@@ -5,4 +5,6 @@ import org.printscript.common.Range;
 public sealed interface Statement permits VariableDeclaration, AssignmentStatement, PrintlnStatement {
 
     Range range();
+
+    <T> T accept(ASTVisitor<T> visitor);
 }

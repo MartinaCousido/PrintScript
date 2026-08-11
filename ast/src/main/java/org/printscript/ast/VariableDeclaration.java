@@ -4,4 +4,9 @@ import java.util.Optional;
 import org.printscript.common.Range;
 
 public record VariableDeclaration(String name, TypeName type, Optional<Expression> initializer, Range range) implements Statement {
+
+    @Override
+    public <T> T accept(ASTVisitor<T> visitor) {
+        return visitor.visitVariableDeclaration(this);
+    }
 }
