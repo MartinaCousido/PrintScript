@@ -48,7 +48,7 @@ class LexerTest {
     }
 
     private static Lexer lexerOf(String... lines) {
-        return new Lexer(List.of(lines).iterator());
+        return new Lexer(List.of(lines).iterator(), List.of());
     }
 
     @Test
@@ -70,7 +70,7 @@ class LexerTest {
     @Test
     void theNextLineIsNotRequestedUntilTheCurrentOneIsExhausted() {
         RecordingLines lines = new RecordingLines(List.of("a b", "c"));
-        Lexer lexer = new Lexer(lines);
+        Lexer lexer = new Lexer(lines, List.of());
 
         assertEquals(0, lines.requested());
 

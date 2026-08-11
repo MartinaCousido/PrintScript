@@ -1,7 +1,9 @@
 package org.printscript.lexer;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import org.printscript.common.Position;
 import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
@@ -11,13 +13,15 @@ import org.printscript.token.TokenType;
 public final class Lexer implements PrintScriptIterator<Token> {
 
     private final Iterator<String> lines;
+    private final List<TokenConstructor> constructors;
     private String currentLine;
     private int lineNumber;
     private int columnIndex;
     private Token pending;
 
-    public Lexer(Iterator<String> lines) {
+    public Lexer(Iterator<String> lines, List<TokenConstructor> constructors) {
         this.lines = lines;
+        this.constructors = constructors;
         this.currentLine = null;
         this.lineNumber = 0;
         this.columnIndex = 0;
@@ -58,8 +62,35 @@ public final class Lexer implements PrintScriptIterator<Token> {
                 columnIndex = columnIndex + 1;
                 continue;
             }
+            return buildTokenAtCurrentColumn();
+        }
+    }
+
+    private Token buildTokenAtCurrentColumn() {
+        Position start = new Position(lineNumber, columnIndex + 1);
+        String rest = currentLine.substring(columnIndex);
+        Token longest = null;
+        int longestLength = 0;
+        for (TokenConstructor constructor : constructors) {
+            Optional<Token> candidate = constructor.tryBuild(rest, start);
+            if (candidate.isEmpty()) {
+                continue;
+            }
+            int length = lengthOf(candidate.get());
+            if (length > longestLength) {
+                longest = candidate.get();
+                longestLength = length;
+            }
+        }
+        if (longest == null) {
             return unknownAtCurrentColumn();
         }
+        columnIndex = columnIndex + longestLength;
+        return longest;
+    }
+
+    private static int lengthOf(Token token) {
+        return token.range().end().column() - token.range().start().column() + 1;
     }
 
     private Token unknownAtCurrentColumn() {
