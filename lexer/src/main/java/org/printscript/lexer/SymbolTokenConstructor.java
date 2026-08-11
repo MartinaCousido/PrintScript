@@ -6,7 +6,7 @@ import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-
+//reconoce los simbolos: + - * / = ; : ( )
 public final class SymbolTokenConstructor implements TokenConstructor {
 
     private final Map<String, TokenType> symbols;

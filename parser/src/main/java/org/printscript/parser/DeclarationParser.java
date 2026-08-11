@@ -11,7 +11,8 @@ import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-
+//arma las declaraciones: let x: number = 12;
+//va pidiendo pieza por pieza; si falta alguna, devuelve error
 public final class DeclarationParser implements StatementParser {
 
     private final ExpressionBuilder expressionBuilder;

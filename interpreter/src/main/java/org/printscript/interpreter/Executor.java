@@ -15,7 +15,7 @@ import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.runtime.OutputPrinter;
-
+//ejecuta las sentencias
 public final class Executor implements ASTVisitor<Result<Void>> {
 
     private final OutputPrinter printer;
@@ -86,6 +86,7 @@ public final class Executor implements ASTVisitor<Result<Void>> {
         return expression.accept(new ExpressionEvaluator(environment));
     }
 
+    //calcula el valor y guarda la variable
     private Result<Void> declare(VariableDeclaration declaration, Object value) {
         return environment.declare(declaration.name(), declaration.type().name(), value)
             .<Result<Void>>map(this::commit)

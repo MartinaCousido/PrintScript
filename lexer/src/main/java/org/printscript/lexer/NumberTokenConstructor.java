@@ -5,7 +5,7 @@ import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-
+//reconoce números, enteros y con coma decimal
 public final class NumberTokenConstructor implements TokenConstructor {
 
     @Override

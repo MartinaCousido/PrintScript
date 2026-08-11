@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.printscript.ast.Operator;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-
+//tabla de prioridades; el número más alto se resuelve
 final class OperatorPrecedence {
 
     private static final Map<String, Operator> OPERATORS = Map.of(

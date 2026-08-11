@@ -8,7 +8,7 @@ import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-
+//preguntas cortas que se repiten mucho, "este token es la palabra let?" "es un ;?
 final class Tokens {
 
     private Tokens() {

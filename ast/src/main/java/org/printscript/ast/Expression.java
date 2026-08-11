@@ -1,7 +1,7 @@
 package org.printscript.ast;
 
 import org.printscript.common.Range;
-
+// algo que vale algo.
 public sealed interface Expression permits NumberLiteral, StringLiteral, Identifier, BinaryExpression {
 
     Range range();

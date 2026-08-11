@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.printscript.token.TokenType;
-
+//tod lo que sabe la versión 1.0 vive acá: las 4 palabras reservadas y la tabla de simbolos
 public final class LexerProvider10 implements LexerProvider {
 
     private static final Set<String> KEYWORDS = Set.of("let", "println", "number", "string");

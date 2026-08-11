@@ -5,7 +5,10 @@ import org.printscript.common.Failure;
 import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
-
+//la etapa completa: lo que se enchufa después del parser.
+//recie el flujo de sentencias del parser y por cada una llama al Executor
+//un error no corta la iteración, se sigue con la siguiente.
+// Decidir si frenar o no es una tarea de un módulo de más arriba que no existe
 public final class Interpreter implements PrintScriptIterator<Result<?>> {
 
     private final PrintScriptIterator<Result<Statement>> statements;

@@ -1,5 +1,6 @@
 package org.printscript.lexer;
-
+//la puera de entrada al módulo: le pedís "1.0" y te da el provider.
+// Si se pide una versión que no existe, falla con un mensaje claro
 public final class LexerVersionProvider {
 
     private static final String VERSION_10 = "1.0";

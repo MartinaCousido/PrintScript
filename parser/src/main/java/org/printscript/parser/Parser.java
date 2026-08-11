@@ -10,7 +10,8 @@ import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-
+//pieza principal del módulo
+//entrega una sentencia por vez, como el lexer entrega un token por vez
 public final class Parser implements PrintScriptIterator<Result<Statement>> {
 
     private final TokenBuffer buffer;
@@ -26,6 +27,7 @@ public final class Parser implements PrintScriptIterator<Result<Statement>> {
         return buffer.lookahead(0).isPresent();
     }
 
+    //junta tokens hasta encotrar un ;
     @Override
     public Result<Statement> getNext() {
         if (!hasNext()) {

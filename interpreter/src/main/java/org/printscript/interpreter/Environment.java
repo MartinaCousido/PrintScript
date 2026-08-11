@@ -3,7 +3,9 @@ package org.printscript.interpreter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
+//tabla de variables
+//es la única memoria del programa mientras corre
+//es inmutable, cada cambio devuelve una tabla nueva
 public final class Environment {
 
     private final Map<String, Variable> variables;

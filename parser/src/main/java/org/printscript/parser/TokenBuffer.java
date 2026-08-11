@@ -6,7 +6,8 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.printscript.common.PrintScriptIterator;
 import org.printscript.token.Token;
-
+//una ventanita sobre los tokens que van llegando
+//guarda los tokens que hacen falta ahora; hace posible no tener tod en memoria
 public final class TokenBuffer {
 
     private final PrintScriptIterator<Token> source;
@@ -17,6 +18,7 @@ public final class TokenBuffer {
         this.retained = new ArrayList<>();
     }
 
+    //permite espiar sin consumir
     public Optional<Token> lookahead(int position) {
         if (position < 0) {
             throw new IllegalArgumentException("position must be non-negative");

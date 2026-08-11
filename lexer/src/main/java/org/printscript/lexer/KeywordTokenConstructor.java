@@ -6,7 +6,7 @@ import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-
+//reconoce palabras y decide si son reservadas o nombres de variable
 public final class KeywordTokenConstructor implements TokenConstructor {
 
     private final Set<String> keywords;

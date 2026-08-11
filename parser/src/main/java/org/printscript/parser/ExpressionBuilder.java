@@ -13,7 +13,7 @@ import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-
+//arma las cuentas respetando que debe resolverse primero
 public final class ExpressionBuilder {
 
     public Result<Expression> build(TokenBuffer tokens, Range anchor) {

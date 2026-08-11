@@ -9,7 +9,7 @@ import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-
+//pieza principal del módulo.
 public final class Lexer implements PrintScriptIterator<Token> {
 
     private final Iterator<String> lines;
@@ -46,6 +46,7 @@ public final class Lexer implements PrintScriptIterator<Token> {
         return token;
     }
 
+    //lee el código linea por linea y va entregando tokens de a uno
     private Token advance() {
         while (true) {
             if (currentLine == null || columnIndex >= currentLine.length()) {
@@ -93,6 +94,7 @@ public final class Lexer implements PrintScriptIterator<Token> {
         return token.range().end().column() - token.range().start().column() + 1;
     }
 
+    //si ningun reconocedor entiende un caracter, saca un token UNKNOWN y sigue
     private Token unknownAtCurrentColumn() {
         Position start = new Position(lineNumber, columnIndex + 1);
         String lexeme = String.valueOf(currentLine.charAt(columnIndex));

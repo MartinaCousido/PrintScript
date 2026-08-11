@@ -14,7 +14,7 @@ import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
-
+//calcula cuánto vale una expresión, recorriendo su árbol
 public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
 
     private final Environment environment;
@@ -73,6 +73,7 @@ public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
         return notAnExpression(printlnStatement.range());
     }
 
+    //pasa un número a texto
     static String asText(Object value) {
         if (value instanceof Double number && Double.isFinite(number)) {
             return BigDecimal.valueOf(number).stripTrailingZeros().toPlainString();

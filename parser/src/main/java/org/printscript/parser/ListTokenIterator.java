@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.printscript.common.PrintScriptIterator;
 import org.printscript.token.Token;
-
+//convierte una lista de tokens común en el mismo PrintScriptIterator
 final class ListTokenIterator implements PrintScriptIterator<Token> {
 
     private final List<Token> tokens;
