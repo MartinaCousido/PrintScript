@@ -1,5 +1,9 @@
+plugins {
+    id("printscript.java-library")
+}
+
 dependencies {
-    "api"(project(":common"))
-    "api"(project(":token"))
-    "api"(project(":ast"))
+    api(project(":common"))
+    api(project(":token"))
+    api(project(":ast"))
 }

@@ -1,3 +1,3 @@
-dependencies {
-    "implementation"(project(":common"))
+plugins {
+    id("printscript.java-library")
 }
