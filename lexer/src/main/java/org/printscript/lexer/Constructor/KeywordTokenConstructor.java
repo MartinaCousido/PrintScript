@@ -1,4 +1,4 @@
-package org.printscript.lexer;
+package org.printscript.lexer.Constructor;
 
 import java.util.Optional;
 import java.util.Set;

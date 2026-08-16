@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
+import org.printscript.lexer.Provider.LexerVersionProvider;
 import org.printscript.token.Token;
 
 class LexerAcceptanceTest {

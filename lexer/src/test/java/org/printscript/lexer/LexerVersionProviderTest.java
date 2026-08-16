@@ -10,6 +10,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
+import org.printscript.lexer.Provider.LexerProvider;
+import org.printscript.lexer.Provider.LexerVersionProvider;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 

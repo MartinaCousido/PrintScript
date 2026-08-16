@@ -1,4 +1,4 @@
-package org.printscript.lexer;
+package org.printscript.lexer.Constructor;
 
 import java.util.Map;
 import java.util.Optional;
