@@ -7,7 +7,7 @@ import java.util.Optional;
 import org.printscript.common.Position;
 import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
-import org.printscript.lexer.Constructor.TokenConstructor;
+import org.printscript.lexer.constructors.TokenConstructor;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 //pieza principal del módulo.

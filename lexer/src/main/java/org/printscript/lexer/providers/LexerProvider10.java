@@ -1,4 +1,4 @@
-package org.printscript.lexer.Provider;
+package org.printscript.lexer.providers;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.printscript.lexer.Constructor.KeywordTokenConstructor;
-import org.printscript.lexer.Constructor.NumberTokenConstructor;
-import org.printscript.lexer.Constructor.StringTokenConstructor;
-import org.printscript.lexer.Constructor.SymbolTokenConstructor;
+import org.printscript.lexer.constructors.KeywordTokenConstructor;
+import org.printscript.lexer.constructors.NumberTokenConstructor;
+import org.printscript.lexer.constructors.StringTokenConstructor;
+import org.printscript.lexer.constructors.SymbolTokenConstructor;
 import org.printscript.lexer.Lexer;
 import org.printscript.token.TokenType;
 //tod lo que sabe la versión 1.0 vive acá: las 4 palabras reservadas y la tabla de simbolos

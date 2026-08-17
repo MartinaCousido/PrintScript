@@ -6,8 +6,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
-import org.printscript.lexer.Constructor.StringTokenConstructor;
-import org.printscript.lexer.Constructor.TokenConstructor;
+import org.printscript.lexer.constructors.StringTokenConstructor;
+import org.printscript.lexer.constructors.TokenConstructor;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 

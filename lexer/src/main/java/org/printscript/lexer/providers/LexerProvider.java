@@ -1,4 +1,4 @@
-package org.printscript.lexer.Provider;
+package org.printscript.lexer.providers;
 
 import org.printscript.lexer.Lexer;
 
