@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    name: Build, chequeos y tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # El toolchain que compila el proyecto está declarado en el convention plugin
+      # (Java 25). Lo instalamos acá para que Gradle lo encuentre local en vez de
+      # descargarlo en cada corrida. Quien desarrolla no necesita tenerlo: el
+      # foojay-resolver de settings.gradle.kts lo resuelve solo.
+      - name: Instalar el JDK del toolchain declarado
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build de los siete módulos
+        run: ./gradlew build --no-daemon --warning-mode all
+
+      - name: Publicar los reportes de test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-de-test
+          path: '*/build/reports/tests/test'
+          if-no-files-found: ignore
