@@ -1,5 +1,6 @@
 package org.printscript.interpreter;
 
+import java.util.Set;
 import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
 import org.printscript.common.PrintScriptIterator;
@@ -13,10 +14,22 @@ public final class Interpreter implements PrintScriptIterator<Result<?>> {
 
     private final PrintScriptIterator<Result<Statement>> statements;
     private final Executor executor;
+    private final Set<Class<? extends Statement>> supportedNodes;
+    private final String version;
 
     public Interpreter(PrintScriptIterator<Result<Statement>> statements, Executor executor) {
+        this(statements, executor, null, null);
+    }
+
+    public Interpreter(
+            PrintScriptIterator<Result<Statement>> statements,
+            Executor executor,
+            Set<Class<? extends Statement>> supportedNodes,
+            String version) {
         this.statements = statements;
         this.executor = executor;
+        this.supportedNodes = supportedNodes;
+        this.version = version;
     }
 
     @Override
@@ -30,6 +43,13 @@ public final class Interpreter implements PrintScriptIterator<Result<?>> {
         if (next instanceof Failure<Statement>) {
             return next;
         }
-        return ((Success<Statement>) next).value().accept(executor);
+        Statement statement = ((Success<Statement>) next).value();
+        if (supportedNodes != null && !supportedNodes.contains(statement.getClass())) {
+            return new Failure<>(
+                "Nodo " + statement.getClass().getSimpleName()
+                    + " no soportado por la versión " + version + " de PrintScript",
+                statement.range());
+        }
+        return statement.accept(executor);
     }
 }
