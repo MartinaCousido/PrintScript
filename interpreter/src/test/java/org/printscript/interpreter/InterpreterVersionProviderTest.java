@@ -1,10 +1,8 @@
 package org.printscript.interpreter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,7 +84,7 @@ class InterpreterVersionProviderTest {
 
     @Test
     void version10ProvidesAnInterpreterThatExecutesTheThreeStatements() {
-        InterpreterProvider provider = InterpreterVersionProvider.providerFor("1.0");
+        InterpreterProvider provider = new InterpreterVersionProvider().providerFor("1.0");
         InMemoryPrinter printer = new InMemoryPrinter();
         Interpreter interpreter = provider.provide(
             new ResultStream(List.of(
@@ -109,9 +107,8 @@ class InterpreterVersionProviderTest {
     void anUnknownVersionFailsWithAClearMessage() {
         IllegalArgumentException error = assertThrows(
             IllegalArgumentException.class,
-            () -> InterpreterVersionProvider.providerFor("9.9"));
+            () -> new InterpreterVersionProvider().providerFor("9.9"));
 
-        assertTrue(error.getMessage().contains("9.9"), error.getMessage());
-        assertFalse(error.getMessage().isBlank());
+        assertEquals("Versión de PrintScript desconocida: 9.9. Versiones soportadas: 1.0", error.getMessage());
     }
 }

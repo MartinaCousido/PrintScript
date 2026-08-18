@@ -1,9 +1,9 @@
 package org.printscript.parser;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,7 @@ class ParserVersionProviderTest {
 
     @Test
     void version10ProvidesAParserThatParsesTheThreeStatementsOfTheVersion() {
-        ParserProvider provider = ParserVersionProvider.providerFor("1.0");
+        ParserProvider provider = new ParserVersionProvider().providerFor("1.0");
         TokenBuffer buffer = new TokenBuffer(new ListTokenIterator(List.of(
             token(TokenType.KEYWORD, "let", 1),
             token(TokenType.IDENTIFIER, "x", 5),
@@ -59,9 +59,8 @@ class ParserVersionProviderTest {
     void anUnknownVersionFailsWithAClearMessage() {
         IllegalArgumentException error = assertThrows(
             IllegalArgumentException.class,
-            () -> ParserVersionProvider.providerFor("9.9"));
+            () -> new ParserVersionProvider().providerFor("9.9"));
 
-        assertTrue(error.getMessage().contains("9.9"), error.getMessage());
-        assertFalse(error.getMessage().isBlank());
+        assertEquals("Versión de PrintScript desconocida: 9.9. Versiones soportadas: 1.0", error.getMessage());
     }
 }

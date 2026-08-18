@@ -221,6 +221,8 @@ private static final Set<String> KEYWORDS = Set.of("let", "println", "number", "
 
 Cuando llegue 1.1 se agrega `LexerProvider11`, `ParserProvider11`, `SemanticProvider11`, `InterpreterProvider11`, `FormatterProvider11` y `LinterProvider11`. Los motores no cambian una línea.
 
+**El contrato del provider por versión vive en `common`.** Las tres etapas implementan la misma interfaz `VersionProvider<T>`, con una sola operación que recibe la versión como texto y devuelve el provider correspondiente. Se acepta el costo de que `common` gane una noción de armado que no es del pipeline: un único contrato reconocible para las tres etapas vale más que la pureza de `common`, y la alternativa — una interfaz por módulo con la misma forma — es exactamente la triplicación que el contrato viene a evitar. El criterio de fallo tampoco puede divergir porque lo construye el propio contrato: ante una versión desconocida, `VersionProvider.unknownVersion` arma la `IllegalArgumentException` con el formato único (versión pedida y lista de soportadas), y ninguna implementación escribe el mensaje a mano.
+
 **Riesgo conocido:** los providers reparten el conocimiento de una versión entre varios módulos, lo que permite inconsistencias — un lexer que reconoce `if` con un parser que no sabe qué hacer con él. Se mitiga con tests de integración por versión que ejerciten cada operación completa contra los ejemplos de la consigna.
 
 ---

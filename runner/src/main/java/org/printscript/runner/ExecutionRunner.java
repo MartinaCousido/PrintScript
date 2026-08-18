@@ -18,7 +18,7 @@ public final class ExecutionRunner {
 
     public List<Failure<?>> run(Iterator<String> lines, String version, OutputPrinter printer) {
         Parser parser = statementStream(lines, version);
-        Interpreter interpreter = InterpreterVersionProvider.providerFor(version).provide(parser, printer);
+        Interpreter interpreter = new InterpreterVersionProvider().providerFor(version).provide(parser, printer);
         List<Failure<?>> failures = new ArrayList<>();
         while (interpreter.hasNext()) {
             Result<?> result = interpreter.getNext();
@@ -30,8 +30,8 @@ public final class ExecutionRunner {
     }
 
     private Parser statementStream(Iterator<String> lines, String version) {
-        Lexer lexer = LexerVersionProvider.providerFor(version).provide(lines);
+        Lexer lexer = new LexerVersionProvider().providerFor(version).provide(lines);
         TokenBuffer buffer = new TokenBuffer(lexer);
-        return ParserVersionProvider.providerFor(version).provide(buffer);
+        return new ParserVersionProvider().providerFor(version).provide(buffer);
     }
 }

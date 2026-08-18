@@ -1,9 +1,7 @@
 package org.printscript.lexer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +22,7 @@ class LexerVersionProviderTest {
 
     @Test
     void version10ProvidesALexerThatTokenizesACompleteStatement() {
-        LexerProvider provider = LexerVersionProvider.providerFor("1.0");
+        LexerProvider provider = new LexerVersionProvider().providerFor("1.0");
         Lexer lexer = provider.provide(List.of("let name: string = \"Joe\";").iterator());
 
         List<Token> tokens = new ArrayList<>();
@@ -48,9 +46,8 @@ class LexerVersionProviderTest {
     void anUnknownVersionFailsWithAClearMessage() {
         IllegalArgumentException error = assertThrows(
             IllegalArgumentException.class,
-            () -> LexerVersionProvider.providerFor("9.9"));
+            () -> new LexerVersionProvider().providerFor("9.9"));
 
-        assertTrue(error.getMessage().contains("9.9"), error.getMessage());
-        assertFalse(error.getMessage().isBlank());
+        assertEquals("Versión de PrintScript desconocida: 9.9. Versiones soportadas: 1.0", error.getMessage());
     }
 }

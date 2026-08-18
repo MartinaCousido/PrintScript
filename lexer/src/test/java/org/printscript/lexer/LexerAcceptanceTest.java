@@ -47,7 +47,7 @@ class LexerAcceptanceTest {
     }
 
     private static Lexer lexerOf(Iterator<String> lines) {
-        return LexerVersionProvider.providerFor("1.0").provide(lines);
+        return new LexerVersionProvider().providerFor("1.0").provide(lines);
     }
 
     private static List<String> tokenize(String... lines) {
