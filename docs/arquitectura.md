@@ -234,3 +234,15 @@ Cuando llegue 1.1 se agrega `LexerProvider11`, `ParserProvider11`, `SemanticProv
 **El costo del contrato único.** `ASTVisitor` cubre expresiones y sentencias juntas, así que `Executor` implementa los cuatro `visit` de expresión devolviendo un error, y `ExpressionEvaluator` hace lo simétrico con los tres de sentencia. Son ramas inalcanzables, impuestas por tener un solo contrato publicado de recorrido.
 
 **Trece módulos.** El número no es el criterio; la independencia de razones de cambio sí. `config`, `semantic` y `runtime-api` existen porque cada uno esconde una decisión distinta con evolución propia. La única fusión que no rompería razones de cambio sería `runner` dentro de `cli`, y se descarta porque PrintScript se publica como librería.
+
+---
+
+## 8. El módulo `runner`
+
+Es el único lugar del sistema donde el lexer y el parser se conocen entre sí. `ExecutionRunner` recibe el iterador de líneas, la versión y un `OutputPrinter`, le pide a los tres `VersionProvider` las piezas de esa versión, encadena `Lexer` → `TokenBuffer` → `Parser` → `Interpreter` y corre el bucle `while (hasNext) getNext`. El armado de la cadena lexer→buffer→parser vive en una función privada compartida, pensada para que la fachada de validación la reutilice sin duplicarla.
+
+El invariante del módulo: **compone, no decide**. No tiene ni una regla del lenguaje; todo el conocimiento de versión sigue en los providers.
+
+**La política con los errores es acumular, no cortar.** Las etapas deliberadamente no la toman, así que la decisión vive acá: la fachada junta los `Failure` que salen del bucle — con su mensaje y su `Range` — y los devuelve como lista al terminar. Un error no detiene la ejecución del resto del programa.
+
+**Trade-off asumido.** Como la ejecución es en una sola pasada, cuando aparece un error las sentencias válidas anteriores ya se ejecutaron y su salida ya salió. Quien necesite atomicidad corre primero la validación.

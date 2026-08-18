@@ -12,4 +12,5 @@ include(
     "parser",
     "runtime-api",
     "interpreter",
+    "runner",
 )
