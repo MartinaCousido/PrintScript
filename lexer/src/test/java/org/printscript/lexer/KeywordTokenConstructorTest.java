@@ -2,8 +2,8 @@ package org.printscript.lexer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -13,14 +13,14 @@ import org.printscript.token.TokenType;
 
 class KeywordTokenConstructorTest {
 
-    private static Token buildAt(Set<String> keywords, String rest, Position start) {
+    private static Token buildAt(Map<String, TokenType> keywords, String rest, Position start) {
         Optional<Token> token = new KeywordTokenConstructor(keywords).tryBuild(rest, start);
         return token.orElseThrow();
     }
 
     @Test
-    void aWordOfTheKeywordSetIsAKeyword() {
-        Token token = buildAt(Set.of("let"), "let x", new Position(1, 1));
+    void aWordOfTheTableIsClassifiedWithItsMappedType() {
+        Token token = buildAt(Map.of("let", TokenType.KEYWORD), "let x", new Position(1, 1));
 
         assertEquals(TokenType.KEYWORD, token.type());
         assertEquals("let", token.value());
@@ -29,7 +29,7 @@ class KeywordTokenConstructorTest {
 
     @Test
     void aWordThatMerelyStartsWithAKeywordIsAnIdentifier() {
-        Token token = buildAt(Set.of("let"), "letra", new Position(1, 1));
+        Token token = buildAt(Map.of("let", TokenType.KEYWORD), "letra", new Position(1, 1));
 
         assertEquals(TokenType.IDENTIFIER, token.type());
         assertEquals("letra", token.value());
@@ -38,7 +38,7 @@ class KeywordTokenConstructorTest {
 
     @Test
     void identifiersAcceptDigitsAndUnderscores() {
-        Token token = buildAt(Set.of("let"), "_my_var2 = 1", new Position(1, 1));
+        Token token = buildAt(Map.of("let", TokenType.KEYWORD), "_my_var2 = 1", new Position(1, 1));
 
         assertEquals(TokenType.IDENTIFIER, token.type());
         assertEquals("_my_var2", token.value());
@@ -46,10 +46,18 @@ class KeywordTokenConstructorTest {
     }
 
     @Test
-    void theKeywordSetArrivesByParameterAndChangesTheClassification() {
+    void theTableArrivesByParameterAndChangesTheClassification() {
         Position start = new Position(1, 1);
 
-        assertEquals(TokenType.KEYWORD, buildAt(Set.of("println"), "println", start).type());
-        assertEquals(TokenType.IDENTIFIER, buildAt(Set.of("let"), "println", start).type());
+        assertEquals(TokenType.KEYWORD, buildAt(Map.of("println", TokenType.KEYWORD), "println", start).type());
+        assertEquals(TokenType.IDENTIFIER, buildAt(Map.of("let", TokenType.KEYWORD), "println", start).type());
+    }
+
+    @Test
+    void aWordMappedToBooleanIsClassifiedAsBooleanWithoutANewConstructorClass() {
+        Token token = buildAt(Map.of("true", TokenType.BOOLEAN), "true", new Position(1, 1));
+
+        assertEquals(TokenType.BOOLEAN, token.type());
+        assertEquals("true", token.value());
     }
 }

@@ -1,17 +1,17 @@
 package org.printscript.lexer.constructors;
 
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-//reconoce palabras y decide si son reservadas o nombres de variable
+//reconoce palabras y decide su categoría según la tabla que le pasan
 public final class KeywordTokenConstructor implements TokenConstructor {
 
-    private final Set<String> keywords;
+    private final Map<String, TokenType> keywords;
 
-    public KeywordTokenConstructor(Set<String> keywords) {
+    public KeywordTokenConstructor(Map<String, TokenType> keywords) {
         this.keywords = keywords;
     }
 
@@ -25,7 +25,7 @@ public final class KeywordTokenConstructor implements TokenConstructor {
             length = length + 1;
         }
         String word = rest.substring(0, length);
-        TokenType type = keywords.contains(word) ? TokenType.KEYWORD : TokenType.IDENTIFIER;
+        TokenType type = keywords.getOrDefault(word, TokenType.IDENTIFIER);
         Position end = new Position(start.line(), start.column() + length - 1);
         return Optional.of(new Token(type, word, new Range(start, end)));
     }
