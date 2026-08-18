@@ -15,6 +15,8 @@ import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
+import org.printscript.parser.providers.ParserProvider;
+import org.printscript.parser.providers.ParserVersionProvider;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 

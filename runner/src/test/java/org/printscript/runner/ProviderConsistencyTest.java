@@ -18,8 +18,8 @@ import org.printscript.interpreter.providers.InterpreterVersionProvider;
 import org.printscript.lexer.Lexer;
 import org.printscript.lexer.providers.LexerVersionProvider;
 import org.printscript.parser.Parser;
-import org.printscript.parser.ParserVersionProvider;
 import org.printscript.parser.TokenBuffer;
+import org.printscript.parser.providers.ParserVersionProvider;
 import org.printscript.runtime.OutputPrinter;
 
 class ProviderConsistencyTest {

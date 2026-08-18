@@ -1,4 +1,4 @@
-package org.printscript.parser;
+package org.printscript.parser.providers;
 
 import org.printscript.common.VersionProvider;
 

@@ -4,8 +4,8 @@ import java.util.Iterator;
 import org.printscript.lexer.Lexer;
 import org.printscript.lexer.providers.LexerVersionProvider;
 import org.printscript.parser.Parser;
-import org.printscript.parser.ParserVersionProvider;
 import org.printscript.parser.TokenBuffer;
+import org.printscript.parser.providers.ParserVersionProvider;
 
 final class StatementStreams {
 
