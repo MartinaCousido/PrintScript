@@ -241,7 +241,9 @@ Cuando llegue 1.1 se agrega `LexerProvider11`, `ParserProvider11`, `SemanticProv
 
 ## 8. El módulo `runner`
 
-Es el único lugar del sistema donde el lexer y el parser se conocen entre sí. `ExecutionRunner` recibe el iterador de líneas, la versión y un `OutputPrinter`, le pide a los tres `VersionProvider` las piezas de esa versión, encadena `Lexer` → `TokenBuffer` → `Parser` → `Interpreter` y corre el bucle `while (hasNext) getNext`. El armado de la cadena lexer→buffer→parser vive en una función privada compartida, pensada para que la fachada de validación la reutilice sin duplicarla.
+Es el único lugar del sistema donde el lexer y el parser se conocen entre sí. `ExecutionRunner` recibe el iterador de líneas, la versión y un `OutputPrinter`, le pide a los tres `VersionProvider` las piezas de esa versión, encadena `Lexer` → `TokenBuffer` → `Parser` → `Interpreter` y corre el bucle `while (hasNext) getNext`. El armado de la cadena lexer→buffer→parser vive en `StatementStreams`, una clase package-private con una única función estática que comparten las dos fachadas: la construcción existe en un solo lugar.
+
+`ValidationRunner` es la segunda fachada: arma la misma cadena pero se detiene en el parser, sin interpreter y sin `OutputPrinter` — la firma de `validate` ni siquiera recibe uno. Recorre el flujo de sentencias, junta los `Failure` con su mensaje y su `Range`, y no ejecuta nada: validar un programa con `println` no imprime. Queda anotado explícitamente: la consigna pide validar sintaxis **y semántica**, y el módulo `semantic` no existe todavía, así que esta fachada valida solo sintaxis. Cuando `semantic` exista, se encadena entre el parser y el consumidor sin que ninguna de las dos etapas cambie.
 
 El invariante del módulo: **compone, no decide**. No tiene ni una regla del lenguaje; todo el conocimiento de versión sigue en los providers.
 
