@@ -24,9 +24,15 @@ indent_style = space
 indent_size = 4
 max_line_length = 100
 
-# Archivos de build y configuración: 2 espacios es la convención de estos
-# formatos. Los .kts los formatea ktlint a través de Spotless.
-[*.{kts,yml,yaml,json}]
+# Kotlin, incluido el DSL de Gradle, usa 4 espacios: es la convención oficial
+# del lenguaje y es lo que ya tienen los archivos de build del repo. ktlint lee
+# este valor de acá, así que es el que decide cómo quedan los .gradle.kts.
+[*.kts]
+indent_style = space
+indent_size = 4
+
+# Los formatos de configuración sí usan 2 espacios.
+[*.{yml,yaml,json}]
 indent_style = space
 indent_size = 2
 
