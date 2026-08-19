@@ -1,0 +1,49 @@
+# Formato del proyecto PrintScript.
+#
+# La fuente de verdad del formato de Java es Spotless con google-java-format
+# en variante AOSP. Este archivo NO compite con el formateador: existe para
+# que el IDE escriba desde el principio lo mismo que spotlessApply va a
+# imponer. Si los dos no coinciden, el IDE escribe una cosa, el formateador
+# la reescribe a otra, y el equipo termina peleando contra su herramienta.
+#
+# Si manana cambia el estilo del formateador, este archivo cambia con el.
+#
+# Lo leen IntelliJ, VS Code y Vim sin instalar nada.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# 4 espacios y 100 columnas es lo que impone googleJavaFormat().aosp().
+[*.java]
+indent_style = space
+indent_size = 4
+max_line_length = 100
+
+# Archivos de build y configuracion: 2 espacios es la convencion de estos
+# formatos. Los .kts los formatea ktlint a traves de Spotless.
+[*.{kts,yml,yaml,json}]
+indent_style = space
+indent_size = 2
+
+# Los .xml de configuracion (checkstyle, pmd) siguen la indentacion que ya
+# tiene checkstyle.xml.
+[*.xml]
+indent_style = space
+indent_size = 4
+
+# El script del wrapper para Windows tiene que quedar en CRLF o deja de
+# funcionar. Es la unica excepcion a la regla de saltos de linea de arriba.
+[*.bat]
+end_of_line = crlf
+
+# En Markdown, dos espacios al final de una linea son un salto de linea
+# intencional: recortarlos rompe el texto.
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
