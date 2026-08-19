@@ -18,18 +18,18 @@
     - MagicNumber: ruido en tablas de precedencia y en los tests.
 -->
 <module name="Checker">
-    <property name="severity" value="error"/>
-    <property name="fileExtensions" value="java"/>
+    <property name="severity" value="error"/> <!-- cualquier incumplimiento de cualquier regla es un error, no un warning -->
+    <property name="fileExtensions" value="java"/> <!-- solo se miran archivos java; los .kts, .yml, .md no los toca nadie -->
 
-    <module name="NewlineAtEndOfFile"/>
-    <module name="FileTabCharacter"/>
+    <module name="NewlineAtEndOfFile"/> <!-- tod archivo tiene que terminar con un salto de linea -->
+    <module name="FileTabCharacter"/> <!-- prhoibido el carácter de tabulación -->
 
-    <module name="LineLength">
+    <module name="LineLength"> <!-- ninguna linea supera 140 caracteres -->
         <property name="max" value="140"/>
         <property name="ignorePattern" value="^package.*|^import.*|https?://"/>
     </module>
 
-    <module name="RegexpSingleline">
+    <module name="RegexpSingleline"> <!-- proíbe espacios o tabs al final de una línea -->
         <property name="format" value="\s+$"/>
         <property name="message" value="Espacios en blanco al final de la línea"/>
     </module>
@@ -37,9 +37,9 @@
     <module name="TreeWalker">
 
         <!-- imports -->
-        <module name="AvoidStarImport"/>
-        <module name="RedundantImport"/>
-        <module name="UnusedImports"/>
+        <module name="AvoidStarImport"/> <!-- nada de import java.util.* , obliga a que los imports sean explícitos -->
+        <module name="RedundantImport"/> <!-- prohíbe importar dos veces lo mismo -->
+        <module name="UnusedImports"/> <!--un import que ningún tipo del archivo usa es basura -->
 
         <!-- nombres -->
         <module name="PackageName">
@@ -53,32 +53,32 @@
         <module name="ConstantName"/>
 
         <!-- forma del código -->
-        <module name="LeftCurly"/>
-        <module name="RightCurly"/>
-        <module name="NeedBraces"/>
-        <module name="ModifierOrder"/>
-        <module name="OneStatementPerLine"/>
+        <module name="LeftCurly"/> <!-- la llave que abre va al final de la línea, no en una línea propia -->
+        <module name="RightCurly"/> <!-- la llave que cierra un bloque que continúa (if/else, try/catch, do/while) va en la misma línea que lo que sigue -->
+        <module name="NeedBraces"/> <!-- if, else, for, while, do siempre con llaves, aunque el cuerpo sea una línea -->
+        <module name="ModifierOrder"/> <!-- los modificadores en el orden que manda la especificación del lenguaje: public static final -->
+        <module name="OneStatementPerLine"/> <!-- una sentencia por linea, nada de int a = 1; int b = 2; -->
         <module name="UpperEll"/>
-        <module name="ArrayTypeStyle"/>
+        <module name="ArrayTypeStyle"/> <!-- los corchetes van pegados al tipo: String[] nombres -->
 
         <!-- espacios -->
-        <module name="WhitespaceAfter"/>
-        <module name="WhitespaceAround">
+        <module name="WhitespaceAfter"/> <!-- espacio después de la coma, del punto y coma y del casteo: m(a, b), no m(a,b) -->
+        <module name="WhitespaceAround"> <!-- espacio a ambos lados de operadores, llaves y palabras clave: a + b, no a+b -->
             <property name="allowEmptyConstructors" value="true"/>
             <property name="allowEmptyMethods" value="true"/>
             <property name="allowEmptyTypes" value="true"/>
             <property name="allowEmptyLambdas" value="true"/>
         </module>
-        <module name="GenericWhitespace"/>
-        <module name="NoWhitespaceBefore"/>
+        <module name="GenericWhitespace"/> <!-- los <> con los espacios donde van: List<String> x, no List <String> x, ni List<String>x -->
+        <module name="NoWhitespaceBefore"/> <!-- nada de espacios antes de la coma o el punto y coma de sufijo; m(a , b) está mal -->
 
         <!-- errores probables -->
-        <module name="EmptyStatement"/>
-        <module name="EqualsHashCode"/>
-        <module name="SimplifyBooleanExpression"/>
-        <module name="SimplifyBooleanReturn"/>
-        <module name="StringLiteralEquality"/>
-        <module name="HideUtilityClassConstructor"/>
+        <module name="EmptyStatement"/> <!-- un ';' suelto -->
+        <module name="EqualsHashCode"/> <!-- si redefinís equals sin redefinir hashCode (o al revés), el objeto se rompe adentro de cualquier HashMap o HashSet -->
+        <module name="SimplifyBooleanExpression"/> <!-- if (x == true) en vez de if (x) -->
+        <module name="SimplifyBooleanReturn"/> <!-- if (x) { return true; } else { return false; } en vez de return x; -->
+        <module name="StringLiteralEquality"/> <!-- comparar strings con == en vez de .equals() -->
+        <module name="HideUtilityClassConstructor"/> <!-- una clase que solo tiene métodos estáticos no puede tener constructor público. Si nadie la va a instanciar, el constructor tiene que ser privado -->
         <module name="FallThrough"/>
 
     </module>
