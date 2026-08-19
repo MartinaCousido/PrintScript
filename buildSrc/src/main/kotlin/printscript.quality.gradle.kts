@@ -12,8 +12,9 @@ jacoco {
 checkstyle {
     toolVersion = "10.21.0"
     configFile = rootProject.file("config/checkstyle/checkstyle.xml")
+    // Sin maxWarnings: el checkstyle.xml declara severity=error global, asi que
+    // ninguna violacion es warning nunca y esa propiedad no cambiaba nada.
     isIgnoreFailures = false
-    maxWarnings = 0
 }
 
 tasks.named<Test>("test") {

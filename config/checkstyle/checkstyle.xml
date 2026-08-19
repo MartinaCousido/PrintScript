@@ -10,6 +10,31 @@
   sea predecible, no en cuál de las opciones se eligió. Si una regla molesta más de
   lo que aporta, se discute y se saca de acá; lo que no se hace es ignorarla.
 
+  EL REPARTO CON SPOTLESS: si el formateador lo decide, Checkstyle no opina.
+  Desde que existe Spotless con google-java-format (variante AOSP), el formato lo
+  escribe el formateador y no tiene sentido que además una regla lo reporte: sería
+  definir el estilo en dos archivos que van a divergir. Checkstyle queda con lo que
+  un formateador NO puede decidir: cómo se llaman las cosas y qué construcciones son
+  un error probable.
+
+  Se sacaron de acá, con la verificación al lado, porque google-java-format ya las
+  escribe (probado con un archivo que las violaba todas):
+    - NewlineAtEndOfFile y FileTabCharacter quedan igual, ver abajo por qué.
+    - LineLength: el formateador corta en 100.
+    - RegexpSingleline (espacios al final): los borra.
+    - LeftCurly y RightCurly: coloca las llaves.
+    - ModifierOrder: reordena "static public" a "public static".
+    - OneStatementPerLine: parte "int a = 1; int b = 2;" en dos líneas.
+    - WhitespaceAfter, WhitespaceAround, GenericWhitespace, NoWhitespaceBefore:
+      normaliza todos los espacios.
+    - RedundantImport y UnusedImports: los borra el paso removeUnusedImports.
+    - Indentation nunca estuvo, y ahora tampoco hace falta: la indentación la
+      escribe el formateador. No agregarla.
+
+  AvoidStarImport SÍ se queda: se verificó que el formateador NO expande los
+  imports con asterisco, así que es la única regla de imports que sigue haciendo
+  falta.
+
   Deliberadamente NO están:
     - MissingSwitchDefault: el diseño usa switch exhaustivo sobre tipos sellados,
       justamente sin default, para que el compilador avise cuando aparece una
@@ -19,27 +44,22 @@
 -->
 <module name="Checker">
     <property name="severity" value="error"/> <!-- cualquier incumplimiento de cualquier regla es un error, no un warning -->
-    <property name="fileExtensions" value="java"/> <!-- solo se miran archivos java; los .kts, .yml, .md no los toca nadie -->
+    <property name="fileExtensions" value="java"/> <!-- solo se miran archivos java; los .kts, .yml, .md los formatea Spotless -->
 
-    <module name="NewlineAtEndOfFile"/> <!-- tod archivo tiene que terminar con un salto de linea -->
-    <module name="FileTabCharacter"/> <!-- prhoibido el carácter de tabulación -->
-
-    <module name="LineLength"> <!-- ninguna linea supera 140 caracteres -->
-        <property name="max" value="140"/>
-        <property name="ignorePattern" value="^package.*|^import.*|https?://"/>
-    </module>
-
-    <module name="RegexpSingleline"> <!-- proíbe espacios o tabs al final de una línea -->
-        <property name="format" value="\s+$"/>
-        <property name="message" value="Espacios en blanco al final de la línea"/>
+    <!--
+      Estas dos las cubre el formateador, pero se quedan como red para los archivos
+      que todavía nadie tocó: el ratchet de Spotless solo formatea lo modificado,
+      mientras que Checkstyle mira siempre los 90 archivos. Cuestan una línea.
+    -->
+    <module name="NewlineAtEndOfFile"/> <!-- todo archivo tiene que terminar con un salto de linea -->
+    <module name="FileTabCharacter"> <!-- prohibido el carácter de tabulación -->
+        <property name="eachLine" value="true"/> <!-- sin esto reporta solo la primera tabulación de cada archivo -->
     </module>
 
     <module name="TreeWalker">
 
         <!-- imports -->
         <module name="AvoidStarImport"/> <!-- nada de import java.util.* , obliga a que los imports sean explícitos -->
-        <module name="RedundantImport"/> <!-- prohíbe importar dos veces lo mismo -->
-        <module name="UnusedImports"/> <!--un import que ningún tipo del archivo usa es basura -->
 
         <!-- nombres -->
         <module name="PackageName">
@@ -51,26 +71,21 @@
         <module name="ParameterName"/>
         <module name="LocalVariableName"/>
         <module name="ConstantName"/>
-
-        <!-- forma del código -->
-        <module name="LeftCurly"/> <!-- la llave que abre va al final de la línea, no en una línea propia -->
-        <module name="RightCurly"/> <!-- la llave que cierra un bloque que continúa (if/else, try/catch, do/while) va en la misma línea que lo que sigue -->
-        <module name="NeedBraces"/> <!-- if, else, for, while, do siempre con llaves, aunque el cuerpo sea una línea -->
-        <module name="ModifierOrder"/> <!-- los modificadores en el orden que manda la especificación del lenguaje: public static final -->
-        <module name="OneStatementPerLine"/> <!-- una sentencia por linea, nada de int a = 1; int b = 2; -->
-        <module name="UpperEll"/>
-        <module name="ArrayTypeStyle"/> <!-- los corchetes van pegados al tipo: String[] nombres -->
-
-        <!-- espacios -->
-        <module name="WhitespaceAfter"/> <!-- espacio después de la coma, del punto y coma y del casteo: m(a, b), no m(a,b) -->
-        <module name="WhitespaceAround"> <!-- espacio a ambos lados de operadores, llaves y palabras clave: a + b, no a+b -->
-            <property name="allowEmptyConstructors" value="true"/>
-            <property name="allowEmptyMethods" value="true"/>
-            <property name="allowEmptyTypes" value="true"/>
-            <property name="allowEmptyLambdas" value="true"/>
+        <!--
+          ConstantName no cubre los valores de un enum, y Checkstyle no tiene una
+          regla dedicada para eso: sin esto, un Operator.modulo entra sin que nadie
+          lo frene. Se resuelve con MatchXpath, que permite consultar el árbol
+          directamente. El patrón es el mismo que usa ConstantName.
+        -->
+        <module name="MatchXpath">
+            <property name="query" value="//ENUM_CONSTANT_DEF/IDENT[not(matches(@text, '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'))]"/>
+            <message key="matchxpath.match" value="Los valores de un enum van en mayúsculas separadas por guion bajo"/>
         </module>
-        <module name="GenericWhitespace"/> <!-- los <> con los espacios donde van: List<String> x, no List <String> x, ni List<String>x -->
-        <module name="NoWhitespaceBefore"/> <!-- nada de espacios antes de la coma o el punto y coma de sufijo; m(a , b) está mal -->
+
+        <!-- forma del código: solo lo que el formateador NO decide -->
+        <module name="NeedBraces"/> <!-- if, else, for, while, do siempre con llaves, aunque el cuerpo sea una línea. El formateador no las agrega -->
+        <module name="UpperEll"/> <!-- 100L y no 100l, que se confunde con 1001. El formateador no toca los literales -->
+        <module name="ArrayTypeStyle"/> <!-- los corchetes van pegados al tipo: String[] nombres -->
 
         <!-- errores probables -->
         <module name="EmptyStatement"/> <!-- un ';' suelto -->
