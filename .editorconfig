@@ -6,7 +6,7 @@
 # imponer. Si los dos no coinciden, el IDE escribe una cosa, el formateador
 # la reescribe a otra, y el equipo termina peleando contra su herramienta.
 #
-# Si manana cambia el estilo del formateador, este archivo cambia con el.
+# Si mañana cambia el estilo del formateador, este archivo cambia con él.
 #
 # Lo leen IntelliJ, VS Code y Vim sin instalar nada.
 
@@ -24,24 +24,24 @@ indent_style = space
 indent_size = 4
 max_line_length = 100
 
-# Archivos de build y configuracion: 2 espacios es la convencion de estos
-# formatos. Los .kts los formatea ktlint a traves de Spotless.
+# Archivos de build y configuración: 2 espacios es la convención de estos
+# formatos. Los .kts los formatea ktlint a través de Spotless.
 [*.{kts,yml,yaml,json}]
 indent_style = space
 indent_size = 2
 
-# Los .xml de configuracion (checkstyle, pmd) siguen la indentacion que ya
+# Los .xml de configuración (checkstyle, pmd) siguen la indentación que ya
 # tiene checkstyle.xml.
 [*.xml]
 indent_style = space
 indent_size = 4
 
 # El script del wrapper para Windows tiene que quedar en CRLF o deja de
-# funcionar. Es la unica excepcion a la regla de saltos de linea de arriba.
+# funcionar. Es la única excepción a la regla de saltos de línea de arriba.
 [*.bat]
 end_of_line = crlf
 
-# En Markdown, dos espacios al final de una linea son un salto de linea
+# En Markdown, dos espacios al final de una línea son un salto de línea
 # intencional: recortarlos rompe el texto.
 [*.md]
 indent_style = space
