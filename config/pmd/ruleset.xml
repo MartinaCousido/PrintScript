@@ -25,11 +25,30 @@
       - Cualquier regla que exija 'default' en un switch: el diseño usa switch
         exhaustivo sobre tipos sellados a propósito, mismo argumento que
         MissingSwitchDefault en checkstyle.xml.
+
+    Dos reglas de bestpractices se corrieron una vez, contra los ~150 archivos de
+    test ya escritos, y se sacaron con el número anotado:
+
+      - UnitTestAssertionsShouldIncludeMessage (325 violaciones): pide que cada
+        assert lleve un mensaje. El equipo eligió, en todos los archivos de test
+        ya escritos, nombrar el método de test para que describa lo que se
+        verifica y dejar que JUnit muestre esperado/actual en el fallo. Es una
+        decisión de estilo ya tomada y consistente en los ~150 archivos; no hay
+        nada que la regla detecte que el nombre del test no diga ya.
+      - UnitTestContainsTooManyAsserts (115 violaciones): limita a un assert por
+        test. El estilo del equipo verifica varias propiedades relacionadas del
+        mismo resultado en un mismo test (por ejemplo, tipo y rango de un
+        Statement) en vez de fragmentarlas en tests separados. Es la misma
+        decisión de fondo que la regla de arriba: no encaja con cómo ya está
+        escrita toda la suite, no es un problema puntual de un test.
   </description>
 
   <rule ref="category/java/errorprone.xml" />
 
-  <rule ref="category/java/bestpractices.xml" />
+  <rule ref="category/java/bestpractices.xml">
+    <exclude name="UnitTestAssertionsShouldIncludeMessage" />
+    <exclude name="UnitTestContainsTooManyAsserts" />
+  </rule>
 
   <rule ref="category/java/design.xml/CyclomaticComplexity">
     <properties>

@@ -12,6 +12,8 @@ import org.printscript.runtime.OutputPrinter;
 class ExecutionErrorsEndToEndTest {
 
     private static final String VERSION = "1.0";
+    private static final String ANTES = "antes";
+    private static final String PRINTLN_ANTES = "println(\"antes\");";
 
     private static final class InMemoryPrinter implements OutputPrinter {
 
@@ -27,7 +29,8 @@ class ExecutionErrorsEndToEndTest {
         return new ExecutionRunner().run(List.of(lines).iterator(), VERSION, printer);
     }
 
-    private static void assertRange(Range range, int startLine, int startColumn, int endLine, int endColumn) {
+    private static void assertRange(
+            Range range, int startLine, int startColumn, int endLine, int endColumn) {
         assertEquals(startLine, range.start().line());
         assertEquals(startColumn, range.start().column());
         assertEquals(endLine, range.end().line());
@@ -38,28 +41,27 @@ class ExecutionErrorsEndToEndTest {
     void missingSemicolonReportsTheIntrudingTokenAndLaterStatementsStillRun() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "println(\"antes\");",
-            "let x: number = 1",
-            "println(\"tragada\");",
-            "println(\"fin\");");
+        List<Failure<?>> failures =
+                runProgram(
+                        printer,
+                        PRINTLN_ANTES,
+                        "let x: number = 1",
+                        "println(\"tragada\");",
+                        "println(\"fin\");");
 
         assertEquals(1, failures.size());
         Failure<?> failure = failures.getFirst();
         assertEquals("Expected ';' at the end of the declaration", failure.message());
         assertRange(failure.range(), 3, 1, 3, 7);
-        assertEquals(List.of("antes", "fin"), printer.lines);
+        assertEquals(List.of(ANTES, "fin"), printer.lines);
     }
 
     @Test
     void missingColonInDeclarationReportsTheTokenFoundInItsPlaceAndTheNextStatementRuns() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "let x number = 1;",
-            "println(\"despues\");");
+        List<Failure<?>> failures =
+                runProgram(printer, "let x number = 1;", "println(\"despues\");");
 
         assertEquals(1, failures.size());
         Failure<?> failure = failures.getFirst();
@@ -72,10 +74,8 @@ class ExecutionErrorsEndToEndTest {
     void unexpectedTokenInOperandPositionReportsItsExactRangeAndTheNextStatementRuns() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "let a: number = *;",
-            "println(\"sigue\");");
+        List<Failure<?>> failures =
+                runProgram(printer, "let a: number = *;", "println(\"sigue\");");
 
         assertEquals(1, failures.size());
         Failure<?> failure = failures.getFirst();
@@ -101,11 +101,12 @@ class ExecutionErrorsEndToEndTest {
     void subtractingTwoStringsPointsToTheOffendingExpression() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "let a: string = \"x\";",
-            "let b: string = \"y\";",
-            "println(a - b);");
+        List<Failure<?>> failures =
+                runProgram(
+                        printer,
+                        "let a: string = \"x\";",
+                        "let b: string = \"y\";",
+                        "println(a - b);");
 
         assertEquals(1, failures.size());
         Failure<?> failure = failures.getFirst();
@@ -118,49 +119,40 @@ class ExecutionErrorsEndToEndTest {
     void unknownCharacterInTheMiddleOfTheSourceDoesNotStopTheRestOfTheProgram() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "println(\"antes\");",
-            "@;",
-            "println(\"despues\");");
+        List<Failure<?>> failures =
+                runProgram(printer, PRINTLN_ANTES, "@;", "println(\"despues\");");
 
         assertEquals(1, failures.size());
         Failure<?> failure = failures.getFirst();
         assertEquals("Unrecognized statement", failure.message());
         assertRange(failure.range(), 2, 1, 2, 1);
-        assertEquals(List.of("antes", "despues"), printer.lines);
+        assertEquals(List.of(ANTES, "despues"), printer.lines);
     }
 
     @Test
     void printlnWithSyntaxErrorReachesTheConsumerWithoutPrintingAnything() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "println(\"antes\");",
-            "println(\"rota\";",
-            "println(\"despues\");");
+        List<Failure<?>> failures =
+                runProgram(printer, PRINTLN_ANTES, "println(\"rota\";", "println(\"despues\");");
 
         assertEquals(1, failures.size());
         Failure<?> failure = failures.getFirst();
         assertEquals("Expected ')' after the println argument", failure.message());
         assertRange(failure.range(), 2, 15, 2, 15);
-        assertEquals(List.of("antes", "despues"), printer.lines);
+        assertEquals(List.of(ANTES, "despues"), printer.lines);
     }
 
     @Test
     void missingSemicolonAtTheEndOfTheStreamReportsTheLastToken() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "println(\"antes\");",
-            "let x: number = 42");
+        List<Failure<?>> failures = runProgram(printer, PRINTLN_ANTES, "let x: number = 42");
 
         assertEquals(1, failures.size());
         Failure<?> failure = failures.getFirst();
         assertEquals("Expected ';' before the end of the stream", failure.message());
         assertRange(failure.range(), 2, 17, 2, 18);
-        assertEquals(List.of("antes"), printer.lines);
+        assertEquals(List.of(ANTES), printer.lines);
     }
 }

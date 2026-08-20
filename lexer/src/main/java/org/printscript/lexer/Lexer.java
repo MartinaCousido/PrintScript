@@ -10,7 +10,12 @@ import org.printscript.common.Range;
 import org.printscript.lexer.constructors.TokenConstructor;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-//pieza principal del módulo.
+
+// pieza principal del módulo.
+// null es el centinela de "todavía no se calculó" para currentLine y pending,
+// campos mutables de un hot path; envolverlos en Optional agregaría boxing en
+// cada token sin cambiar la lógica.
+@SuppressWarnings("PMD.NullAssignment")
 public final class Lexer implements PrintScriptIterator<Token> {
 
     private final Iterator<String> lines;
@@ -47,7 +52,10 @@ public final class Lexer implements PrintScriptIterator<Token> {
         return token;
     }
 
-    //lee el código linea por linea y va entregando tokens de a uno
+    // lee el código linea por linea y va entregando tokens de a uno
+    // el return final es la salida natural de un bucle de escaneo sin límite fijo:
+    // termina apenas encuentra un token, no hay forma más simple de expresarlo.
+    @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
     private Token advance() {
         while (true) {
             if (currentLine == null || columnIndex >= currentLine.length()) {
@@ -95,7 +103,7 @@ public final class Lexer implements PrintScriptIterator<Token> {
         return token.range().end().column() - token.range().start().column() + 1;
     }
 
-    //si ningun reconocedor entiende un caracter, saca un token UNKNOWN y sigue
+    // si ningun reconocedor entiende un caracter, saca un token UNKNOWN y sigue
     private Token unknownAtCurrentColumn() {
         Position start = new Position(lineNumber, columnIndex + 1);
         String lexeme = String.valueOf(currentLine.charAt(columnIndex));

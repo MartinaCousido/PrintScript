@@ -19,18 +19,19 @@ class StatementTest {
         return switch (statement) {
             case VariableDeclaration declaration -> "declaration:" + declaration.name();
             case AssignmentStatement assignment -> "assignment:" + assignment.name();
-            case PrintlnStatement println -> "println";
+            case PrintlnStatement _ -> "println";
         };
     }
 
     @Test
     void declarationWithInitializerCarriesTheExpression() {
         Expression initializer = new NumberLiteral(8.0, rangeAt(14, 14));
-        VariableDeclaration declaration = new VariableDeclaration(
-            "x",
-            new TypeName("number", rangeAt(8, 13)),
-            Optional.of(initializer),
-            rangeAt(1, 14));
+        VariableDeclaration declaration =
+                new VariableDeclaration(
+                        "x",
+                        new TypeName("number", rangeAt(8, 13)),
+                        Optional.of(initializer),
+                        rangeAt(1, 14));
 
         assertTrue(declaration.initializer().isPresent());
         assertEquals(initializer, declaration.initializer().get());
@@ -42,11 +43,12 @@ class StatementTest {
 
     @Test
     void declarationWithoutInitializerHasAnEmptyOptional() {
-        VariableDeclaration declaration = new VariableDeclaration(
-            "y",
-            new TypeName("string", rangeAt(8, 13)),
-            Optional.empty(),
-            rangeAt(1, 13));
+        VariableDeclaration declaration =
+                new VariableDeclaration(
+                        "y",
+                        new TypeName("string", rangeAt(8, 13)),
+                        Optional.empty(),
+                        rangeAt(1, 13));
 
         assertFalse(declaration.initializer().isPresent());
         assertEquals(Optional.empty(), declaration.initializer());

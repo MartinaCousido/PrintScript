@@ -42,7 +42,7 @@ class LexerTest {
             return line;
         }
 
-        private int requested() {
+        private int requestedCount() {
             return requested;
         }
     }
@@ -72,15 +72,15 @@ class LexerTest {
         RecordingLines lines = new RecordingLines(List.of("a b", "c"));
         Lexer lexer = new Lexer(lines, List.of());
 
-        assertEquals(0, lines.requested());
+        assertEquals(0, lines.requestedCount());
 
         lexer.getNext();
-        assertEquals(1, lines.requested());
+        assertEquals(1, lines.requestedCount());
 
         lexer.getNext();
-        assertEquals(1, lines.requested());
+        assertEquals(1, lines.requestedCount());
 
         assertTrue(lexer.hasNext());
-        assertEquals(2, lines.requested());
+        assertEquals(2, lines.requestedCount());
     }
 }

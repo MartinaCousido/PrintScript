@@ -13,6 +13,8 @@ import org.printscript.token.TokenType;
 
 class KeywordTokenConstructorTest {
 
+    private static final String LET = "let";
+
     private static Token buildAt(Map<String, TokenType> keywords, String rest, Position start) {
         Optional<Token> token = new KeywordTokenConstructor(keywords).tryBuild(rest, start);
         return token.orElseThrow();
@@ -20,16 +22,16 @@ class KeywordTokenConstructorTest {
 
     @Test
     void aWordOfTheTableIsClassifiedWithItsMappedType() {
-        Token token = buildAt(Map.of("let", TokenType.KEYWORD), "let x", new Position(1, 1));
+        Token token = buildAt(Map.of(LET, TokenType.KEYWORD), "let x", new Position(1, 1));
 
         assertEquals(TokenType.KEYWORD, token.type());
-        assertEquals("let", token.value());
+        assertEquals(LET, token.value());
         assertEquals(new Range(new Position(1, 1), new Position(1, 3)), token.range());
     }
 
     @Test
     void aWordThatMerelyStartsWithAKeywordIsAnIdentifier() {
-        Token token = buildAt(Map.of("let", TokenType.KEYWORD), "letra", new Position(1, 1));
+        Token token = buildAt(Map.of(LET, TokenType.KEYWORD), "letra", new Position(1, 1));
 
         assertEquals(TokenType.IDENTIFIER, token.type());
         assertEquals("letra", token.value());
@@ -38,7 +40,7 @@ class KeywordTokenConstructorTest {
 
     @Test
     void identifiersAcceptDigitsAndUnderscores() {
-        Token token = buildAt(Map.of("let", TokenType.KEYWORD), "_my_var2 = 1", new Position(1, 1));
+        Token token = buildAt(Map.of(LET, TokenType.KEYWORD), "_my_var2 = 1", new Position(1, 1));
 
         assertEquals(TokenType.IDENTIFIER, token.type());
         assertEquals("_my_var2", token.value());
@@ -49,8 +51,12 @@ class KeywordTokenConstructorTest {
     void theTableArrivesByParameterAndChangesTheClassification() {
         Position start = new Position(1, 1);
 
-        assertEquals(TokenType.KEYWORD, buildAt(Map.of("println", TokenType.KEYWORD), "println", start).type());
-        assertEquals(TokenType.IDENTIFIER, buildAt(Map.of("let", TokenType.KEYWORD), "println", start).type());
+        assertEquals(
+                TokenType.KEYWORD,
+                buildAt(Map.of("println", TokenType.KEYWORD), "println", start).type());
+        assertEquals(
+                TokenType.IDENTIFIER,
+                buildAt(Map.of(LET, TokenType.KEYWORD), "println", start).type());
     }
 
     @Test

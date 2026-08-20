@@ -24,6 +24,8 @@ import org.printscript.token.TokenType;
 
 class PrintlnParserTest {
 
+    private static final String PRINTLN = "println";
+
     private final PrintlnParser parser = new PrintlnParser(new ExpressionBuilder());
 
     private static Range range(int startColumn, int endColumn) {
@@ -44,81 +46,84 @@ class PrintlnParserTest {
 
     @Test
     void matchesOnlyStatementsThatStartWithPrintln() {
-        assertTrue(parser.matches(bufferOf(token(TokenType.KEYWORD, "println", 1))));
+        assertTrue(parser.matches(bufferOf(token(TokenType.KEYWORD, PRINTLN, 1))));
         assertFalse(parser.matches(bufferOf(token(TokenType.KEYWORD, "let", 1))));
-        assertFalse(parser.matches(bufferOf(token(TokenType.IDENTIFIER, "println", 1))));
+        assertFalse(parser.matches(bufferOf(token(TokenType.IDENTIFIER, PRINTLN, 1))));
         assertFalse(parser.matches(bufferOf()));
     }
 
     @Test
     void parsesPrintlnWithAStringLiteral() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "println", 1),
-            token(TokenType.PUNCTUATION, "(", 8),
-            string("Hello", 9),
-            token(TokenType.PUNCTUATION, ")", 16),
-            token(TokenType.PUNCTUATION, ";", 17));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, PRINTLN, 1),
+                        token(TokenType.PUNCTUATION, "(", 8),
+                        string("Hello", 9),
+                        token(TokenType.PUNCTUATION, ")", 16),
+                        token(TokenType.PUNCTUATION, ";", 17));
 
         Result<Statement> result = parser.parse(tokens);
 
-        Statement expected = new PrintlnStatement(
-            new StringLiteral("Hello", range(9, 15)),
-            range(1, 17));
+        Statement expected =
+                new PrintlnStatement(new StringLiteral("Hello", range(9, 15)), range(1, 17));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void parsesPrintlnWithAnIdentifier() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "println", 1),
-            token(TokenType.PUNCTUATION, "(", 8),
-            token(TokenType.IDENTIFIER, "name", 9),
-            token(TokenType.PUNCTUATION, ")", 13),
-            token(TokenType.PUNCTUATION, ";", 14));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, PRINTLN, 1),
+                        token(TokenType.PUNCTUATION, "(", 8),
+                        token(TokenType.IDENTIFIER, "name", 9),
+                        token(TokenType.PUNCTUATION, ")", 13),
+                        token(TokenType.PUNCTUATION, ";", 14));
 
         Result<Statement> result = parser.parse(tokens);
 
-        Statement expected = new PrintlnStatement(
-            new Identifier("name", range(9, 12)),
-            range(1, 14));
+        Statement expected =
+                new PrintlnStatement(new Identifier("name", range(9, 12)), range(1, 14));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void parsesPrintlnWithACompoundExpression() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "println", 1),
-            token(TokenType.PUNCTUATION, "(", 8),
-            token(TokenType.IDENTIFIER, "a", 9),
-            token(TokenType.OPERATOR, "+", 11),
-            token(TokenType.NUMBER, "2", 13),
-            token(TokenType.OPERATOR, "*", 15),
-            token(TokenType.NUMBER, "3", 17),
-            token(TokenType.PUNCTUATION, ")", 18),
-            token(TokenType.PUNCTUATION, ";", 19));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, PRINTLN, 1),
+                        token(TokenType.PUNCTUATION, "(", 8),
+                        token(TokenType.IDENTIFIER, "a", 9),
+                        token(TokenType.OPERATOR, "+", 11),
+                        token(TokenType.NUMBER, "2", 13),
+                        token(TokenType.OPERATOR, "*", 15),
+                        token(TokenType.NUMBER, "3", 17),
+                        token(TokenType.PUNCTUATION, ")", 18),
+                        token(TokenType.PUNCTUATION, ";", 19));
 
         Result<Statement> result = parser.parse(tokens);
 
-        Statement expected = new PrintlnStatement(
-            new BinaryExpression(
-                new Identifier("a", range(9, 9)),
-                Operator.PLUS,
-                new BinaryExpression(
-                    new NumberLiteral(2.0, range(13, 13)),
-                    Operator.MULTIPLY,
-                    new NumberLiteral(3.0, range(17, 17)),
-                    range(13, 17)),
-                range(9, 17)),
-            range(1, 19));
+        Statement expected =
+                new PrintlnStatement(
+                        new BinaryExpression(
+                                new Identifier("a", range(9, 9)),
+                                Operator.PLUS,
+                                new BinaryExpression(
+                                        new NumberLiteral(2.0, range(13, 13)),
+                                        Operator.MULTIPLY,
+                                        new NumberLiteral(3.0, range(17, 17)),
+                                        range(13, 17)),
+                                range(9, 17)),
+                        range(1, 19));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void missingOpenParenthesisFailsAtTheOffendingToken() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "println", 1),
-            string("x", 9),
-            token(TokenType.PUNCTUATION, ";", 12));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, PRINTLN, 1),
+                        string("x", 9),
+                        token(TokenType.PUNCTUATION, ";", 12));
 
         Result<Statement> result = parser.parse(tokens);
 
@@ -128,11 +133,12 @@ class PrintlnParserTest {
 
     @Test
     void missingCloseParenthesisFailsAtTheOffendingToken() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "println", 1),
-            token(TokenType.PUNCTUATION, "(", 8),
-            token(TokenType.IDENTIFIER, "x", 9),
-            token(TokenType.PUNCTUATION, ";", 10));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, PRINTLN, 1),
+                        token(TokenType.PUNCTUATION, "(", 8),
+                        token(TokenType.IDENTIFIER, "x", 9),
+                        token(TokenType.PUNCTUATION, ";", 10));
 
         Result<Statement> result = parser.parse(tokens);
 
@@ -142,11 +148,12 @@ class PrintlnParserTest {
 
     @Test
     void missingSemicolonFailsAfterTheCloseParenthesis() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "println", 1),
-            token(TokenType.PUNCTUATION, "(", 8),
-            token(TokenType.IDENTIFIER, "x", 9),
-            token(TokenType.PUNCTUATION, ")", 10));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, PRINTLN, 1),
+                        token(TokenType.PUNCTUATION, "(", 8),
+                        token(TokenType.IDENTIFIER, "x", 9),
+                        token(TokenType.PUNCTUATION, ")", 10));
 
         Result<Statement> result = parser.parse(tokens);
 
@@ -156,11 +163,12 @@ class PrintlnParserTest {
 
     @Test
     void emptyArgumentFailsAtTheCloseParenthesis() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "println", 1),
-            token(TokenType.PUNCTUATION, "(", 8),
-            token(TokenType.PUNCTUATION, ")", 9),
-            token(TokenType.PUNCTUATION, ";", 10));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, PRINTLN, 1),
+                        token(TokenType.PUNCTUATION, "(", 8),
+                        token(TokenType.PUNCTUATION, ")", 9),
+                        token(TokenType.PUNCTUATION, ";", 10));
 
         Result<Statement> result = parser.parse(tokens);
 

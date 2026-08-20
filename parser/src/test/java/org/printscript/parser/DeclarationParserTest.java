@@ -22,6 +22,9 @@ import org.printscript.token.TokenType;
 
 class DeclarationParserTest {
 
+    private static final String LET = "let";
+    private static final String NUMBER = "number";
+
     private final DeclarationParser parser = new DeclarationParser(new ExpressionBuilder());
 
     private static Range range(int startColumn, int endColumn) {
@@ -38,75 +41,79 @@ class DeclarationParserTest {
 
     @Test
     void matchesOnlyStatementsThatStartWithLet() {
-        assertTrue(parser.matches(bufferOf(token(TokenType.KEYWORD, "let", 1))));
+        assertTrue(parser.matches(bufferOf(token(TokenType.KEYWORD, LET, 1))));
         assertFalse(parser.matches(bufferOf(token(TokenType.KEYWORD, "println", 1))));
-        assertFalse(parser.matches(bufferOf(token(TokenType.IDENTIFIER, "let", 1))));
+        assertFalse(parser.matches(bufferOf(token(TokenType.IDENTIFIER, LET, 1))));
         assertFalse(parser.matches(bufferOf()));
     }
 
     @Test
     void parsesADeclarationWithInitializer() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "let", 1),
-            token(TokenType.IDENTIFIER, "x", 5),
-            token(TokenType.PUNCTUATION, ":", 6),
-            token(TokenType.KEYWORD, "number", 8),
-            token(TokenType.OPERATOR, "=", 15),
-            token(TokenType.NUMBER, "5", 17),
-            token(TokenType.PUNCTUATION, ";", 18));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, LET, 1),
+                        token(TokenType.IDENTIFIER, "x", 5),
+                        token(TokenType.PUNCTUATION, ":", 6),
+                        token(TokenType.KEYWORD, NUMBER, 8),
+                        token(TokenType.OPERATOR, "=", 15),
+                        token(TokenType.NUMBER, "5", 17),
+                        token(TokenType.PUNCTUATION, ";", 18));
 
         Result<Statement> result = parser.parse(tokens);
 
-        Statement expected = new VariableDeclaration(
-            "x",
-            new TypeName("number", range(8, 13)),
-            Optional.of(new NumberLiteral(5.0, range(17, 17))),
-            range(1, 18));
+        Statement expected =
+                new VariableDeclaration(
+                        "x",
+                        new TypeName(NUMBER, range(8, 13)),
+                        Optional.of(new NumberLiteral(5.0, range(17, 17))),
+                        range(1, 18));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void parsesADeclarationWithoutInitializer() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "let", 1),
-            token(TokenType.IDENTIFIER, "x", 5),
-            token(TokenType.PUNCTUATION, ":", 6),
-            token(TokenType.KEYWORD, "number", 8),
-            token(TokenType.PUNCTUATION, ";", 15));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, LET, 1),
+                        token(TokenType.IDENTIFIER, "x", 5),
+                        token(TokenType.PUNCTUATION, ":", 6),
+                        token(TokenType.KEYWORD, NUMBER, 8),
+                        token(TokenType.PUNCTUATION, ";", 15));
 
         Result<Statement> result = parser.parse(tokens);
 
-        Statement expected = new VariableDeclaration(
-            "x",
-            new TypeName("number", range(8, 13)),
-            Optional.empty(),
-            range(1, 15));
+        Statement expected =
+                new VariableDeclaration(
+                        "x", new TypeName(NUMBER, range(8, 13)), Optional.empty(), range(1, 15));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void keepsTheTypeAnnotationAsWritten() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "let", 1),
-            token(TokenType.IDENTIFIER, "x", 5),
-            token(TokenType.PUNCTUATION, ":", 6),
-            token(TokenType.IDENTIFIER, "Foo", 8),
-            token(TokenType.PUNCTUATION, ";", 12));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, LET, 1),
+                        token(TokenType.IDENTIFIER, "x", 5),
+                        token(TokenType.PUNCTUATION, ":", 6),
+                        token(TokenType.IDENTIFIER, "Foo", 8),
+                        token(TokenType.PUNCTUATION, ";", 12));
 
         Result<Statement> result = parser.parse(tokens);
 
         Success<Statement> success = assertInstanceOf(Success.class, result);
-        VariableDeclaration declaration = assertInstanceOf(VariableDeclaration.class, success.value());
+        VariableDeclaration declaration =
+                assertInstanceOf(VariableDeclaration.class, success.value());
         assertEquals(new TypeName("Foo", range(8, 10)), declaration.type());
     }
 
     @Test
     void missingIdentifierFailsAtTheOffendingToken() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "let", 1),
-            token(TokenType.PUNCTUATION, ":", 5),
-            token(TokenType.KEYWORD, "number", 7),
-            token(TokenType.PUNCTUATION, ";", 14));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, LET, 1),
+                        token(TokenType.PUNCTUATION, ":", 5),
+                        token(TokenType.KEYWORD, NUMBER, 7),
+                        token(TokenType.PUNCTUATION, ";", 14));
 
         Result<Statement> result = parser.parse(tokens);
 
@@ -116,12 +123,13 @@ class DeclarationParserTest {
 
     @Test
     void missingColonFailsAtTheOffendingToken() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "let", 1),
-            token(TokenType.IDENTIFIER, "x", 5),
-            token(TokenType.OPERATOR, "=", 7),
-            token(TokenType.NUMBER, "5", 9),
-            token(TokenType.PUNCTUATION, ";", 10));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, LET, 1),
+                        token(TokenType.IDENTIFIER, "x", 5),
+                        token(TokenType.OPERATOR, "=", 7),
+                        token(TokenType.NUMBER, "5", 9),
+                        token(TokenType.PUNCTUATION, ";", 10));
 
         Result<Statement> result = parser.parse(tokens);
 
@@ -131,13 +139,14 @@ class DeclarationParserTest {
 
     @Test
     void missingSemicolonFailsAfterTheLastTokenOfTheStatement() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "let", 1),
-            token(TokenType.IDENTIFIER, "x", 5),
-            token(TokenType.PUNCTUATION, ":", 6),
-            token(TokenType.KEYWORD, "number", 8),
-            token(TokenType.OPERATOR, "=", 15),
-            token(TokenType.NUMBER, "5", 17));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, LET, 1),
+                        token(TokenType.IDENTIFIER, "x", 5),
+                        token(TokenType.PUNCTUATION, ":", 6),
+                        token(TokenType.KEYWORD, NUMBER, 8),
+                        token(TokenType.OPERATOR, "=", 15),
+                        token(TokenType.NUMBER, "5", 17));
 
         Result<Statement> result = parser.parse(tokens);
 
@@ -147,13 +156,14 @@ class DeclarationParserTest {
 
     @Test
     void emptyInitializerAfterTheEqualsSignFails() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.KEYWORD, "let", 1),
-            token(TokenType.IDENTIFIER, "x", 5),
-            token(TokenType.PUNCTUATION, ":", 6),
-            token(TokenType.KEYWORD, "number", 8),
-            token(TokenType.OPERATOR, "=", 15),
-            token(TokenType.PUNCTUATION, ";", 17));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.KEYWORD, LET, 1),
+                        token(TokenType.IDENTIFIER, "x", 5),
+                        token(TokenType.PUNCTUATION, ":", 6),
+                        token(TokenType.KEYWORD, NUMBER, 8),
+                        token(TokenType.OPERATOR, "=", 15),
+                        token(TokenType.PUNCTUATION, ";", 17));
 
         Result<Statement> result = parser.parse(tokens);
 

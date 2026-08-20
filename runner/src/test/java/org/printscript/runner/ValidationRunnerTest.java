@@ -21,15 +21,16 @@ class ValidationRunnerTest {
         return new ValidationRunner().validate(List.of(lines).iterator(), VERSION);
     }
 
+    // originalOut es un alias de System.out para restaurarlo en el finally, no un
+    // recurso propio que haya que cerrar.
     @Test
+    @SuppressWarnings("PMD.CloseResource")
     void validProgramWithPrintlnProducesNoFailuresAndNoOutput() {
         PrintStream originalOut = System.out;
         ByteArrayOutputStream captured = new ByteArrayOutputStream();
         System.setOut(new PrintStream(captured, true, StandardCharsets.UTF_8));
         try {
-            List<Failure<?>> failures = validateProgram(
-                "let x: number = 1 + 2;",
-                "println(x);");
+            List<Failure<?>> failures = validateProgram("let x: number = 1 + 2;", "println(x);");
 
             assertEquals(List.of(), failures);
             assertEquals("", captured.toString(StandardCharsets.UTF_8));
@@ -57,9 +58,7 @@ class ValidationRunnerTest {
 
     @Test
     void reportsUnrecognizedStatementWithFullRangeOnItsLine() {
-        List<Failure<?>> failures = validateProgram(
-            "let x: number = 1;",
-            "42;");
+        List<Failure<?>> failures = validateProgram("let x: number = 1;", "42;");
 
         assertEquals(1, failures.size());
         Failure<?> failure = failures.getFirst();
@@ -70,10 +69,7 @@ class ValidationRunnerTest {
 
     @Test
     void collectsEverySyntaxErrorOfTheProgram() {
-        List<Failure<?>> failures = validateProgram(
-            "42;",
-            "println(\"ok\");",
-            "7;");
+        List<Failure<?>> failures = validateProgram("42;", "println(\"ok\");", "7;");
 
         assertEquals(2, failures.size());
     }
@@ -83,9 +79,10 @@ class ValidationRunnerTest {
         ValidationRunner runner = new ValidationRunner();
         List<String> lines = List.of("println(1);");
 
-        IllegalArgumentException error = assertThrows(
-            IllegalArgumentException.class,
-            () -> runner.validate(lines.iterator(), "9.9"));
+        IllegalArgumentException error =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> runner.validate(lines.iterator(), "9.9"));
 
         assertTrue(error.getMessage().contains("9.9"));
     }

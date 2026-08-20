@@ -12,6 +12,7 @@ import org.printscript.runtime.OutputPrinter;
 class AssignmentAndDeclarationEndToEndTest {
 
     private static final String VERSION = "1.0";
+    private static final String PRINTLN_X = "println(x);";
 
     private static final class InMemoryPrinter implements OutputPrinter {
 
@@ -27,7 +28,8 @@ class AssignmentAndDeclarationEndToEndTest {
         return new ExecutionRunner().run(List.of(lines).iterator(), VERSION, printer);
     }
 
-    private static void assertRange(Range range, int startLine, int startColumn, int endLine, int endColumn) {
+    private static void assertRange(
+            Range range, int startLine, int startColumn, int endLine, int endColumn) {
         assertEquals(startLine, range.start().line());
         assertEquals(startColumn, range.start().column());
         assertEquals(endLine, range.end().line());
@@ -38,11 +40,7 @@ class AssignmentAndDeclarationEndToEndTest {
     void declaringAssigningAndPrintingShowsTheNewValue() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "let x: number = 1;",
-            "x = 42;",
-            "println(x);");
+        List<Failure<?>> failures = runProgram(printer, "let x: number = 1;", "x = 42;", PRINTLN_X);
 
         assertEquals(List.of("42"), printer.lines);
         assertEquals(List.of(), failures);
@@ -52,11 +50,8 @@ class AssignmentAndDeclarationEndToEndTest {
     void variableKeepsOperatingAsItsDeclaredTypeAfterAssignment() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "let x: number = 10;",
-            "x = 7;",
-            "println(x - 2);");
+        List<Failure<?>> failures =
+                runProgram(printer, "let x: number = 10;", "x = 7;", "println(x - 2);");
 
         assertEquals(List.of("5"), printer.lines);
         assertEquals(List.of(), failures);
@@ -66,10 +61,7 @@ class AssignmentAndDeclarationEndToEndTest {
     void assigningToANeverDeclaredVariableFailsWithTheStatementRangeAndTheName() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "y = 1;",
-            "println(\"sigue\");");
+        List<Failure<?>> failures = runProgram(printer, "y = 1;", "println(\"sigue\");");
 
         assertEquals(1, failures.size());
         Failure<?> failure = failures.getFirst();
@@ -82,11 +74,7 @@ class AssignmentAndDeclarationEndToEndTest {
     void declarationWithoutInitializerThenAssignmentAndPrintlnRunsEndToEnd() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "let x: number;",
-            "x = 5;",
-            "println(x);");
+        List<Failure<?>> failures = runProgram(printer, "let x: number;", "x = 5;", PRINTLN_X);
 
         assertEquals(List.of("5"), printer.lines);
         assertEquals(List.of(), failures);
@@ -96,11 +84,8 @@ class AssignmentAndDeclarationEndToEndTest {
     void redeclaringAVariableFailsWithTheRangeOfTheSecondDeclaration() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "let x: number = 1;",
-            "let x: number = 2;",
-            "println(x);");
+        List<Failure<?>> failures =
+                runProgram(printer, "let x: number = 1;", "let x: number = 2;", PRINTLN_X);
 
         assertEquals(1, failures.size());
         Failure<?> failure = failures.getFirst();
@@ -113,10 +98,7 @@ class AssignmentAndDeclarationEndToEndTest {
     void printingAnUninitializedVariableCurrentlyPrintsNull() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "let x: number;",
-            "println(x);");
+        List<Failure<?>> failures = runProgram(printer, "let x: number;", PRINTLN_X);
 
         assertEquals(List.of("null"), printer.lines);
         assertEquals(List.of(), failures);

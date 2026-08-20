@@ -24,6 +24,8 @@ import org.printscript.token.TokenType;
 
 class ParserTest {
 
+    private static final String GREET = "greet";
+
     private static final class FakeStatementParser implements StatementParser {
 
         private final String keyword;
@@ -38,8 +40,8 @@ class ParserTest {
         public boolean matches(TokenBuffer tokens) {
             Optional<Token> first = tokens.lookahead(0);
             return first.isPresent()
-                && first.get().type() == TokenType.KEYWORD
-                && keyword.equals(first.get().value());
+                    && first.get().type() == TokenType.KEYWORD
+                    && keyword.equals(first.get().value());
         }
 
         @Override
@@ -50,7 +52,9 @@ class ParserTest {
                 tokens.commit(1);
             }
             receivedStatements.add(received);
-            Range range = new Range(received.getFirst().range().start(), received.getLast().range().end());
+            Range range =
+                    new Range(
+                            received.getFirst().range().start(), received.getLast().range().end());
             return new Success<>(new PrintlnStatement(new Identifier(keyword, range), range));
         }
     }
@@ -77,16 +81,20 @@ class ParserTest {
     }
 
     private static Parser parserOf(List<StatementParser> statementParsers, Token... tokens) {
-        return new Parser(new TokenBuffer(new ListTokenIterator(List.of(tokens))), statementParsers);
+        return new Parser(
+                new TokenBuffer(new ListTokenIterator(List.of(tokens))), statementParsers);
     }
 
     @Test
     void dispatchesToTheStatementParserThatRecognizesTheStatement() {
-        FakeStatementParser greet = new FakeStatementParser("greet");
+        FakeStatementParser greet = new FakeStatementParser(GREET);
         FakeStatementParser farewell = new FakeStatementParser("farewell");
-        Parser parser = parserOf(
-            List.of(greet, farewell),
-            keyword("farewell", 1), identifier("x", 2), semicolon(3));
+        Parser parser =
+                parserOf(
+                        List.of(greet, farewell),
+                        keyword("farewell", 1),
+                        identifier("x", 2),
+                        semicolon(3));
 
         Result<Statement> result = parser.getNext();
 
@@ -98,28 +106,36 @@ class ParserTest {
 
     @Test
     void eachStatementParserReceivesOnlyTheTokensOfItsStatement() {
-        FakeStatementParser greet = new FakeStatementParser("greet");
-        Parser parser = parserOf(
-            List.of(greet),
-            keyword("greet", 1), identifier("a", 2), semicolon(3),
-            keyword("greet", 4), identifier("b", 5), semicolon(6));
+        FakeStatementParser greet = new FakeStatementParser(GREET);
+        Parser parser =
+                parserOf(
+                        List.of(greet),
+                        keyword(GREET, 1),
+                        identifier("a", 2),
+                        semicolon(3),
+                        keyword(GREET, 4),
+                        identifier("b", 5),
+                        semicolon(6));
 
         assertInstanceOf(Success.class, parser.getNext());
         assertInstanceOf(Success.class, parser.getNext());
         assertFalse(parser.hasNext());
 
         assertEquals(
-            List.of(
-                List.of(keyword("greet", 1), identifier("a", 2), semicolon(3)),
-                List.of(keyword("greet", 4), identifier("b", 5), semicolon(6))),
-            greet.receivedStatements);
+                List.of(
+                        List.of(keyword(GREET, 1), identifier("a", 2), semicolon(3)),
+                        List.of(keyword(GREET, 4), identifier("b", 5), semicolon(6))),
+                greet.receivedStatements);
     }
 
     @Test
     void unrecognizedStatementProducesFailureWithTheRangeOfTheFirstToken() {
-        Parser parser = parserOf(
-            List.of(new FakeStatementParser("greet")),
-            keyword("unknown", 1), identifier("x", 2), semicolon(3));
+        Parser parser =
+                parserOf(
+                        List.of(new FakeStatementParser(GREET)),
+                        keyword("unknown", 1),
+                        identifier("x", 2),
+                        semicolon(3));
 
         Result<Statement> result = parser.getNext();
 
@@ -130,24 +146,30 @@ class ParserTest {
 
     @Test
     void recoversAtTheStatementFollowingAnUnrecognizedOne() {
-        FakeStatementParser greet = new FakeStatementParser("greet");
-        Parser parser = parserOf(
-            List.of(greet),
-            keyword("unknown", 1), identifier("x", 2), semicolon(3),
-            keyword("greet", 4), semicolon(5));
+        FakeStatementParser greet = new FakeStatementParser(GREET);
+        Parser parser =
+                parserOf(
+                        List.of(greet),
+                        keyword("unknown", 1),
+                        identifier("x", 2),
+                        semicolon(3),
+                        keyword(GREET, 4),
+                        semicolon(5));
 
         assertInstanceOf(Failure.class, parser.getNext());
         assertTrue(parser.hasNext());
         assertInstanceOf(Success.class, parser.getNext());
-        assertEquals(List.of(List.of(keyword("greet", 4), semicolon(5))), greet.receivedStatements);
+        assertEquals(List.of(List.of(keyword(GREET, 4), semicolon(5))), greet.receivedStatements);
         assertFalse(parser.hasNext());
     }
 
     @Test
     void missingSemicolonAtTheEndProducesFailureWithTheRangeOfTheLastToken() {
-        Parser parser = parserOf(
-            List.of(new FakeStatementParser("greet")),
-            keyword("greet", 1), identifier("x", 2));
+        Parser parser =
+                parserOf(
+                        List.of(new FakeStatementParser(GREET)),
+                        keyword(GREET, 1),
+                        identifier("x", 2));
 
         Result<Statement> result = parser.getNext();
 
@@ -158,7 +180,7 @@ class ParserTest {
 
     @Test
     void getNextWithoutPendingStatementsThrows() {
-        Parser parser = parserOf(List.of(new FakeStatementParser("greet")));
+        Parser parser = parserOf(List.of(new FakeStatementParser(GREET)));
 
         assertFalse(parser.hasNext());
         assertThrows(NoSuchElementException.class, parser::getNext);

@@ -19,11 +19,12 @@ class TokenTest {
 
     @Test
     void keywordAndIdentifierShareTheSameTextButDifferInType() {
-        Token keyword = new Token(TokenType.KEYWORD, "let", anyRange());
-        Token identifier = new Token(TokenType.IDENTIFIER, "let", anyRange());
+        String text = "let";
+        Token keyword = new Token(TokenType.KEYWORD, text, anyRange());
+        Token identifier = new Token(TokenType.IDENTIFIER, text, anyRange());
 
-        assertEquals("let", keyword.value());
-        assertEquals("let", identifier.value());
+        assertEquals(text, keyword.value());
+        assertEquals(text, identifier.value());
 
         assertEquals(TokenType.KEYWORD, keyword.type());
         assertEquals(TokenType.IDENTIFIER, identifier.type());
@@ -32,21 +33,20 @@ class TokenTest {
 
     @Test
     void tokenTypeExposesGenericCategoriesNotOnePerWord() {
-        Set<String> categories = Arrays.stream(TokenType.values())
-            .map(Enum::name)
-            .collect(Collectors.toSet());
+        Set<String> categories =
+                Arrays.stream(TokenType.values()).map(Enum::name).collect(Collectors.toSet());
 
         assertEquals(
-            Set.of(
-                "KEYWORD",
-                "IDENTIFIER",
-                "NUMBER",
-                "STRING",
-                "OPERATOR",
-                "PUNCTUATION",
-                "BOOLEAN",
-                "UNKNOWN"),
-            categories);
+                Set.of(
+                        "KEYWORD",
+                        "IDENTIFIER",
+                        "NUMBER",
+                        "STRING",
+                        "OPERATOR",
+                        "PUNCTUATION",
+                        "BOOLEAN",
+                        "UNKNOWN"),
+                categories);
 
         assertFalse(categories.contains("LET"));
         assertFalse(categories.contains("PLUS"));
