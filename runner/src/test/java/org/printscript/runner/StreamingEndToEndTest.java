@@ -1,0 +1,126 @@
+package org.printscript.runner;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+import org.junit.jupiter.api.Test;
+import org.printscript.common.Result;
+import org.printscript.interpreter.Interpreter;
+import org.printscript.interpreter.providers.InterpreterVersionProvider;
+import org.printscript.lexer.Lexer;
+import org.printscript.lexer.providers.LexerVersionProvider;
+import org.printscript.parser.Parser;
+import org.printscript.parser.TokenBuffer;
+import org.printscript.parser.providers.ParserVersionProvider;
+import org.printscript.runtime.OutputPrinter;
+
+class StreamingEndToEndTest {
+
+    private static final String VERSION = "1.0";
+
+    private static final class CountingIterator implements Iterator<String> {
+
+        private final List<String> lines;
+        private int index;
+        private int consumed;
+
+        private CountingIterator(List<String> lines) {
+            this.lines = lines;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return index < lines.size();
+        }
+
+        @Override
+        public String next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            consumed = consumed + 1;
+            String line = lines.get(index);
+            index = index + 1;
+            return line;
+        }
+    }
+
+    private static final class RecordingPrinter implements OutputPrinter {
+
+        private final CountingIterator source;
+        private final List<Integer> consumedAtEachPrint = new ArrayList<>();
+
+        private RecordingPrinter(CountingIterator source) {
+            this.source = source;
+        }
+
+        @Override
+        public void print(String line) {
+            consumedAtEachPrint.add(source.consumed);
+        }
+    }
+
+    private static Interpreter buildChain(CountingIterator lines, RecordingPrinter printer) {
+        Lexer lexer = new LexerVersionProvider().providerFor(VERSION).provide(lines);
+        TokenBuffer buffer = new TokenBuffer(lexer);
+        Parser parser = new ParserVersionProvider().providerFor(VERSION).provide(buffer);
+        return new InterpreterVersionProvider().providerFor(VERSION).provide(parser, printer);
+    }
+
+    @Test
+    void buildingTheChainDoesNotConsumeAnyLine() {
+        CountingIterator lines = new CountingIterator(List.of("println(\"uno\");"));
+        RecordingPrinter printer = new RecordingPrinter(lines);
+
+        buildChain(lines, printer);
+
+        assertEquals(0, lines.consumed);
+    }
+
+    @Test
+    void linesAreRequestedOneAtATimeAsExecutionAdvances() {
+        List<String> program =
+                List.of(
+                        "println(\"uno\");",
+                        "println(\"dos\");",
+                        "println(\"tres\");",
+                        "println(\"cuatro\");");
+        CountingIterator lines = new CountingIterator(program);
+        RecordingPrinter printer = new RecordingPrinter(lines);
+        Interpreter interpreter = buildChain(lines, printer);
+
+        Result<?> first = interpreter.getNext();
+
+        assertTrue(lines.consumed < program.size(), "consumed=" + lines.consumed);
+        assertEquals(1, lines.consumed);
+        assertTrue(first != null);
+    }
+
+    @Test
+    void theFirstStatementsOutputIsProducedBeforeTheLastSourceLineIsRequested() {
+        List<String> program =
+                List.of(
+                        "println(\"primera\");",
+                        "println(\"segunda\");",
+                        "println(\"tercera\");",
+                        "println(\"ultima\");");
+        CountingIterator lines = new CountingIterator(program);
+        RecordingPrinter printer = new RecordingPrinter(lines);
+        Interpreter interpreter = buildChain(lines, printer);
+
+        while (interpreter.hasNext()) {
+            interpreter.getNext();
+        }
+
+        assertEquals(program.size(), printer.consumedAtEachPrint.size());
+        int consumedAtFirstPrint = printer.consumedAtEachPrint.getFirst();
+        assertTrue(
+                consumedAtFirstPrint < program.size(),
+                "consumedAtFirstPrint=" + consumedAtFirstPrint);
+        assertEquals(1, consumedAtFirstPrint);
+    }
+}
