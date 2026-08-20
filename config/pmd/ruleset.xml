@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="PrintScript"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+  <description>
+    Análisis estático de PrintScript. Checkstyle pregunta si el código está escrito
+    como acordamos; PMD pregunta si es una buena idea. Se arranca chico y de alta
+    señal: las categorías completas de errorprone y bestpractices, más solo dos
+    reglas puntuales de design.
+
+    Deliberadamente NO están:
+      - codestyle entera: se pisa con Spotless (google-java-format) y con
+        checkstyle.xml, que ya deciden forma. Sumar una tercera opinión sobre lo
+        mismo es ruido, no valor.
+      - documentation entera (incluye las reglas de Javadoc obligatorio): la
+        semántica de cada contrato la fijan los tests, mismo criterio que
+        checkstyle.xml.
+      - design entera: la mayoría de sus reglas (por ejemplo LawOfDemeter o
+        LoosePackageCoupling) opinan sobre arquitectura de un modo que no encaja
+        con el patrón Strategy + factory por versión que ya eligió el equipo.
+        Se toman solo dos reglas puntuales de esa categoría, que son las que de
+        verdad miden algo objetivo: complejidad.
+      - Cualquier regla que exija 'default' en un switch: el diseño usa switch
+        exhaustivo sobre tipos sellados a propósito, mismo argumento que
+        MissingSwitchDefault en checkstyle.xml.
+  </description>
+
+  <rule ref="category/java/errorprone.xml" />
+
+  <rule ref="category/java/bestpractices.xml" />
+
+  <rule ref="category/java/design.xml/CyclomaticComplexity">
+    <properties>
+      <property name="classReportLevel" value="80" />
+      <property name="methodReportLevel" value="10" />
+    </properties>
+  </rule>
+
+  <rule ref="category/java/design.xml/NPathComplexity">
+    <properties>
+      <property name="reportLevel" value="200" />
+    </properties>
+  </rule>
+
+</ruleset>

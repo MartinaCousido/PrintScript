@@ -1,6 +1,7 @@
 plugins {
     id("jacoco")
     id("checkstyle")
+    id("pmd")
 }
 
 // Versiones fijadas, no "la última": el mismo código con las mismas herramientas
@@ -14,6 +15,15 @@ checkstyle {
     configFile = rootProject.file("config/checkstyle/checkstyle.xml")
     // Sin maxWarnings: el checkstyle.xml declara severity=error global, asi que
     // ninguna violacion es warning nunca y esa propiedad no cambiaba nada.
+    isIgnoreFailures = false
+}
+
+pmd {
+    toolVersion = "7.26.0"
+    ruleSetFiles = files(rootProject.file("config/pmd/ruleset.xml"))
+    // Sin esto, el plugin suma su ruleset por defecto al nuestro y aparecen
+    // violaciones de reglas que nadie eligió.
+    ruleSets = emptyList()
     isIgnoreFailures = false
 }
 
