@@ -39,6 +39,15 @@ tasks.named<JacocoReport>("jacocoTestReport") {
     }
 }
 
+val pisosDeCobertura = mapOf(
+    "common" to "0.95",
+    "token" to "0.95",
+    "ast" to "0.95",
+    "lexer" to "0.95",
+    "parser" to "0.90",
+    "runner" to "0.95",
+)
+
 tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
     dependsOn(tasks.named("jacocoTestReport"))
     violationRules {
@@ -48,7 +57,7 @@ tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
             // no si se verificó algo: es un piso, nunca un objetivo.
             limit {
                 counter = "INSTRUCTION"
-                minimum = "0.80".toBigDecimal()
+                minimum = (pisosDeCobertura[project.name] ?: "0.80").toBigDecimal()
             }
         }
     }

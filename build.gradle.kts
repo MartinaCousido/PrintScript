@@ -1,9 +1,25 @@
 plugins {
     id("com.diffplug.spotless")
+    id("jacoco")
 }
 
 group = "org.printscript"
 version = "0.1.0"
+
+jacoco {
+    toolVersion = "0.8.14"
+}
+
+tasks.register<JacocoReport>("jacocoRootReport") {
+    dependsOn(subprojects.map { it.tasks.named("test") })
+    executionData(subprojects.map { it.fileTree(it.layout.buildDirectory).include("jacoco/test.exec") })
+    sourceDirectories.from(subprojects.map { it.file("src/main/java") })
+    classDirectories.from(subprojects.map { it.fileTree(it.layout.buildDirectory.dir("classes/java/main")) })
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
 
 // El convention plugin trae los repositorios, pero lo aplican los ocho módulos
 // y no el raíz: ktlint se baja desde acá, así que el raíz necesita el suyo.
