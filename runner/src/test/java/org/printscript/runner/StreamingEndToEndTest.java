@@ -1,6 +1,7 @@
 package org.printscript.runner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -97,7 +98,7 @@ class StreamingEndToEndTest {
 
         assertTrue(lines.consumed < program.size(), "consumed=" + lines.consumed);
         assertEquals(1, lines.consumed);
-        assertTrue(first != null);
+        assertNotNull(first);
     }
 
     @Test
