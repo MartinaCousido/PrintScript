@@ -27,6 +27,31 @@ repositories {
     mavenCentral()
 }
 
+val cpd: Configuration by configurations.creating
+
+dependencies {
+    cpd("net.sourceforge.pmd:pmd-cli:7.26.0")
+    cpd("net.sourceforge.pmd:pmd-java:7.26.0")
+}
+
+tasks.register<JavaExec>("cpdCheck") {
+    val reporte = layout.buildDirectory.file("reports/cpd/cpd.txt")
+    outputs.file(reporte)
+    classpath = cpd
+    mainClass.set("net.sourceforge.pmd.cli.PmdCli")
+    args("cpd", "--minimum-tokens", "50", "--language", "java")
+    subprojects.forEach { args("--dir", "${it.name}/src/main/java") }
+    doFirst {
+        val archivo = reporte.get().asFile
+        archivo.parentFile.mkdirs()
+        standardOutput = archivo.outputStream()
+    }
+}
+
+tasks.named("check") {
+    dependsOn("cpdCheck")
+}
+
 // Los archivos de build no los formateaba nadie: el convention plugin
 // printscript.format lo aplican los ocho módulos y solo alcanza a los .java.
 // Esta configuración vive en el raíz porque desde acá se llega a todos los
