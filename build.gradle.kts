@@ -52,6 +52,10 @@ tasks.named("check") {
     dependsOn("cpdCheck")
 }
 
+tasks.register<Exec>("installGitHooks") {
+    commandLine("git", "config", "core.hooksPath", "config/githooks")
+}
+
 // Los archivos de build no los formateaba nadie: el convention plugin
 // printscript.format lo aplican los ocho módulos y solo alcanza a los .java.
 // Esta configuración vive en el raíz porque desde acá se llega a todos los

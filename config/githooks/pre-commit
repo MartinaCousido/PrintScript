@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if ! ./gradlew -q spotlessCheck checkstyleMain; then
+    echo ""
+    echo "El pre-commit encontró problemas de formato o de estilo."
+    echo "Para el formato: ./gradlew spotlessApply y volver a agregar los archivos."
+    echo "Para Checkstyle: leer el reporte en <modulo>/build/reports/checkstyle y arreglar a mano."
+    echo "Para saltearlo en un caso legítimo: git commit --no-verify"
+    exit 1
+fi
