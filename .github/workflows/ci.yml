@@ -31,8 +31,8 @@ jobs:
       - name: Preparar Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Build de los siete módulos
-        run: ./gradlew build --no-daemon --warning-mode all
+      - name: Build de los ocho módulos
+        run: ./gradlew build jacocoRootReport --no-daemon --warning-mode all
 
       - name: Publicar los reportes de test
         if: always()
@@ -40,4 +40,44 @@ jobs:
         with:
           name: reportes-de-test
           path: '*/build/reports/tests/test'
+          if-no-files-found: ignore
+
+      - name: Publicar los reportes de Checkstyle
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reportes-de-checkstyle
+          path: '*/build/reports/checkstyle'
+          if-no-files-found: ignore
+
+      - name: Publicar los reportes de PMD
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reportes-de-pmd
+          path: '*/build/reports/pmd'
+          if-no-files-found: ignore
+
+      - name: Publicar el reporte de CPD
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reporte-de-cpd
+          path: 'build/reports/cpd'
+          if-no-files-found: ignore
+
+      - name: Publicar la cobertura por módulo
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cobertura-por-modulo
+          path: '*/build/reports/jacoco'
+          if-no-files-found: ignore
+
+      - name: Publicar la cobertura agregada
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cobertura-agregada
+          path: 'build/reports/jacoco/jacocoRootReport'
           if-no-files-found: ignore
