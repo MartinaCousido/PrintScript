@@ -65,6 +65,83 @@ export PATH="$JAVA_HOME/bin:$PATH"
 ./gradlew clean build --warning-mode all
 ```
 
+## Herramientas de calidad
+
+Seis herramientas corren dentro de `./gradlew check` (que `build` incluye) y rompen el
+build cuando encuentran algo. El reparto de responsabilidades: **el formateador decide
+cómo se ve el código, Checkstyle decide cómo se llaman las cosas, PMD decide si la idea
+es buena, CPD avisa cuando algo está escrito dos veces y JaCoCo mide qué tocaron los
+tests.** Antes de agregar una regla, esa división dice dónde va.
+
+| Herramienta | Qué hace | Sobre qué | Dónde se configura | Cuando falla |
+|---|---|---|---|---|
+| Spotless + google-java-format (AOSP) | escribe el formato del código | `src/**/*.java` | en ningún lado: el formateador no es configurable a propósito | `./gradlew spotlessApply` |
+| ktlint (vía Spotless) | formatea los archivos de build y de texto | `*.gradle.kts`, `*.md`, `*.yml` | `.editorconfig` | `./gradlew spotlessApply` |
+| Checkstyle | nombres y errores probables | `src/main` y `src/test` | `config/checkstyle/checkstyle.xml` | leer el reporte en `<modulo>/build/reports/checkstyle` y arreglar a mano |
+| PMD | malas prácticas y complejidad | `src/main` y `src/test` | `config/pmd/ruleset.xml` | leer el reporte en `<modulo>/build/reports/pmd`, arreglar o justificar la supresión |
+| CPD | código duplicado | `src/main` de los ocho módulos | tarea `cpdCheck` del `build.gradle.kts` raíz, umbral de 50 tokens | leer `build/reports/cpd/cpd.txt` y extraer lo repetido |
+| JaCoCo | cobertura de los tests, con piso | cada módulo por separado | convention plugin `printscript.quality` | escribir el test que falta |
+
+La cobertura es un **piso, nunca un objetivo**: mide qué líneas se ejecutaron, no si se
+verificó algo, así que sirve para avisar cuando baja y no como número a perseguir. El
+piso por defecto es `0.80` y sube en los módulos cuya cobertura real ya es alta; los
+valores están en `buildSrc/src/main/kotlin/printscript.quality.gradle.kts`. El reporte
+agregado del proyecto entero sale con `./gradlew jacocoRootReport` y queda en
+`build/reports/jacoco/jacocoRootReport/html/index.html`.
+
+CPD corre solo sobre `src/main`: las suites de test repiten estructura a propósito
+(cada `TokenConstructor` y cada `StatementParser` se prueba con la misma forma) y ahí
+la repetición es legibilidad, no deuda.
+
+### Órdenes útiles
+
+```bash
+# toda la cadena: formato, estilo, PMD, CPD, tests y cobertura
+./gradlew check
+
+# una sola herramienta
+./gradlew spotlessCheck
+./gradlew checkstyleMain
+./gradlew pmdMain
+./gradlew cpdCheck
+./gradlew jacocoTestCoverageVerification
+
+# formatear sin buildear
+./gradlew spotlessApply
+
+# cobertura agregada del proyecto entero
+./gradlew jacocoRootReport
+```
+
+### El hook de pre-commit
+
+El hook vive versionado en `config/githooks/pre-commit` porque `.git/hooks/` es local a
+cada clon y no viaja con el repo: un hook que no está versionado no existe para el
+equipo. Por eso hay que instalarlo **una vez por clon**:
+
+```bash
+./gradlew installGitHooks
+```
+
+La tarea apunta `core.hooksPath` a `config/githooks`, así cualquier cambio al hook llega
+solo al resto del equipo, sin copias.
+
+El hook corre solo lo rápido —`spotlessCheck` y `checkstyleMain`— y **avisa y aborta**
+el commit en vez de arreglarlo, para no modificar nada por debajo. Los tests, la
+cobertura, PMD y CPD quedan afuera a propósito: son lo lento, y de eso se encarga el CI
+sin hacerte esperar. Para un caso legítimo (un commit de emergencia, un WIP en una rama
+propia) existe `git commit --no-verify`; la red que no se puede saltear es el CI.
+
+### Dos aclaraciones
+
+- Estas herramientas operan sobre **nuestro código Java**. No son el `formatter` ni el
+  `linter` de PrintScript que pide la consigna: esos operan sobre los programas `.ps`
+  del usuario y se configuran con un JSON o un YAML.
+- No usamos ktlint ni Detekt sobre el código del proyecto porque son herramientas de
+  Kotlin y nuestro código es Java; sus equivalentes acá son google-java-format,
+  Checkstyle y PMD. ktlint aparece únicamente para formatear los `.gradle.kts` del
+  build, que sí son Kotlin.
+
 ## Módulos
 
 Siete módulos Gradle, cada uno con su propio set de dependencias y compilando por
@@ -101,17 +178,23 @@ PrintScript 1.0, con una excepción marcada:
 ## Integración continua
 
 Cada push a `master` y cada pull request dispara el workflow de
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml), que compila los siete módulos y
-corre todos los tests. El JDK del toolchain se instala en el runner para no descargarlo
-en cada corrida.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml), que corre `./gradlew build`
+con toda la cadena de calidad y publica como artifacts los reportes de test,
+Checkstyle, PMD, CPD y cobertura (por módulo y agregada), también cuando el build
+falla, que es cuando más sirven. El JDK del toolchain se instala en el runner para no
+descargarlo en cada corrida.
 
 ## Estructura del repositorio
 
 ```
-buildSrc/                 convention plugin con la configuración común del build
+buildSrc/                 convention plugins con la configuración común del build
+config/checkstyle/        reglas de nombres y errores probables
+config/pmd/               ruleset de análisis estático
+config/githooks/          hook de pre-commit versionado
 common/  token/  ast/     vocabulario y contratos, sin lógica
 runtime-api/              puertos de E/S del programa en ejecución
 lexer/  parser/           etapas del pipeline
 interpreter/
+runner/                   orquesta el pipeline de punta a punta
 docs/arquitectura.md      diagramas de componentes y responsabilidades
 ```
