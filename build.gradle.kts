@@ -1,14 +1,59 @@
 plugins {
     id("com.diffplug.spotless")
+    id("jacoco")
 }
 
 group = "org.printscript"
 version = "0.1.0"
 
+jacoco {
+    toolVersion = "0.8.14"
+}
+
+tasks.register<JacocoReport>("jacocoRootReport") {
+    dependsOn(subprojects.map { it.tasks.named("test") })
+    executionData(subprojects.map { it.fileTree(it.layout.buildDirectory).include("jacoco/test.exec") })
+    sourceDirectories.from(subprojects.map { it.file("src/main/java") })
+    classDirectories.from(subprojects.map { it.fileTree(it.layout.buildDirectory.dir("classes/java/main")) })
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
 // El convention plugin trae los repositorios, pero lo aplican los ocho módulos
 // y no el raíz: ktlint se baja desde acá, así que el raíz necesita el suyo.
 repositories {
     mavenCentral()
+}
+
+val cpd: Configuration by configurations.creating
+
+dependencies {
+    cpd("net.sourceforge.pmd:pmd-cli:7.26.0")
+    cpd("net.sourceforge.pmd:pmd-java:7.26.0")
+}
+
+tasks.register<JavaExec>("cpdCheck") {
+    val reporte = layout.buildDirectory.file("reports/cpd/cpd.txt")
+    outputs.file(reporte)
+    classpath = cpd
+    mainClass.set("net.sourceforge.pmd.cli.PmdCli")
+    args("cpd", "--minimum-tokens", "50", "--language", "java")
+    subprojects.forEach { args("--dir", "${it.name}/src/main/java") }
+    doFirst {
+        val archivo = reporte.get().asFile
+        archivo.parentFile.mkdirs()
+        standardOutput = archivo.outputStream()
+    }
+}
+
+tasks.named("check") {
+    dependsOn("cpdCheck")
+}
+
+tasks.register<Exec>("installGitHooks") {
+    commandLine("git", "config", "core.hooksPath", "config/githooks")
 }
 
 // Los archivos de build no los formateaba nadie: el convention plugin
