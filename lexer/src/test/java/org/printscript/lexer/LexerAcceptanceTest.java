@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
-import org.printscript.lexer.providers.LexerVersionProvider;
 import org.printscript.token.Token;
 
 class LexerAcceptanceTest {
@@ -47,7 +46,7 @@ class LexerAcceptanceTest {
     }
 
     private static Lexer lexerOf(Iterator<String> lines) {
-        return new LexerVersionProvider().providerFor("1.0").provide(lines);
+        return LexerFactory.create(lines);
     }
 
     private static List<String> tokenize(String... lines) {

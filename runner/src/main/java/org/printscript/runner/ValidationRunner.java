@@ -9,8 +9,8 @@ import org.printscript.parser.Parser;
 
 public final class ValidationRunner {
 
-    public List<Failure<?>> validate(Iterator<String> lines, String version) {
-        Parser parser = StatementStreams.statementStream(lines, version);
+    public List<Failure<?>> validate(Iterator<String> lines) {
+        Parser parser = StatementStreams.statementStream(lines);
         List<Failure<?>> failures = new ArrayList<>();
         while (parser.hasNext()) {
             Result<?> result = parser.getNext();

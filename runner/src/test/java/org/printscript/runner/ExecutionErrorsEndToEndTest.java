@@ -11,7 +11,6 @@ import org.printscript.runtime.OutputPrinter;
 
 class ExecutionErrorsEndToEndTest {
 
-    private static final String VERSION = "1.0";
     private static final String ANTES = "antes";
     private static final String PRINTLN_ANTES = "println(\"antes\");";
 
@@ -26,7 +25,7 @@ class ExecutionErrorsEndToEndTest {
     }
 
     private static List<Failure<?>> runProgram(InMemoryPrinter printer, String... lines) {
-        return new ExecutionRunner().run(List.of(lines).iterator(), VERSION, printer);
+        return new ExecutionRunner().run(List.of(lines).iterator(), printer);
     }
 
     private static void assertRange(

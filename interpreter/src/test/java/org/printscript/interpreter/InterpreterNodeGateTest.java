@@ -65,28 +65,31 @@ class InterpreterNodeGateTest {
         }
     }
 
-    private static Interpreter gatedInterpreter(OutputPrinter printer, List<Result<Statement>> results) {
+    private static Interpreter gatedInterpreter(
+            OutputPrinter printer, List<Result<Statement>> results) {
         return new Interpreter(
-            new ResultStream(results),
-            new Executor(new Environment(), printer),
-            Set.of(PrintlnStatement.class),
-            "1.0");
+                new ResultStream(results),
+                new Executor(new Environment(), printer),
+                Set.of(PrintlnStatement.class));
     }
 
     @Test
     void aNodeOutsideTheSupportedSetProducesAFailureWithRangeAndMessageWithoutExecuting() {
         Range range = new Range(new Position(3, 5), new Position(3, 20));
-        Statement declaration = new VariableDeclaration(
-            "x",
-            new TypeName("number", ANY),
-            Optional.of(new NumberLiteral(1, ANY)),
-            range);
+        Statement declaration =
+                new VariableDeclaration(
+                        "x",
+                        new TypeName("number", ANY),
+                        Optional.of(new NumberLiteral(1, ANY)),
+                        range);
         InMemoryPrinter printer = new InMemoryPrinter();
-        Interpreter interpreter = gatedInterpreter(
-            printer,
-            List.of(
-                new Success<>(declaration),
-                new Success<>(new PrintlnStatement(new Identifier("x", ANY), ANY))));
+        Interpreter interpreter =
+                gatedInterpreter(
+                        printer,
+                        List.of(
+                                new Success<>(declaration),
+                                new Success<>(
+                                        new PrintlnStatement(new Identifier("x", ANY), ANY))));
 
         Result<?> first = interpreter.getNext();
         Result<?> second = interpreter.getNext();
@@ -94,7 +97,7 @@ class InterpreterNodeGateTest {
         Failure<?> failure = assertInstanceOf(Failure.class, first, String.valueOf(first));
         assertEquals(range, failure.range());
         assertTrue(failure.message().contains("VariableDeclaration"), failure.message());
-        assertTrue(failure.message().contains("1.0"), failure.message());
+        assertTrue(failure.message().contains("PrintScript"), failure.message());
         assertInstanceOf(Failure.class, second, String.valueOf(second));
         assertEquals(List.of(), printer.lines);
     }
@@ -102,9 +105,13 @@ class InterpreterNodeGateTest {
     @Test
     void aNodeInsideTheSupportedSetIsExecuted() {
         InMemoryPrinter printer = new InMemoryPrinter();
-        Interpreter interpreter = gatedInterpreter(
-            printer,
-            List.of(new Success<>(new PrintlnStatement(new StringLiteral("hola", ANY), ANY))));
+        Interpreter interpreter =
+                gatedInterpreter(
+                        printer,
+                        List.of(
+                                new Success<>(
+                                        new PrintlnStatement(
+                                                new StringLiteral("hola", ANY), ANY))));
 
         Result<?> result = interpreter.getNext();
 
