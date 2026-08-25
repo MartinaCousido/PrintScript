@@ -8,10 +8,12 @@ El criterio de descomposición es el de Parnas: cada módulo esconde **una decis
 
 ## 1. Estado actual
 
-Siete módulos Gradle, cada uno con su propio set de dependencias, compilando por separado.
+Ocho módulos Gradle, cada uno con su propio set de dependencias, compilando por separado.
 
 ```mermaid
 flowchart TD
+    runner["runner"]
+
     subgraph motores["Motores · una etapa del pipeline cada uno"]
         lexer["lexer"]
         parser["parser"]
@@ -25,6 +27,12 @@ flowchart TD
     end
 
     common["common"]
+
+    runner --> lexer
+    runner --> parser
+    runner --> interpreter
+    runner --> runtimeapi
+    runner --> common
 
     lexer --> token
     lexer --> common
@@ -51,7 +59,7 @@ Trece módulos. Los de borde punteado todavía no existen.
 ```mermaid
 flowchart TD
     cli["cli"]:::previsto
-    runner["runner"]:::previsto
+    runner["runner"]
 
     subgraph motores["Motores"]
         lexer["lexer"]
@@ -128,7 +136,7 @@ Lo que cambia respecto de hoy:
 | `semantic` | Qué programas bien formados tienen sentido | Cambian las reglas de tipos y scope | `common`, `ast` | ⬜ |
 | `formatter` | Cómo se ve el código | Cambian las reglas de estilo | `common`, `token`, `config` | ⬜ |
 | `linter` | Qué convenciones se exigen | Cambian las convenciones | `common`, `ast`, `config` | ⬜ |
-| `runner` | Cómo se arma el pipeline de cada operación y versión | Aparecen operaciones nuevas | todos los anteriores | ⬜ |
+| `runner` | Cómo se arma el pipeline de cada operación | Aparecen operaciones nuevas | todos los anteriores | ✅ |
 | `cli` | La experiencia de línea de comandos | Cambian argumentos, progreso, exit codes | `runner`, `runtime-api`, `common` | ⬜ |
 
 ---
@@ -209,21 +217,24 @@ Tan importante como las dependencias que existen son las que se evitaron deliber
 
 ## 6. Cómo entra una versión nueva del lenguaje
 
-Cada módulo con conocimiento del lenguaje expone el par `VersionProvider` → `Provider`. **Los motores no saben qué versiones existen**: todo el conocimiento de versión vive en los providers.
+Cada módulo con conocimiento del lenguaje expone una **factory**: `LexerFactory`, `ParserFactory` e `InterpreterFactory`. **Los motores no saben nada de PrintScript**: reciben ya armadas las piezas que definen el lenguaje.
 
 ```java
 // El motor no tiene ni una palabra de PrintScript escrita adentro
 public Lexer(Iterator<String> lines, List<TokenConstructor> constructors)
 
-// El provider es el único que sabe qué es la versión 1.0
-private static final Set<String> KEYWORDS = Set.of("let", "println", "number", "string");
+// La factory es la única que sabe qué palabras tiene el lenguaje
+keywords.put("let", TokenType.KEYWORD);
+keywords.put("println", TokenType.KEYWORD);
 ```
 
-Cuando llegue 1.1 se agrega `LexerProvider11`, `ParserProvider11`, `SemanticProvider11`, `InterpreterProvider11`, `FormatterProvider11` y `LinterProvider11`. Los motores no cambian una línea.
+Esa separación es la que importa y es la que sigue en pie: **el conocimiento del lenguaje está concentrado en tres archivos**, y los motores no cambian cuando el lenguaje cambia. Agregar `const` es una línea en `LexerFactory`.
 
-**El contrato del provider por versión vive en `common`.** Las tres etapas implementan la misma interfaz `VersionProvider<T>`, con una sola operación que recibe la versión como texto y devuelve el provider correspondiente. Se acepta el costo de que `common` gane una noción de armado que no es del pipeline: un único contrato reconocible para las tres etapas vale más que la pureza de `common`, y la alternativa — una interfaz por módulo con la misma forma — es exactamente la triplicación que el contrato viene a evitar. El criterio de fallo tampoco puede divergir porque lo construye el propio contrato: ante una versión desconocida, `VersionProvider.unknownVersion` arma la `IllegalArgumentException` con el formato único (versión pedida y lista de soportadas), y ninguna implementación escribe el mensaje a mano.
+**El despacho por versión se quitó, y conviene dejar escrito por qué.** Hasta el 25/08/2026 existía un nivel más: el par `VersionProvider` → `Provider`, con `providerFor("1.0")` devolviendo el provider de esa versión, y la versión viajando como `String` por las firmas públicas de las dos fachadas del `runner`. Se eliminó en el PR #9 porque hoy existe **una sola versión** del lenguaje: eran tres interfaces, tres implementaciones de despacho y un parámetro en cada firma pública para elegir siempre la misma opción. Era andamiaje para un problema que todavía no se tiene.
 
-**Riesgo conocido:** los providers reparten el conocimiento de una versión entre varios módulos, lo que permite inconsistencias — un lexer que reconoce `if` con un parser que no sabe qué hacer con él. Se mitiga con tests de integración por versión que ejerciten cada operación completa contra los ejemplos de la consigna.
+**Qué cuesta reintroducirlo cuando aparezca 1.1.** El cambio queda contenido en dos lugares: cada factory gana un método de despacho por versión — o vuelve la interfaz `VersionProvider` a `common` —, y el parámetro `version` vuelve a las firmas de `ExecutionRunner.run` y `ValidationRunner.validate`. **Los motores, el vocabulario y el AST no se tocan**, que es exactamente la propiedad que esta separación vino a comprar. El costo asumido es un refactor de firmas públicas el día que llegue la 1.1; el beneficio es no cargar hoy con un mecanismo especulativo.
+
+**Riesgo conocido:** las tres factories reparten el conocimiento del lenguaje entre varios módulos, lo que permite inconsistencias — un lexer que reconoce `if` con un parser que no sabe qué hacer con él. Se mitiga por dos vías: la compuerta de nodos del `Interpreter`, que ante un nodo que no sabe ejecutar devuelve un `Failure` explícito en vez de romper, y los tests end-to-end del `runner`, que ejercitan el pipeline completo contra los ejemplos de la consigna.
 
 ---
 
@@ -241,11 +252,11 @@ Cuando llegue 1.1 se agrega `LexerProvider11`, `ParserProvider11`, `SemanticProv
 
 ## 8. El módulo `runner`
 
-Es el único lugar del sistema donde el lexer y el parser se conocen entre sí. `ExecutionRunner` recibe el iterador de líneas, la versión y un `OutputPrinter`, le pide a los tres `VersionProvider` las piezas de esa versión, encadena `Lexer` → `TokenBuffer` → `Parser` → `Interpreter` y corre el bucle `while (hasNext) getNext`. El armado de la cadena lexer→buffer→parser vive en `StatementStreams`, una clase package-private con una única función estática que comparten las dos fachadas: la construcción existe en un solo lugar.
+Es el único lugar del sistema donde el lexer y el parser se conocen entre sí. `ExecutionRunner` recibe el iterador de líneas y un `OutputPrinter`, le pide a las tres factories las piezas del pipeline, encadena `Lexer` → `TokenBuffer` → `Parser` → `Interpreter` y corre el bucle `while (hasNext) getNext`. El armado de la cadena lexer→buffer→parser vive en `StatementStreams`, una clase package-private con una única función estática que comparten las dos fachadas: la construcción existe en un solo lugar.
 
 `ValidationRunner` es la segunda fachada: arma la misma cadena pero se detiene en el parser, sin interpreter y sin `OutputPrinter` — la firma de `validate` ni siquiera recibe uno. Recorre el flujo de sentencias, junta los `Failure` con su mensaje y su `Range`, y no ejecuta nada: validar un programa con `println` no imprime. Queda anotado explícitamente: la consigna pide validar sintaxis **y semántica**, y el módulo `semantic` no existe todavía, así que esta fachada valida solo sintaxis. Cuando `semantic` exista, se encadena entre el parser y el consumidor sin que ninguna de las dos etapas cambie.
 
-El invariante del módulo: **compone, no decide**. No tiene ni una regla del lenguaje; todo el conocimiento de versión sigue en los providers.
+El invariante del módulo: **compone, no decide**. No tiene ni una regla del lenguaje; todo el conocimiento del lenguaje sigue en las factories.
 
 **La política con los errores es acumular, no cortar.** Las etapas deliberadamente no la toman, así que la decisión vive acá: la fachada junta los `Failure` que salen del bucle — con su mensaje y su `Range` — y los devuelve como lista al terminar. Un error no detiene la ejecución del resto del programa.
 
