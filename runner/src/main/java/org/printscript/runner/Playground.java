@@ -1,10 +1,7 @@
 package org.printscript.runner;
 
-import java.util.Iterator;
 import java.util.List;
-import org.printscript.common.PrintScriptIterators;
-import org.printscript.lexer.Lexer;
-import org.printscript.lexer.LexerFactory;
+import org.printscript.common.Failure;
 
 public final class Playground {
 
@@ -12,19 +9,14 @@ public final class Playground {
 
     public static void main(String[] args) {
         List<String> program =
-                List.of("let name: string = \"Joe\";", "println(name + \" \" + lastName);");
+                List.of(
+                        "let name: string = \"Joe\";",
+                        "let lastName: string = \"Doe\";",
+                        "println(name + \" \" + lastName);");
 
-        Iterator<String> lines = program.iterator();
-        Lexer lexer = LexerFactory.create(lines);
+        List<Failure<?>> failures =
+                new ExecutionRunner().run(program.iterator(), System.out::println);
 
-        PrintScriptIterators.stream(lexer)
-                .forEach(
-                        token ->
-                                System.out.println(
-                                        token.type()
-                                                + "  \""
-                                                + token.value()
-                                                + "\"  "
-                                                + token.range()));
+        failures.forEach(failure -> System.out.println("ERROR: " + failure.message()));
     }
 }
