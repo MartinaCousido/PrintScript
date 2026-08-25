@@ -11,7 +11,6 @@ import org.printscript.runtime.OutputPrinter;
 
 class AssignmentAndDeclarationEndToEndTest {
 
-    private static final String VERSION = "1.0";
     private static final String PRINTLN_X = "println(x);";
 
     private static final class InMemoryPrinter implements OutputPrinter {
@@ -25,7 +24,7 @@ class AssignmentAndDeclarationEndToEndTest {
     }
 
     private static List<Failure<?>> runProgram(InMemoryPrinter printer, String... lines) {
-        return new ExecutionRunner().run(List.of(lines).iterator(), VERSION, printer);
+        return new ExecutionRunner().run(List.of(lines).iterator(), printer);
     }
 
     private static void assertRange(

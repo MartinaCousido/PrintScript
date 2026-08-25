@@ -10,8 +10,6 @@ import org.printscript.runtime.OutputPrinter;
 
 class ConsignaExamplesEndToEndTest {
 
-    private static final String VERSION = "1.0";
-
     private static final class InMemoryPrinter implements OutputPrinter {
 
         private final List<String> lines = new ArrayList<>();
@@ -23,7 +21,7 @@ class ConsignaExamplesEndToEndTest {
     }
 
     private static List<Failure<?>> runProgram(InMemoryPrinter printer, String... lines) {
-        return new ExecutionRunner().run(List.of(lines).iterator(), VERSION, printer);
+        return new ExecutionRunner().run(List.of(lines).iterator(), printer);
     }
 
     @Test

@@ -2,7 +2,6 @@ package org.printscript.runner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -12,8 +11,6 @@ import org.printscript.common.Failure;
 import org.printscript.runtime.OutputPrinter;
 
 class ExecutionRunnerTest {
-
-    private static final String VERSION = "1.0";
 
     private static final class InMemoryPrinter implements OutputPrinter {
 
@@ -26,7 +23,7 @@ class ExecutionRunnerTest {
     }
 
     private static List<Failure<?>> runProgram(InMemoryPrinter printer, String... lines) {
-        return new ExecutionRunner().run(List.of(lines).iterator(), VERSION, printer);
+        return new ExecutionRunner().run(List.of(lines).iterator(), printer);
     }
 
     @Test
@@ -43,11 +40,12 @@ class ExecutionRunnerTest {
     void executesProgramWithStringsAndDeclarationsAcrossLines() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "let greeting: string = \"hola\";",
-            "let name: string = \"mundo\";",
-            "println(greeting + \" \" + name);");
+        List<Failure<?>> failures =
+                runProgram(
+                        printer,
+                        "let greeting: string = \"hola\";",
+                        "let name: string = \"mundo\";",
+                        "println(greeting + \" \" + name);");
 
         assertEquals(List.of("hola mundo"), printer.lines);
         assertEquals(List.of(), failures);
@@ -67,11 +65,12 @@ class ExecutionRunnerTest {
     void accumulatesFailuresWithoutStoppingExecution() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "println(\"antes\");",
-            "println(desconocida);",
-            "println(\"despues\");");
+        List<Failure<?>> failures =
+                runProgram(
+                        printer,
+                        "println(\"antes\");",
+                        "println(desconocida);",
+                        "println(\"despues\");");
 
         assertEquals(List.of("antes", "despues"), printer.lines);
         assertEquals(1, failures.size());
@@ -83,10 +82,8 @@ class ExecutionRunnerTest {
     void outputBeforeTheErrorIsAlreadyEmitted() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "println(\"primera\");",
-            "let x: number = y;");
+        List<Failure<?>> failures =
+                runProgram(printer, "println(\"primera\");", "let x: number = y;");
 
         assertEquals(List.of("primera"), printer.lines);
         assertEquals(1, failures.size());
@@ -96,11 +93,8 @@ class ExecutionRunnerTest {
     void collectsEveryFailureOfTheProgram() {
         InMemoryPrinter printer = new InMemoryPrinter();
 
-        List<Failure<?>> failures = runProgram(
-            printer,
-            "println(a);",
-            "println(b);",
-            "println(\"fin\");");
+        List<Failure<?>> failures =
+                runProgram(printer, "println(a);", "println(b);", "println(\"fin\");");
 
         assertEquals(2, failures.size());
         assertEquals(List.of("fin"), printer.lines);
@@ -115,18 +109,5 @@ class ExecutionRunnerTest {
         assertEquals(1, failures.size());
         assertTrue(failures.getFirst().message().contains(";"));
         assertEquals(List.of(), printer.lines);
-    }
-
-    @Test
-    void unknownVersionFailsWithClearMessage() {
-        InMemoryPrinter printer = new InMemoryPrinter();
-        ExecutionRunner runner = new ExecutionRunner();
-        List<String> lines = List.of("println(1);");
-
-        IllegalArgumentException error = assertThrows(
-            IllegalArgumentException.class,
-            () -> runner.run(lines.iterator(), "9.9", printer));
-
-        assertTrue(error.getMessage().contains("9.9"));
     }
 }

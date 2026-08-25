@@ -1,27 +1,27 @@
-package org.printscript.lexer.providers;
+package org.printscript.lexer;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.printscript.lexer.Lexer;
 import org.printscript.lexer.constructors.KeywordTokenConstructor;
 import org.printscript.lexer.constructors.NumberTokenConstructor;
 import org.printscript.lexer.constructors.StringTokenConstructor;
 import org.printscript.lexer.constructors.SymbolTokenConstructor;
 import org.printscript.token.TokenType;
-//tod lo que sabe la versión 1.0 vive acá: las 4 palabras reservadas y la tabla de simbolos
-public final class LexerProvider10 implements LexerProvider {
 
-    @Override
-    public Lexer provide(Iterator<String> lines) {
+public final class LexerFactory {
+
+    private LexerFactory() {}
+
+    public static Lexer create(Iterator<String> lines) {
         return new Lexer(
-            lines,
-            List.of(
-                new StringTokenConstructor(),
-                new NumberTokenConstructor(),
-                new KeywordTokenConstructor(keywords()),
-                new SymbolTokenConstructor(symbols())));
+                lines,
+                List.of(
+                        new StringTokenConstructor(),
+                        new NumberTokenConstructor(),
+                        new KeywordTokenConstructor(keywords()),
+                        new SymbolTokenConstructor(symbols())));
     }
 
     private static Map<String, TokenType> keywords() {

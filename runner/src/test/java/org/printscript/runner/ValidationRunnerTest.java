@@ -1,7 +1,6 @@
 package org.printscript.runner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -15,10 +14,8 @@ import org.printscript.common.Range;
 
 class ValidationRunnerTest {
 
-    private static final String VERSION = "1.0";
-
     private static List<Failure<?>> validateProgram(String... lines) {
-        return new ValidationRunner().validate(List.of(lines).iterator(), VERSION);
+        return new ValidationRunner().validate(List.of(lines).iterator());
     }
 
     // originalOut es un alias de System.out para restaurarlo en el finally, no un
@@ -72,18 +69,5 @@ class ValidationRunnerTest {
         List<Failure<?>> failures = validateProgram("42;", "println(\"ok\");", "7;");
 
         assertEquals(2, failures.size());
-    }
-
-    @Test
-    void unknownVersionFailsWithClearMessage() {
-        ValidationRunner runner = new ValidationRunner();
-        List<String> lines = List.of("println(1);");
-
-        IllegalArgumentException error =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> runner.validate(lines.iterator(), "9.9"));
-
-        assertTrue(error.getMessage().contains("9.9"));
     }
 }

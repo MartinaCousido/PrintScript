@@ -18,3 +18,15 @@ tasks.register<JavaExec>("playground") {
     mainClass.set("org.printscript.runner.Playground")
     classpath = sourceSets["main"].runtimeClasspath
 }
+
+tasks.named<Pmd>("pmdMain") {
+    exclude("**/Playground.java")
+}
+
+tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+    classDirectories.setFrom(
+        classDirectories.files.map {
+            fileTree(it) { exclude("**/Playground.class") }
+        },
+    )
+}

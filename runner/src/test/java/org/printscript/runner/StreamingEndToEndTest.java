@@ -11,17 +11,15 @@ import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
 import org.printscript.common.Result;
 import org.printscript.interpreter.Interpreter;
-import org.printscript.interpreter.providers.InterpreterVersionProvider;
+import org.printscript.interpreter.InterpreterFactory;
 import org.printscript.lexer.Lexer;
-import org.printscript.lexer.providers.LexerVersionProvider;
+import org.printscript.lexer.LexerFactory;
 import org.printscript.parser.Parser;
+import org.printscript.parser.ParserFactory;
 import org.printscript.parser.TokenBuffer;
-import org.printscript.parser.providers.ParserVersionProvider;
 import org.printscript.runtime.OutputPrinter;
 
 class StreamingEndToEndTest {
-
-    private static final String VERSION = "1.0";
 
     private static final class CountingIterator implements Iterator<String> {
 
@@ -66,10 +64,10 @@ class StreamingEndToEndTest {
     }
 
     private static Interpreter buildChain(CountingIterator lines, RecordingPrinter printer) {
-        Lexer lexer = new LexerVersionProvider().providerFor(VERSION).provide(lines);
+        Lexer lexer = LexerFactory.create(lines);
         TokenBuffer buffer = new TokenBuffer(lexer);
-        Parser parser = new ParserVersionProvider().providerFor(VERSION).provide(buffer);
-        return new InterpreterVersionProvider().providerFor(VERSION).provide(parser, printer);
+        Parser parser = ParserFactory.create(buffer);
+        return InterpreterFactory.create(parser, printer);
     }
 
     @Test
