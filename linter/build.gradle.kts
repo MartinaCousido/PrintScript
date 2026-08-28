@@ -7,5 +7,5 @@ plugins {
 dependencies {
     api(project(":common"))
     api(project(":ast"))
-    api(project(":config"))
+    api(project(":configuration"))
 }

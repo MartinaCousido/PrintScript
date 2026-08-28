@@ -10,7 +10,7 @@ dependencies {
     implementation(project(":lexer"))
     implementation(project(":parser"))
     implementation(project(":interpreter"))
-    api(project(":config"))
+    api(project(":configuration"))
     api(project(":linter"))
 }
 

@@ -13,6 +13,6 @@ include(
     "runtime-api",
     "interpreter",
     "runner",
-    "config",
+    "configuration",
     "linter",
 )
