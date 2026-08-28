@@ -13,4 +13,5 @@ include(
     "runtime-api",
     "interpreter",
     "runner",
+    "config",
 )
