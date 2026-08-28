@@ -10,6 +10,8 @@ dependencies {
     implementation(project(":lexer"))
     implementation(project(":parser"))
     implementation(project(":interpreter"))
+    api(project(":config"))
+    api(project(":linter"))
 }
 
 tasks.register<JavaExec>("playground") {
