@@ -144,7 +144,7 @@ propia) existe `git commit --no-verify`; la red que no se puede saltear es el CI
 
 ## Módulos
 
-Siete módulos Gradle, cada uno con su propio set de dependencias y compilando por
+Nueve módulos Gradle, cada uno con su propio set de dependencias y compilando por
 separado. La configuración común vive en un convention plugin en `buildSrc/`, no
 duplicada en cada módulo.
 
@@ -157,9 +157,27 @@ duplicada en cada módulo.
 | `lexer` | Cómo se reconoce un token dentro del texto |
 | `parser` | La gramática y cómo se construye el árbol |
 | `interpreter` | Qué efecto produce cada nodo al ejecutarse |
+| `runner` | Cómo se arma el pipeline lexer→parser→intérprete de punta a punta |
+| `cli` | La experiencia de línea de comandos: argumentos, progreso, exit codes |
 
-Faltan `semantic`, `config`, `formatter`, `linter`, `runner` y `cli`. El grafo completo
-está en [`docs/arquitectura.md`](docs/arquitectura.md).
+Faltan `semantic`, `config`, `formatter` y `linter`. El grafo completo está en
+[`docs/arquitectura.md`](docs/arquitectura.md).
+
+## Cómo usar la CLI
+
+El módulo `cli` expone las cuatro operaciones de la consigna (`execution`,
+`validation`, `formatting`, `analyzing`) como subcomandos:
+
+```bash
+# el working directory de la tarea run es cli/, por eso la ruta es relativa a ahí
+./gradlew :cli:run --args="execution src/test/resources/examples/valid-hello.ps"
+
+./gradlew :cli:installDist
+cli/build/install/printscript/bin/printscript execution ruta/al/archivo.ps
+```
+
+Referencia completa de argumentos, códigos de salida y ejemplos de salida (éxito y
+error con fila/columna) en [`docs/cli.md`](docs/cli.md).
 
 ## Qué reconoce hoy
 
@@ -196,5 +214,7 @@ runtime-api/              puertos de E/S del programa en ejecución
 lexer/  parser/           etapas del pipeline
 interpreter/
 runner/                   orquesta el pipeline de punta a punta
+cli/                      línea de comandos: la única que toca filesystem, System.out/err y exit codes
 docs/arquitectura.md      diagramas de componentes y responsabilidades
+docs/cli.md               guía de uso de la CLI
 ```
