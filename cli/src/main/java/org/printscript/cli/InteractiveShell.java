@@ -235,25 +235,33 @@ final class InteractiveShell {
     }
 
     private void printHelp() {
-        out.println("Comandos disponibles:");
-        out.println("  Operaciones sobre un archivo .ps");
-        out.println("    execution|exec|run <archivo>     Ejecuta el archivo e imprime su salida");
-        out.println(
-                "    save|guardar <archivo>           Ejecuta y guarda la salida en un .txt junto"
-                        + " al fuente");
-        out.println("    validation|validate <archivo>    Valida sintaxis/semántica sin ejecutar");
-        out.println(
-                "    formatting|format|fmt <archivo> [config]   Formatea el archivo (reglas del"
-                        + " config)");
-        out.println(
-                "    analyzing|analyze|lint <archivo> [config]  Lintea el archivo (reglas del"
-                        + " config)");
-        out.println("  Navegación del filesystem");
-        out.println("    pwd                  Muestra el directorio actual");
-        out.println("    ls|dir [directorio]  Lista el contenido (por defecto, el actual)");
-        out.println("    cd <directorio>      Cambia de directorio (acepta .. y rutas absolutas)");
+        out.println("Comandos disponibles  (<x> es obligatorio, [x] es opcional):");
+        out.println();
+        out.println("  Sobre un archivo .ps");
+        helpLine("run|exec <archivo>", "Ejecuta el archivo e imprime la salida por pantalla");
+        helpLine(
+                "save <archivo>",
+                "Como run, y además guarda la salida en <fuente>.out.txt junto al .ps");
+        helpLine("validate <archivo>", "Valida la sintaxis sin ejecutar el programa");
+        helpLine("format <archivo> [config]", "Formatea el archivo e imprime el resultado");
+        helpLine("analyze <archivo> [config]", "Lintea el archivo y reporta las violaciones");
+        out.println();
+        out.println("    [config] es un archivo de reglas .json/.yaml/.yml (opcional):");
+        out.println("      · format sin [config]  → reglas por defecto (sin espaciado extra)");
+        out.println("      · analyze sin [config] → ninguna regla activa (no reporta nada)");
+        out.println("      · alias: exec=execution, format=fmt=formatting, analyze=lint=analyzing");
+        out.println();
+        out.println("  Navegación del filesystem (rutas relativas al directorio actual, pwd)");
+        helpLine("pwd", "Muestra el directorio actual");
+        helpLine("ls|dir [directorio]", "Lista el contenido (por defecto, el actual)");
+        helpLine("cd <directorio>", "Cambia de directorio (acepta .. y rutas absolutas)");
+        out.println();
         out.println("  Sesión");
-        out.println("    help|?               Muestra esta ayuda");
-        out.println("    exit|quit            Sale de la interfaz");
+        helpLine("help|?", "Muestra esta ayuda");
+        helpLine("exit|quit", "Sale de la interfaz (también con Ctrl-D)");
+    }
+
+    private void helpLine(String command, String description) {
+        out.println(String.format(Locale.ROOT, "    %-28s%s", command, description));
     }
 }
