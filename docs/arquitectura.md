@@ -8,7 +8,7 @@ El criterio de descomposición es el de Parnas: cada módulo esconde **una decis
 
 ## 1. Estado actual
 
-Ocho módulos Gradle, cada uno con su propio set de dependencias, compilando por separado.
+Diez módulos Gradle, cada uno con su propio set de dependencias, compilando por separado.
 
 ```mermaid
 flowchart TD
@@ -18,12 +18,14 @@ flowchart TD
         lexer["lexer"]
         parser["parser"]
         interpreter["interpreter"]
+        linter["linter"]
     end
 
-    subgraph vocabulario["Vocabulario y puertos · estables, sin lógica"]
+    subgraph vocabulario["Vocabulario, puertos y configuración · estables, sin lógica"]
         token["token"]
         ast["ast"]
         runtimeapi["runtime-api"]
+        config["configuration"]
     end
 
     common["common"]
@@ -31,6 +33,8 @@ flowchart TD
     runner --> lexer
     runner --> parser
     runner --> interpreter
+    runner --> linter
+    runner --> config
     runner --> runtimeapi
     runner --> common
 
@@ -42,15 +46,19 @@ flowchart TD
     interpreter --> ast
     interpreter --> runtimeapi
     interpreter --> common
+    linter --> ast
+    linter --> config
+    linter --> common
     token --> common
     ast --> common
+    config --> common
 ```
 
 Tres cosas para leer en ese grafo:
 
-- **Los tres motores no se conocen entre sí.** No hay ninguna flecha horizontal. Consumen vocabulario, nunca el módulo de al lado.
+- **Los cuatro motores no se conocen entre sí.** No hay ninguna flecha horizontal. Consumen vocabulario, nunca el módulo de al lado. El `linter` en particular no conoce al `parser`: recibe el flujo de sentencias ya armado.
 - **`runtime-api` no depende de nada.** Es un módulo de puertos: no tiene nada debajo y todos lo tienen arriba.
-- **Nadie depende de `interpreter`.** Es una hoja: lo que más cambia está arriba de todo, donde romperlo no rompe a nadie.
+- **Nadie depende de `interpreter` ni de `linter`.** Son hojas: lo que más cambia está arriba de todo, donde romperlo no rompe a nadie.
 
 ## 2. Estado completo previsto
 
@@ -67,14 +75,14 @@ flowchart TD
         semantic["semantic"]:::previsto
         interpreter["interpreter"]
         formatter["formatter"]:::previsto
-        linter["linter"]:::previsto
+        linter["linter"]
     end
 
     subgraph vocabulario["Vocabulario, puertos y configuración"]
         token["token"]
         ast["ast"]
         runtimeapi["runtime-api"]
-        config["config"]:::previsto
+        config["configuration"]
     end
 
     common["common"]
@@ -115,8 +123,7 @@ Lo que cambia respecto de hoy:
 
 - Aparece **`semantic`** entre el parser y el interpreter. Es la etapa que valida tipos, scope y constancia, y la que hace que el modo Validation de la consigna valide de verdad la semántica y no solo la sintaxis.
 - Aparece **`runner`**, el único módulo del sistema donde el lexer y el parser se conocen. Es lo que permite publicar PrintScript como librería sin arrastrar la línea de comandos.
-- Aparecen **`formatter`** y **`linter`**, que cuelgan del vocabulario sin conocer al parser: se puede formatear o lintear un programa con errores de tipos.
-- Aparece **`config`**, que esconde en qué formato vive la configuración. Recibe streams, nunca paths: abrir archivos es responsabilidad exclusiva de `cli`.
+- Aparece **`formatter`**, que cuelga del vocabulario sin conocer al parser: se puede formatear un programa con errores de tipos.
 - Aparece **`cli`**, que depende solo de `runner`, `runtime-api` y `common`.
 
 ---
@@ -132,10 +139,10 @@ Lo que cambia respecto de hoy:
 | `lexer` | Cómo se reconoce un token dentro del texto | Cambian las reglas léxicas | `common`, `token` | ✅ |
 | `parser` | La gramática y cómo se construye el árbol | Cambian las reglas sintácticas | `common`, `token`, `ast` | ✅ |
 | `interpreter` | Qué efecto produce cada nodo al ejecutarse | Cambia la semántica de ejecución | `common`, `ast`, `runtime-api` | ✅ |
-| `config` | En qué formato vive la configuración (JSON, YAML, mañana TOML) | Aparecen formatos nuevos | `common` | ⬜ |
+| `configuration` | En qué formato vive la configuración (JSON, YAML, mañana TOML) | Aparecen formatos nuevos | `common` | ✅ |
 | `semantic` | Qué programas bien formados tienen sentido | Cambian las reglas de tipos y scope | `common`, `ast` | ⬜ |
-| `formatter` | Cómo se ve el código | Cambian las reglas de estilo | `common`, `token`, `config` | ⬜ |
-| `linter` | Qué convenciones se exigen | Cambian las convenciones | `common`, `ast`, `config` | ⬜ |
+| `formatter` | Cómo se ve el código | Cambian las reglas de estilo | `common`, `token`, `configuration` | ⬜ |
+| `linter` | Qué convenciones se exigen | Cambian las convenciones | `common`, `ast`, `configuration` | ✅ |
 | `runner` | Cómo se arma el pipeline de cada operación | Aparecen operaciones nuevas | todos los anteriores | ✅ |
 | `cli` | La experiencia de línea de comandos | Cambian argumentos, progreso, exit codes | `runner`, `runtime-api`, `common` | ⬜ |
 
@@ -246,7 +253,7 @@ Esa separación es la que importa y es la que sigue en pie: **el conocimiento de
 
 **El costo del contrato único.** `ASTVisitor` cubre expresiones y sentencias juntas, así que `Executor` implementa los cuatro `visit` de expresión devolviendo un error, y `ExpressionEvaluator` hace lo simétrico con los tres de sentencia. Son ramas inalcanzables, impuestas por tener un solo contrato publicado de recorrido.
 
-**Trece módulos.** El número no es el criterio; la independencia de razones de cambio sí. `config`, `semantic` y `runtime-api` existen porque cada uno esconde una decisión distinta con evolución propia. La única fusión que no rompería razones de cambio sería `runner` dentro de `cli`, y se descarta porque PrintScript se publica como librería.
+**Trece módulos.** El número no es el criterio; la independencia de razones de cambio sí. `configuration`, `semantic` y `runtime-api` existen porque cada uno esconde una decisión distinta con evolución propia. La única fusión que no rompería razones de cambio sería `runner` dentro de `cli`, y se descarta porque PrintScript se publica como librería.
 
 ---
 
@@ -256,6 +263,8 @@ Es el único lugar del sistema donde el lexer y el parser se conocen entre sí. 
 
 `ValidationRunner` es la segunda fachada: arma la misma cadena pero se detiene en el parser, sin interpreter y sin `OutputPrinter` — la firma de `validate` ni siquiera recibe uno. Recorre el flujo de sentencias, junta los `Failure` con su mensaje y su `Range`, y no ejecuta nada: validar un programa con `println` no imprime. Queda anotado explícitamente: la consigna pide validar sintaxis **y semántica**, y el módulo `semantic` no existe todavía, así que esta fachada valida solo sintaxis. Cuando `semantic` exista, se encadena entre el parser y el consumidor sin que ninguna de las dos etapas cambie.
 
+`AnalyzingRunner` es la tercera fachada: arma `Lexer` → `TokenBuffer` → `Parser` → `Linter` reusando el mismo `StatementStreams`, y devuelve un `AnalysisReport` con dos listas separadas — las violaciones de estilo y los errores de sintaxis. **No pasa por `semantic`**, y no va a pasar cuando exista: se puede lintear un programa que no tipa. Tiene un segundo `analyze` que recibe el stream de configuración y su formato, y es el único lugar donde se cablean los mappers de `configuration`.
+
 El invariante del módulo: **compone, no decide**. No tiene ni una regla del lenguaje; todo el conocimiento del lenguaje sigue en las factories.
 
 **La política con los errores es acumular, no cortar.** Las etapas deliberadamente no la toman, así que la decisión vive acá: la fachada junta los `Failure` que salen del bucle — con su mensaje y su `Range` — y los devuelve como lista al terminar. Un error no detiene la ejecución del resto del programa.
@@ -263,3 +272,38 @@ El invariante del módulo: **compone, no decide**. No tiene ni una regla del len
 **Trade-off asumido.** Como la ejecución es en una sola pasada, cuando aparece un error las sentencias válidas anteriores ya se ejecutaron y su salida ya salió. Quien necesite atomicidad corre primero la validación.
 
 **Comportamiento anotado: imprimir una variable declarada sin valor.** Hoy el valor guardado para una declaración sin inicializador es `null`, y `asText` lo convierte con `String.valueOf`, así que `println` imprime `null`. No es lo que debería pasar en un lenguaje con chequeo de tipos, pero nadie lo detecta porque `semantic` no existe. Queda pendiente de ese módulo.
+
+---
+
+## 9. El módulo `linter`
+
+Es el *static code analyzer* que pide la consigna: analiza los programas PrintScript del usuario. **No tiene nada que ver con Checkstyle, PMD ni Spotless**, que analizan nuestro código Java y viven en `config/` y en `buildSrc/`.
+
+Es una etapa más del pipeline: implementa `PrintScriptIterator<Result<List<Violation>>>` y decora al parser, así que consume una sentencia por vez y un fuente que no entra en memoria se lintea igual que se ejecuta.
+
+**Las violaciones viajan como dato.** Por cada sentencia, o un `Failure` reenviado del parser, o un `Success` con la lista de lo que incumple — vacía cuando está limpia. Ninguna regla corta a las que siguen y ninguna violación corta a la sentencia siguiente, que es lo que pide la consigna cuando dice que hay que reportar todos los incumplimientos.
+
+**Cada violación lleva el `Range` de aquello de lo que habla**, no el de la sentencia entera: el del identificador mal escrito, el del argumento inválido. Para eso `VariableDeclaration` y `AssignmentStatement` guardan su nombre como `Identifier` y no como `String`.
+
+### El recorrido se escribe una sola vez
+
+`IdentifierCollector` es un `ASTVisitor<List<Identifier>>` y es el único lugar donde se baja por el árbol. Las reglas lo usan; no recorren. Cuando el AST gane un nodo, el visitor deja de compilar y avisa dónde hay que decidir.
+
+`PrintlnArgumentRule` no recorre nada: mira el hijo inmediato del `println` con un switch exhaustivo sobre `Expression`. La regla está escrita en positivo — solo un identificador o un literal — así que un tipo de expresión nuevo también rompe la compilación en vez de colarse.
+
+### Las reglas se configuran al construirse
+
+`LintRule` tiene un solo método, `check(Statement)`. La configuración no viaja en cada llamada y la regla no guarda estado: `LinterFactory` decide qué reglas existen y con qué parámetros, y **una regla apagada simplemente no está en la lista**.
+
+| Clave del archivo | Qué prende | Valores |
+|---|---|---|
+| `identifier_format` | El formato exigido a los identificadores | `camel case` (también `camelCase` y `camel_case`) |
+| `mandatory-variable-or-literal-in-println` | Que `println` reciba solo un identificador o un literal | `true` / `false` |
+
+Una clave ausente deja la regla apagada. Un valor **desconocido** en `identifier_format` rompe con un mensaje que nombra el valor recibido y los soportados, en vez de apagar la regla en silencio.
+
+**`snake case` no está soportado a propósito.** La consigna admite camel case o snake case y el equipo eligió uno solo. Sumarlo es una clase que implemente `IdentifierFormatChecker` y un valor más en el enum: nada de lo que ya está escrito cambia.
+
+### El linter no sabe qué es JSON
+
+Recibe una `LinterConfiguration` tipada. Leer el archivo es trabajo de `configuration`, y traducir esa configuración genérica a la del linter es trabajo de `LinterConfiguration.from`. Así el módulo no arrastra Jackson y sus tests no necesitan un archivo.

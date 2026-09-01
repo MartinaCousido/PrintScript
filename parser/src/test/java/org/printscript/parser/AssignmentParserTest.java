@@ -39,9 +39,11 @@ class AssignmentParserTest {
 
     @Test
     void matchesAnIdentifierFollowedByEquals() {
-        assertTrue(parser.matches(bufferOf(
-            token(TokenType.IDENTIFIER, "x", 1),
-            token(TokenType.OPERATOR, "=", 3))));
+        assertTrue(
+                parser.matches(
+                        bufferOf(
+                                token(TokenType.IDENTIFIER, "x", 1),
+                                token(TokenType.OPERATOR, "=", 3))));
     }
 
     @Test
@@ -49,19 +51,22 @@ class AssignmentParserTest {
         assertFalse(parser.matches(bufferOf(token(TokenType.KEYWORD, "let", 1))));
         assertFalse(parser.matches(bufferOf(token(TokenType.KEYWORD, "println", 1))));
         assertFalse(parser.matches(bufferOf(token(TokenType.IDENTIFIER, "x", 1))));
-        assertFalse(parser.matches(bufferOf(
-            token(TokenType.IDENTIFIER, "x", 1),
-            token(TokenType.PUNCTUATION, ":", 2))));
+        assertFalse(
+                parser.matches(
+                        bufferOf(
+                                token(TokenType.IDENTIFIER, "x", 1),
+                                token(TokenType.PUNCTUATION, ":", 2))));
         assertFalse(parser.matches(bufferOf()));
     }
 
     @Test
     void matchesDoesNotConsumeTokens() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.IDENTIFIER, "x", 1),
-            token(TokenType.OPERATOR, "=", 3),
-            token(TokenType.NUMBER, "5", 5),
-            token(TokenType.PUNCTUATION, ";", 6));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.IDENTIFIER, "x", 1),
+                        token(TokenType.OPERATOR, "=", 3),
+                        token(TokenType.NUMBER, "5", 5),
+                        token(TokenType.PUNCTUATION, ";", 6));
 
         parser.matches(tokens);
 
@@ -70,67 +75,74 @@ class AssignmentParserTest {
 
     @Test
     void parsesAnAssignmentWithALiteral() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.IDENTIFIER, "x", 1),
-            token(TokenType.OPERATOR, "=", 3),
-            token(TokenType.NUMBER, "5", 5),
-            token(TokenType.PUNCTUATION, ";", 6));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.IDENTIFIER, "x", 1),
+                        token(TokenType.OPERATOR, "=", 3),
+                        token(TokenType.NUMBER, "5", 5),
+                        token(TokenType.PUNCTUATION, ";", 6));
 
         Result<Statement> result = parser.parse(tokens);
 
-        Statement expected = new AssignmentStatement(
-            "x",
-            new NumberLiteral(5.0, range(5, 5)),
-            range(1, 6));
+        Statement expected =
+                new AssignmentStatement(
+                        new Identifier("x", range(1, 1)),
+                        new NumberLiteral(5.0, range(5, 5)),
+                        range(1, 6));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void parsesAnAssignmentWithAnIdentifier() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.IDENTIFIER, "x", 1),
-            token(TokenType.OPERATOR, "=", 3),
-            token(TokenType.IDENTIFIER, "y", 5),
-            token(TokenType.PUNCTUATION, ";", 6));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.IDENTIFIER, "x", 1),
+                        token(TokenType.OPERATOR, "=", 3),
+                        token(TokenType.IDENTIFIER, "y", 5),
+                        token(TokenType.PUNCTUATION, ";", 6));
 
         Result<Statement> result = parser.parse(tokens);
 
-        Statement expected = new AssignmentStatement(
-            "x",
-            new Identifier("y", range(5, 5)),
-            range(1, 6));
+        Statement expected =
+                new AssignmentStatement(
+                        new Identifier("x", range(1, 1)),
+                        new Identifier("y", range(5, 5)),
+                        range(1, 6));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void parsesAnAssignmentWithACompoundExpression() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.IDENTIFIER, "x", 1),
-            token(TokenType.OPERATOR, "=", 3),
-            token(TokenType.NUMBER, "2", 5),
-            token(TokenType.OPERATOR, "+", 6),
-            token(TokenType.NUMBER, "3", 7),
-            token(TokenType.PUNCTUATION, ";", 8));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.IDENTIFIER, "x", 1),
+                        token(TokenType.OPERATOR, "=", 3),
+                        token(TokenType.NUMBER, "2", 5),
+                        token(TokenType.OPERATOR, "+", 6),
+                        token(TokenType.NUMBER, "3", 7),
+                        token(TokenType.PUNCTUATION, ";", 8));
 
         Result<Statement> result = parser.parse(tokens);
 
-        Statement expected = new AssignmentStatement(
-            "x",
-            new BinaryExpression(
-                new NumberLiteral(2.0, range(5, 5)),
-                Operator.PLUS,
-                new NumberLiteral(3.0, range(7, 7)),
-                range(5, 7)),
-            range(1, 8));
+        Statement expected =
+                new AssignmentStatement(
+                        new Identifier("x", range(1, 1)),
+                        new BinaryExpression(
+                                new NumberLiteral(2.0, range(5, 5)),
+                                Operator.PLUS,
+                                new NumberLiteral(3.0, range(7, 7)),
+                                range(5, 7)),
+                        range(1, 8));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void missingEqualsFailsAtTheOffendingToken() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.IDENTIFIER, "x", 1),
-            token(TokenType.NUMBER, "5", 3),
-            token(TokenType.PUNCTUATION, ";", 4));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.IDENTIFIER, "x", 1),
+                        token(TokenType.NUMBER, "5", 3),
+                        token(TokenType.PUNCTUATION, ";", 4));
 
         Result<Statement> result = parser.parse(tokens);
 
@@ -140,10 +152,11 @@ class AssignmentParserTest {
 
     @Test
     void missingSemicolonFailsAfterTheLastTokenOfTheExpression() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.IDENTIFIER, "x", 1),
-            token(TokenType.OPERATOR, "=", 3),
-            token(TokenType.NUMBER, "5", 5));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.IDENTIFIER, "x", 1),
+                        token(TokenType.OPERATOR, "=", 3),
+                        token(TokenType.NUMBER, "5", 5));
 
         Result<Statement> result = parser.parse(tokens);
 
@@ -153,10 +166,11 @@ class AssignmentParserTest {
 
     @Test
     void emptyExpressionAfterEqualsFails() {
-        TokenBuffer tokens = bufferOf(
-            token(TokenType.IDENTIFIER, "x", 1),
-            token(TokenType.OPERATOR, "=", 3),
-            token(TokenType.PUNCTUATION, ";", 4));
+        TokenBuffer tokens =
+                bufferOf(
+                        token(TokenType.IDENTIFIER, "x", 1),
+                        token(TokenType.OPERATOR, "=", 3),
+                        token(TokenType.PUNCTUATION, ";", 4));
 
         Result<Statement> result = parser.parse(tokens);
 

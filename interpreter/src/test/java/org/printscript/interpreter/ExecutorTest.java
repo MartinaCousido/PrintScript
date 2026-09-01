@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
@@ -17,7 +18,6 @@ import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
 import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
-import org.printscript.ast.AssignmentStatement;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -48,7 +48,10 @@ class ExecutorTest {
 
     private static Statement declaration(String name, Expression initializer, Range range) {
         return new VariableDeclaration(
-            name, new TypeName("number", ANY), Optional.of(initializer), range);
+                new Identifier(name, ANY),
+                new TypeName("number", ANY),
+                Optional.of(initializer),
+                range);
     }
 
     private static Result<Void> run(Executor executor, Statement statement) {
@@ -71,10 +74,11 @@ class ExecutorTest {
 
     @Test
     void theThreeStatementsOfVersion10AreExecuted() {
-        List<String> printed = printedBy(
-            declaration("x", number(1), ANY),
-            new AssignmentStatement("x", number(5), ANY),
-            new PrintlnStatement(new Identifier("x", ANY), ANY));
+        List<String> printed =
+                printedBy(
+                        declaration("x", number(1), ANY),
+                        new AssignmentStatement(new Identifier("x", ANY), number(5), ANY),
+                        new PrintlnStatement(new Identifier("x", ANY), ANY));
 
         assertEquals(List.of("5"), printed);
     }
@@ -110,7 +114,10 @@ class ExecutorTest {
         Range range = rangeAt(3, 1, 3, 7);
         Executor executor = new Executor(new Environment(), new InMemoryPrinter());
 
-        Failure<Void> failure = runFailing(executor, new AssignmentStatement("y", number(1), range));
+        Failure<Void> failure =
+                runFailing(
+                        executor,
+                        new AssignmentStatement(new Identifier("y", ANY), number(1), range));
 
         assertEquals(range, failure.range());
         assertTrue(failure.message().contains("y"), failure.message());

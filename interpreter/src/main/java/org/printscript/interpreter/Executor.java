@@ -15,7 +15,8 @@ import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.runtime.OutputPrinter;
-//ejecuta las sentencias
+
+// ejecuta las sentencias
 public final class Executor implements ASTVisitor<Result<Void>> {
 
     private final OutputPrinter printer;
@@ -45,11 +46,15 @@ public final class Executor implements ASTVisitor<Result<Void>> {
         if (evaluated instanceof Failure<Object> failure) {
             return propagate(failure);
         }
-        return environment.assign(assignmentStatement.name(), valueOf(evaluated))
-            .<Result<Void>>map(this::commit)
-            .orElseGet(() -> new Failure<>(
-                "Variable no declarada: " + assignmentStatement.name(),
-                assignmentStatement.range()));
+        return environment
+                .assign(assignmentStatement.name().name(), valueOf(evaluated))
+                .<Result<Void>>map(this::commit)
+                .orElseGet(
+                        () ->
+                                new Failure<>(
+                                        "Variable no declarada: "
+                                                + assignmentStatement.name().name(),
+                                        assignmentStatement.range()));
     }
 
     @Override
@@ -86,12 +91,16 @@ public final class Executor implements ASTVisitor<Result<Void>> {
         return expression.accept(new ExpressionEvaluator(environment));
     }
 
-    //calcula el valor y guarda la variable
+    // calcula el valor y guarda la variable
     private Result<Void> declare(VariableDeclaration declaration, Object value) {
-        return environment.declare(declaration.name(), declaration.type().name(), value)
-            .<Result<Void>>map(this::commit)
-            .orElseGet(() -> new Failure<>(
-                "Variable ya declarada: " + declaration.name(), declaration.range()));
+        return environment
+                .declare(declaration.name().name(), declaration.type().name(), value)
+                .<Result<Void>>map(this::commit)
+                .orElseGet(
+                        () ->
+                                new Failure<>(
+                                        "Variable ya declarada: " + declaration.name().name(),
+                                        declaration.range()));
     }
 
     private Result<Void> commit(Environment updated) {

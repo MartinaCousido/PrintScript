@@ -78,7 +78,7 @@ class InterpreterNodeGateTest {
         Range range = new Range(new Position(3, 5), new Position(3, 20));
         Statement declaration =
                 new VariableDeclaration(
-                        "x",
+                        new Identifier("x", ANY),
                         new TypeName("number", ANY),
                         Optional.of(new NumberLiteral(1, ANY)),
                         range);

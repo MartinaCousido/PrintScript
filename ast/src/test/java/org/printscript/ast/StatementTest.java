@@ -17,8 +17,8 @@ class StatementTest {
 
     private static String describe(Statement statement) {
         return switch (statement) {
-            case VariableDeclaration declaration -> "declaration:" + declaration.name();
-            case AssignmentStatement assignment -> "assignment:" + assignment.name();
+            case VariableDeclaration declaration -> "declaration:" + declaration.name().name();
+            case AssignmentStatement assignment -> "assignment:" + assignment.name().name();
             case PrintlnStatement _ -> "println";
         };
     }
@@ -28,14 +28,14 @@ class StatementTest {
         Expression initializer = new NumberLiteral(8.0, rangeAt(14, 14));
         VariableDeclaration declaration =
                 new VariableDeclaration(
-                        "x",
+                        new Identifier("x", rangeAt(5, 5)),
                         new TypeName("number", rangeAt(8, 13)),
                         Optional.of(initializer),
                         rangeAt(1, 14));
 
         assertTrue(declaration.initializer().isPresent());
         assertEquals(initializer, declaration.initializer().get());
-        assertEquals("x", declaration.name());
+        assertEquals("x", declaration.name().name());
         assertEquals("number", declaration.type().name());
         assertEquals(rangeAt(8, 13), declaration.type().range());
         assertEquals("declaration:x", describe(declaration));
@@ -45,7 +45,7 @@ class StatementTest {
     void declarationWithoutInitializerHasAnEmptyOptional() {
         VariableDeclaration declaration =
                 new VariableDeclaration(
-                        "y",
+                        new Identifier("y", rangeAt(5, 5)),
                         new TypeName("string", rangeAt(8, 13)),
                         Optional.empty(),
                         rangeAt(1, 13));
@@ -57,10 +57,11 @@ class StatementTest {
     @Test
     void assignmentAndPrintlnExposeTheirRangeAndAreExhaustive() {
         Expression value = new Identifier("x", rangeAt(5, 5));
-        AssignmentStatement assignment = new AssignmentStatement("y", value, rangeAt(1, 5));
+        AssignmentStatement assignment =
+                new AssignmentStatement(new Identifier("y", rangeAt(1, 1)), value, rangeAt(1, 5));
         PrintlnStatement println = new PrintlnStatement(value, rangeAt(1, 12));
 
-        assertEquals("y", assignment.name());
+        assertEquals("y", assignment.name().name());
         assertEquals(value, assignment.expression());
         assertEquals(rangeAt(1, 5), assignment.range());
 
@@ -77,5 +78,29 @@ class StatementTest {
 
         assertEquals("boolean", type.name());
         assertEquals(rangeAt(3, 9), type.range());
+    }
+
+    @Test
+    void declarationKeepsTheRangeOfItsOwnName() {
+        Identifier name = new Identifier("x", rangeAt(5, 5));
+        VariableDeclaration declaration =
+                new VariableDeclaration(
+                        name,
+                        new TypeName("number", rangeAt(8, 13)),
+                        Optional.empty(),
+                        rangeAt(1, 13));
+
+        assertEquals(name, declaration.name());
+        assertEquals(rangeAt(5, 5), declaration.name().range());
+    }
+
+    @Test
+    void assignmentKeepsTheRangeOfItsOwnName() {
+        Identifier name = new Identifier("y", rangeAt(1, 1));
+        AssignmentStatement assignment =
+                new AssignmentStatement(name, new NumberLiteral(5.0, rangeAt(5, 5)), rangeAt(1, 5));
+
+        assertEquals(name, assignment.name());
+        assertEquals(rangeAt(1, 1), assignment.name().range());
     }
 }

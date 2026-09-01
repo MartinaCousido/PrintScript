@@ -46,6 +46,8 @@ val pisosDeCobertura = mapOf(
     "lexer" to "0.95",
     "parser" to "0.90",
     "runner" to "0.95",
+    "configuration" to "0.95",
+    "linter" to "0.95",
 )
 
 tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
