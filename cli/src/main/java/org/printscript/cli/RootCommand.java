@@ -1,0 +1,47 @@
+package org.printscript.cli;
+
+import java.util.concurrent.Callable;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.ScopeType;
+
+/*
+ * No se usa mixinStandardHelpOptions: registra -V/--version para imprimir la
+ * versión del jar, que choca con el --version/-v de la consigna (la versión del
+ * lenguaje PrintScript). Por eso -h/--help se declara a mano y --version queda
+ * libre para su único significado en esta CLI.
+ */
+@Command(
+        name = "printscript",
+        subcommands = {
+            ExecutionCommand.class,
+            ValidationCommand.class,
+            FormattingCommand.class,
+            AnalyzingCommand.class
+        },
+        description = "CLI de PrintScript: ejecuta, valida, formatea o analiza un archivo .ps")
+public final class RootCommand implements Callable<Integer> {
+
+    @Option(
+            names = {"-v", "--version"},
+            converter = LanguageVersion.Converter.class,
+            defaultValue = "1.0",
+            scope = ScopeType.INHERIT,
+            description = "Versión del lenguaje a interpretar (por ahora solo 1.0)")
+    private LanguageVersion version;
+
+    @Option(
+            names = {"-h", "--help"},
+            usageHelp = true,
+            scope = ScopeType.INHERIT,
+            description = "Muestra este mensaje de ayuda")
+    private boolean helpRequested;
+
+    @Override
+    @SuppressWarnings("PMD.SystemPrintln")
+    public Integer call() {
+        System.err.println(
+                "Falta indicar una operación: execution, validation, formatting o analyzing.");
+        return ExitCode.USAGE_ERROR.code();
+    }
+}

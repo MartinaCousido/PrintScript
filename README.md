@@ -145,7 +145,7 @@ propia) existe `git commit --no-verify`; la red que no se puede saltear es el CI
 
 ## Módulos
 
-Diez módulos Gradle, cada uno con su propio set de dependencias y compilando por
+Doce módulos Gradle, cada uno con su propio set de dependencias y compilando por
 separado. La configuración común vive en un convention plugin en `buildSrc/`, no
 duplicada en cada módulo.
 
@@ -157,13 +157,34 @@ duplicada en cada módulo.
 | `runtime-api` | Cómo habla un programa en ejecución con el mundo exterior |
 | `lexer` | Cómo se reconoce un token dentro del texto |
 | `parser` | La gramática y cómo se construye el árbol |
-| `interpreter` | Qué efecto produce cada nodo al ejecutarse |
 | `configuration` | En qué formato vive la configuración de las herramientas (JSON, YAML) |
 | `linter` | Qué convenciones se le exigen a un programa PrintScript |
+| `formatter` | Cómo se ve el código PrintScript ya formateado |
 | `runner` | Cómo se arma el pipeline de cada operación |
+| `cli` | La experiencia de línea de comandos: argumentos, progreso, exit codes |
 
-Faltan `semantic`, `formatter` y `cli`. El grafo completo está en
+Falta `semantic`. El grafo completo está en
 [`docs/arquitectura.md`](docs/arquitectura.md).
+
+## Cómo usar la CLI
+
+El módulo `cli` expone las cuatro operaciones de la consigna (`execution`,
+`validation`, `formatting`, `analyzing`) como subcomandos, y además abre una
+interfaz interactiva (REPL) cuando se lo corre sin argumentos:
+
+```bash
+# el working directory de la tarea run es cli/, por eso la ruta es relativa a ahí
+./gradlew :cli:run --args="execution src/test/resources/examples/valid-hello.ps"
+
+# sin argumentos: interfaz interactiva para navegar y correr operaciones
+./gradlew :cli:run --console=plain
+
+./gradlew :cli:installDist
+cli/build/install/printscript/bin/printscript execution ruta/al/archivo.ps
+```
+
+Referencia completa de argumentos, códigos de salida, la interfaz interactiva y
+ejemplos de salida (éxito y error con fila/columna) en [`docs/cli.md`](docs/cli.md).
 
 ## Qué reconoce hoy
 
@@ -242,5 +263,7 @@ configuration/            lectura de la configuración de las herramientas de Pr
 lexer/  parser/           etapas del pipeline
 interpreter/  linter/
 runner/                   orquesta el pipeline de punta a punta
+cli/                      línea de comandos: la única que toca filesystem, System.out/err y exit codes
 docs/arquitectura.md      diagramas de componentes y responsabilidades
+docs/cli.md               guía de uso de la CLI
 ```

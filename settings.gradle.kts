@@ -16,4 +16,5 @@ include(
     "configuration",
     "linter",
     "formatter",
+    "cli",
 )

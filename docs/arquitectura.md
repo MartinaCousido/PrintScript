@@ -8,10 +8,11 @@ El criterio de descomposición es el de Parnas: cada módulo esconde **una decis
 
 ## 1. Estado actual
 
-Once módulos Gradle, cada uno con su propio set de dependencias, compilando por separado.
+Doce módulos Gradle, cada uno con su propio set de dependencias, compilando por separado.
 
 ```mermaid
 flowchart TD
+    cli["cli"]
     runner["runner"]
 
     subgraph motores["Motores · una etapa del pipeline cada uno"]
@@ -30,6 +31,10 @@ flowchart TD
     end
 
     common["common"]
+
+    cli --> runner
+    cli --> runtimeapi
+    cli --> common
 
     runner --> lexer
     runner --> parser
@@ -59,11 +64,12 @@ flowchart TD
     config --> common
 ```
 
-Tres cosas para leer en ese grafo:
+Cuatro cosas para leer en ese grafo:
 
 - **Los cinco motores no se conocen entre sí.** No hay ninguna flecha horizontal. Consumen vocabulario, nunca el módulo de al lado. El `linter` y el `formatter` en particular no conocen al `parser`: reciben el flujo de sentencias ya armado.
 - **`runtime-api` no depende de nada.** Es un módulo de puertos: no tiene nada debajo y todos lo tienen arriba.
 - **Nadie depende de `interpreter`, `linter` ni `formatter`.** Son hojas: lo que más cambia está arriba de todo, donde romperlo no rompe a nadie.
+- **`cli` es el único que toca filesystem, `System.out`/`System.err` y códigos de salida**, y el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.main`). No depende de `lexer`, `parser`, `interpreter`, `ast` ni `token`: solo de `runner`, `runtime-api` y `common`. Ver sección 9.
 
 ## 2. Estado completo previsto
 
@@ -71,7 +77,7 @@ Trece módulos. Los de borde punteado todavía no existen.
 
 ```mermaid
 flowchart TD
-    cli["cli"]:::previsto
+    cli["cli"]
     runner["runner"]
 
     subgraph motores["Motores"]
@@ -149,7 +155,7 @@ Lo que cambia respecto de hoy:
 | `formatter` | Cómo se ve el código | Cambian las reglas de estilo | `common`, `ast`, `configuration` | ✅ |
 | `linter` | Qué convenciones se exigen | Cambian las convenciones | `common`, `ast`, `configuration` | ✅ |
 | `runner` | Cómo se arma el pipeline de cada operación | Aparecen operaciones nuevas | todos los anteriores | ✅ |
-| `cli` | La experiencia de línea de comandos | Cambian argumentos, progreso, exit codes | `runner`, `runtime-api`, `common` | ⬜ |
+| `cli` | La experiencia de línea de comandos | Cambian argumentos, progreso, exit codes | `runner`, `runtime-api`, `common` | ✅ |
 
 ---
 
@@ -280,7 +286,27 @@ El invariante del módulo: **compone, no decide**. No tiene ni una regla del len
 
 ---
 
-## 9. El módulo `linter`
+## 9. El módulo `cli`
+
+Es el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.main`) y el único módulo autorizado a tocar filesystem, `System.out`/`System.err` y códigos de salida — el resto son librerías puras. Traduce argumentos con **picocli** a un `RootCommand` con cuatro subcomandos, uno por operación de la consigna: `execution`, `validation`, `formatting` y `analyzing` (con sus alias). A partir de ahí nada depende de picocli salvo las clases de comando mismas.
+
+`ExecutionCommand` y `ValidationCommand` comparten `AbstractSourceFileCommand`, y `AnalyzingCommand` sigue el mismo patrón: todos abren el archivo fuente vía `SourceFileProcessor`, que arma un `Iterator<String>` de líneas con progreso y delega en la operación concreta (`ExecutionRunner`/`ValidationRunner`/`AnalyzingRunner`). Cero lógica de lenguaje en `cli`: solo abre archivos, arma el iterador y reporta lo que el `runner` devuelve.
+
+**Interfaz interactiva.** Correr `cli` sin argumentos abre `InteractiveShell`, un REPL que mantiene su propio directorio de trabajo para navegar el filesystem (`pwd`/`ls`/`cd`) y correr las operaciones sobre archivos relativos a él. No duplica nada: usa el mismo `SourceFileProcessor` y los mismos runners que los subcomandos, así que el resultado es idéntico al de la forma no interactiva.
+
+**Progreso durante el parseo.** `ProgressReportingIterator` decora el iterador de líneas: estima el porcentaje consumido con `Files.size` (una sola llamada, sin releer el archivo) y bytes acumulados por línea, y solo escribe a `System.err` cuando el porcentaje entero cambia. El lexer y el parser nunca se enteran de que existe.
+
+**Errores con rango completo.** `FailureReporter` formatea cada `Failure` (mensaje + `Range` con fila/columna de inicio y fin) a `System.err`, tal como exige la consigna.
+
+**`--version` no viaja al `runner`.** La consigna pide un argumento de versión del lenguaje ("por ahora solo 1.0"); `cli` lo valida en el borde (`LanguageVersion`, un converter de picocli que rechaza cualquier valor que no sea `"1.0"`) pero no lo pasa a `ExecutionRunner`/`ValidationRunner`, que no tienen ese parámetro (ver sección 6). Cuando exista una 1.1 real, el punto de entrada para el despacho sigue siendo el que describe esa sección — las factories, no `cli`.
+
+**`analyzing` corre el linter y `formatting` corre el formatter.** Ambas cargan las reglas del `--config` (JSON/YAML) vía el módulo `configuration` con el helper compartido `ConfigurationFiles`, y sin `--config` cada regla cae en su valor por defecto. `AnalyzingCommand`/`LintAnalysis` corren el `AnalyzingRunner` y reportan las violaciones (prefijo `lint:` + rango) y los errores de sintaxis; `FormattingCommand`/`Formatting` corren el `FormattingRunner` y escriben el código formateado por stdout o, con `--output`, a un archivo (nunca pisan el fuente). Las cuatro operaciones tienen backend hoy; el `UNSUPPORTED_OPERATION` (exit code `3`) queda reservado para cuando se sume una operación sin implementar.
+
+**Guardar la salida (`execution --output` / `save`).** `ExecutionOutput` teea la salida del programa por un `TeeOutputPrinter` hacia la consola y hacia un `WriterOutputPrinter` sobre un archivo, así el programa se ejecuta una sola vez y su salida queda mostrada y guardada. El REPL expone esto como el comando `save`, que deriva el `.txt` junto al fuente.
+
+**Códigos de salida:** `0` éxito, `1` el programa `.ps` tiene errores de validación/ejecución o el análisis encontró violaciones, `2` error de uso (argumentos inválidos, versión no soportada, archivo o configuración inexistente o mal formada), `3` operación pedida pero no implementada. Guía de uso completa con ejemplos en [`docs/cli.md`](cli.md).
+
+## 10. El módulo `linter`
 
 Es el *static code analyzer* que pide la consigna: analiza los programas PrintScript del usuario. **No tiene nada que ver con Checkstyle, PMD ni Spotless**, que analizan nuestro código Java y viven en `config/` y en `buildSrc/`.
 
