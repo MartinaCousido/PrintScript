@@ -52,8 +52,9 @@ Comandos disponibles:
 | Comando | Alias | Qué hace |
 |---|---|---|
 | `execution <archivo>` | `exec`, `run` | Ejecuta el archivo e imprime su salida |
+| `save <archivo>` | `guardar` | Ejecuta y guarda la salida de los `println` en un `.txt` junto al fuente (`ejemplo.ps` → `ejemplo.out.txt`), además de mostrarla |
 | `validation <archivo>` | `validate` | Valida sin ejecutar |
-| `formatting <archivo>` | `format`, `fmt` | No implementado todavía |
+| `formatting <archivo> [config]` | `format`, `fmt` | Formatea el archivo con las reglas del config e imprime el resultado (segundo token opcional) |
 | `analyzing <archivo> [config]` | `analyze`, `lint` | Lintea el archivo con las reglas del config (segundo token opcional) |
 | `pwd` | | Muestra el directorio actual |
 | `ls [directorio]` | `dir` | Lista el contenido (directorios primero, con `/`) |
@@ -75,13 +76,40 @@ prompt con su propia salida de progreso; el binario de `installDist` no lo neces
 |---|---|---|
 | `execution` | `exec` | Ejecuta el archivo: corre lexer → parser → intérprete e imprime la salida del programa por stdout |
 | `validation` | `validate` | Valida sintaxis (y semántica, cuando exista el módulo `semantic`) sin ejecutar nada |
-| `formatting` | `format`, `fmt` | **No implementado todavía** — el módulo `formatter` no existe |
+| `formatting` | `format`, `fmt` | Formatea el archivo con el módulo `formatter`, aplicando las reglas del `--config`; escribe por stdout o, con `--output`, a un archivo |
 | `analyzing` | `analyze`, `lint` | Analiza estáticamente con el módulo `linter`, aplicando las reglas del `--config` (sin config, ninguna regla está prendida) |
 
-Tres de las cuatro tienen backend hoy (`execution`, `validation`, `analyzing`); solo
-`formatting` sigue expuesta como stub porque el módulo `formatter` no existe: termina
-con un mensaje explícito de "no implementado" y exit code `3`, nunca con un resultado
-simulado.
+Las cuatro operaciones tienen backend hoy. El único que falta es el análisis semántico
+(`validation` valida solo sintaxis hasta que exista el módulo `semantic`).
+
+### `execution`: guardar la salida (`--output` / `save`)
+
+`execution -o salida.txt` (o el comando `save` del REPL) escribe la salida de los
+`println` del programa a un archivo, además de mostrarla por stdout. El REPL deriva el
+nombre del archivo del fuente (`ejemplo.ps` → `ejemplo.out.txt`, en el mismo directorio);
+el subcomando toma la ruta explícita del `--output`. Solo se guarda lo que el programa
+imprime, nunca el progreso ni los errores. Si el fuente no existe, no se crea el `.txt`.
+
+### `formatting`: reglas del formatter
+
+El formatter reimprime el código aplicando las reglas del `--config` (JSON o YAML). Una
+clave ausente cae en su valor por defecto. Por defecto el resultado va por stdout;
+`--output archivo` lo escribe a un archivo (nunca pisa el fuente). Reglas disponibles:
+
+| Clave | Qué controla | Valores |
+|---|---|---|
+| `enforce-spacing-before-colon-in-declaration` | Espacio antes del `:` en declaraciones | `true` / `false` |
+| `enforce-spacing-after-colon-in-declaration` | Espacio después del `:` en declaraciones | `true` / `false` |
+| `enforce-spacing-around-equals` | Espacio alrededor del `=` | `true` / `false` |
+| `line-breaks-before-println` | Saltos de línea antes de cada `println` | `0` a `2` |
+
+```bash
+$ printscript formatting feo.ps -c reglas.json
+let x: number = (2 + 3) * 4;
+println(x);
+$ echo $?
+0
+```
 
 ### `analyzing`: reglas del linter
 
@@ -108,24 +136,25 @@ que incumplen; los errores de sintaxis se reportan como en `validation`. El exit
 ## Argumentos
 
 ```
-printscript [-h] [-v=<version>] COMANDO ARCHIVO [-c=<config>]
+printscript [-h] [-v=<version>] COMANDO ARCHIVO [-c=<config>] [-o=<salida>]
 ```
 
 | Argumento | Aplica a | Descripción |
 |---|---|---|
 | `ARCHIVO` | las 4 operaciones | Posicional, requerido. Debe existir y ser un archivo regular. |
 | `-v`, `--version` | global | Opcional, default `1.0`. Es la versión del **lenguaje** PrintScript a interpretar, no la versión de la CLI. Hoy solo se acepta `1.0`; cualquier otro valor falla con exit code `2`. |
-| `-c`, `--config` | `formatting`, `analyzing` | Archivo de configuración YAML/JSON de reglas. En `analyzing` se lee y se aplica (ver arriba); en `formatting` se acepta su forma pero no se usa porque la operación no está implementada. El formato se detecta por la extensión (`.json`/`.yaml`/`.yml`). |
+| `-c`, `--config` | `formatting`, `analyzing` | Archivo de configuración YAML/JSON de reglas, que se lee y se aplica (ver arriba). El formato se detecta por la extensión (`.json`/`.yaml`/`.yml`); una extensión desconocida o un archivo inexistente fallan con exit code `2`. |
+| `-o`, `--output` | `execution`, `formatting` | Archivo de salida. En `execution` guarda la salida del programa (además de mostrarla); en `formatting` escribe el código formateado ahí en vez de por stdout. |
 | `-h`, `--help` | global | Muestra la ayuda de picocli para el comando (o subcomando) actual. |
 
 ## Códigos de salida
 
 | Código | Significado |
 |---|---|
-| `0` | Éxito: sin errores reportados |
-| `1` | El archivo `.ps` tiene errores de validación o ejecución (sintácticos o semánticos) |
-| `2` | Error de uso: argumentos inválidos, versión no soportada, archivo inexistente |
-| `3` | La operación pedida (`formatting`) todavía no está implementada |
+| `0` | Éxito: sin errores ni violaciones reportadas |
+| `1` | El archivo `.ps` tiene errores de validación/ejecución (sintácticos o semánticos) o el análisis encontró violaciones |
+| `2` | Error de uso: argumentos inválidos, versión no soportada, archivo o configuración inexistente o mal formada |
+| `3` | Operación pedida pero no implementada (reservado: hoy las cuatro operaciones tienen backend) |
 
 ## Ejemplos
 
@@ -164,13 +193,14 @@ La segunda sentencia se ejecuta igual (el pipeline no corta al primer error, ver
 archivo reporta el mismo error, con exit code `1`, pero sin ejecutar nada (sin
 `despues` en la salida).
 
-Operación no implementada:
+Guardar la salida a un archivo:
 
 ```bash
-$ printscript formatting valid-hello.ps
-Formatting no está implementado todavía: el módulo formatter no existe (ver docs/arquitectura.md).
-$ echo $?
-3
+$ printscript execution valid-hello.ps -o salida.txt
+Joe Doe
+Salida guardada en salida.txt
+$ cat salida.txt
+Joe Doe
 ```
 
 ## Progreso durante el parsing

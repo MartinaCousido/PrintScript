@@ -1,18 +1,10 @@
 package org.printscript.cli;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
-import org.printscript.config.ConfigurationReader;
-import org.printscript.config.JsonConfigurationMapper;
-import org.printscript.config.YamlConfigurationMapper;
 import org.printscript.linter.Violation;
 import org.printscript.linter.config.LinterConfiguration;
 import org.printscript.runner.AnalysisReport;
@@ -43,31 +35,7 @@ final class LintAnalysis {
     // sin archivo de configuración, ninguna regla está prendida (todas se apagan si
     // su clave no aparece), así que el análisis no reporta violaciones
     private static LinterConfiguration loadConfiguration(Path configFile) throws IOException {
-        if (configFile == null) {
-            return new LinterConfiguration(Optional.empty(), false);
-        }
-        if (!Files.isRegularFile(configFile)) {
-            throw new IllegalArgumentException(
-                    "el archivo de configuración '" + configFile + "' no existe");
-        }
-        String format = formatOf(configFile);
-        try (InputStream source = Files.newInputStream(configFile)) {
-            ConfigurationReader reader =
-                    new ConfigurationReader(
-                            List.of(new JsonConfigurationMapper(), new YamlConfigurationMapper()));
-            return LinterConfiguration.from(reader.read(source, format));
-        }
-    }
-
-    private static String formatOf(Path configFile) {
-        String name = configFile.getFileName().toString().toLowerCase(Locale.ROOT);
-        int dot = name.lastIndexOf('.');
-        if (dot < 0) {
-            throw new IllegalArgumentException(
-                    "el archivo de configuración no tiene extensión (.json/.yaml/.yml): "
-                            + configFile);
-        }
-        return name.substring(dot + 1);
+        return LinterConfiguration.from(ConfigurationFiles.read(configFile));
     }
 
     private static ExitCode report(AnalysisReport analysisReport, PrintStream err) {

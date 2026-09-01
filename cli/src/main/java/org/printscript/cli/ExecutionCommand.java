@@ -1,19 +1,28 @@
 package org.printscript.cli;
 
-import java.util.Iterator;
-import java.util.List;
-import org.printscript.common.Failure;
-import org.printscript.runner.ExecutionRunner;
+import java.nio.file.Path;
+import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 @Command(
         name = "execution",
         aliases = {"exec"},
         description = "Ejecuta un archivo PrintScript, imprimiendo su salida por stdout")
-final class ExecutionCommand extends AbstractSourceFileCommand {
+final class ExecutionCommand implements Callable<Integer> {
+
+    @Parameters(index = "0", paramLabel = "ARCHIVO", description = "Archivo .ps a ejecutar")
+    private Path sourceFile;
+
+    @Option(
+            names = {"-o", "--output"},
+            paramLabel = "SALIDA",
+            description = "Guarda la salida del programa en este archivo, además de mostrarla")
+    private Path outputFile;
 
     @Override
-    protected List<Failure<?>> execute(Iterator<String> lines) {
-        return new ExecutionRunner().run(lines, new ConsoleOutputPrinter());
+    public Integer call() {
+        return ExecutionOutput.run(sourceFile, outputFile, System.out, System.err).code();
     }
 }

@@ -88,12 +88,28 @@ class InteractiveShellTest {
     }
 
     @Test
-    void formattingReportsNotImplemented(@TempDir Path dir) throws IOException {
-        writeFile(dir.resolve("x.ps"), "println(1);\n");
+    void saveWritesProgramOutputToTxtNextToSource(@TempDir Path dir) throws IOException {
+        writeFile(dir.resolve("hola.ps"), "println(\"hola\");\n");
 
-        Output result = run(dir, "format x.ps\nexit\n");
+        Output result = run(dir, "save hola.ps\nexit\n");
 
-        assertTrue(result.err().contains("Formatting no está implementado"));
+        Path saved = dir.resolve("hola.out.txt");
+        assertTrue(Files.exists(saved), "crea hola.out.txt junto al fuente");
+        assertTrue(Files.readString(saved, StandardCharsets.UTF_8).contains("hola"));
+        assertTrue(result.out().contains("Salida guardada en"), "avisa dónde guardó");
+    }
+
+    @Test
+    void formatsApplyingConfigRules(@TempDir Path dir) throws IOException {
+        writeFile(dir.resolve("feo.ps"), "let a:number=12;\n");
+        writeFile(
+                dir.resolve("reglas.json"),
+                "{ \"enforce-spacing-after-colon-in-declaration\": true,"
+                        + " \"enforce-spacing-around-equals\": true }");
+
+        Output result = run(dir, "format feo.ps reglas.json\nexit\n");
+
+        assertTrue(result.out().contains("let a: number = 12;"), result.out());
     }
 
     @Test

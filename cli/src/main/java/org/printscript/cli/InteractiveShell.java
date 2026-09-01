@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
-import org.printscript.runner.ExecutionRunner;
 import org.printscript.runner.ValidationRunner;
 
 // Interfaz interactiva (REPL) que se lanza cuando la CLI se corre sin argumentos.
@@ -49,12 +48,9 @@ final class InteractiveShell {
         register(this::listDirectory, "ls", "dir");
         register(this::changeDirectory, "cd");
         register(this::runExecution, "execution", "exec", "run");
+        register(this::runSave, "save", "guardar");
         register(this::runValidation, "validation", "validate");
-        register(
-                argument -> reportUnsupported("Formatting", "formatter"),
-                "formatting",
-                "format",
-                "fmt");
+        register(this::runFormatting, "formatting", "format", "fmt");
         register(this::runAnalyzing, "analyzing", "analyze", "lint");
         register(argument -> running = false, "exit", "quit", "salir");
     }
@@ -113,15 +109,16 @@ final class InteractiveShell {
     // --- operaciones sobre archivos ---
 
     private void runExecution(String argument) {
+        withSourceFile(argument, source -> ExecutionOutput.run(source, null, out, err));
+    }
+
+    // save <archivo>: ejecuta y guarda la salida en un .txt junto al fuente
+    private void runSave(String argument) {
         withSourceFile(
                 argument,
-                path ->
-                        SourceFileProcessor.process(
-                                path,
-                                lines ->
-                                        new ExecutionRunner()
-                                                .run(lines, new ConsoleOutputPrinter(out)),
-                                err));
+                source ->
+                        ExecutionOutput.run(
+                                source, ExecutionOutput.defaultOutputFor(source), out, err));
     }
 
     private void runValidation(String argument) {
@@ -132,29 +129,28 @@ final class InteractiveShell {
                                 path, lines -> new ValidationRunner().validate(lines), err));
     }
 
-    // analyze <archivo> [config]: el segundo token opcional es el archivo de reglas
     private void runAnalyzing(String argument) {
-        if (argument.isEmpty()) {
-            err.println("Falta el archivo. Uso: analyze <archivo.ps> [config.json|yaml]");
-            return;
-        }
-        String[] parts = argument.split("\\s+", 2);
-        Path source = resolve(parts[0]);
-        Path config = parts.length > 1 ? resolve(parts[1]) : null;
-        LintAnalysis.run(source, config, err);
+        withSourceAndConfig(
+                argument,
+                "analyze <archivo.ps> [config.json|yaml]",
+                (source, config) -> LintAnalysis.run(source, config, err));
     }
 
-    private void reportUnsupported(String operation, String missingModule) {
-        err.println(
-                operation
-                        + " no está implementado todavía: el módulo "
-                        + missingModule
-                        + " no existe (ver docs/arquitectura.md).");
+    private void runFormatting(String argument) {
+        withSourceAndConfig(
+                argument,
+                "format <archivo.ps> [config.json|yaml]",
+                (source, config) -> Formatting.run(source, config, null, out, err));
     }
 
     @FunctionalInterface
     private interface SourceAction {
         void run(Path resolved);
+    }
+
+    @FunctionalInterface
+    private interface ConfiguredOperation {
+        void run(Path source, Path config);
     }
 
     private void withSourceFile(String argument, SourceAction action) {
@@ -163,6 +159,18 @@ final class InteractiveShell {
             return;
         }
         action.run(resolve(argument));
+    }
+
+    // <archivo> [config]: el segundo token opcional es el archivo de reglas
+    private void withSourceAndConfig(String argument, String uso, ConfiguredOperation operation) {
+        if (argument.isEmpty()) {
+            err.println("Falta el archivo. Uso: " + uso);
+            return;
+        }
+        String[] parts = argument.split("\\s+", 2);
+        Path source = resolve(parts[0]);
+        Path config = parts.length > 1 ? resolve(parts[1]) : null;
+        operation.run(source, config);
     }
 
     // --- navegación del filesystem ---
@@ -230,8 +238,13 @@ final class InteractiveShell {
         out.println("Comandos disponibles:");
         out.println("  Operaciones sobre un archivo .ps");
         out.println("    execution|exec|run <archivo>     Ejecuta el archivo e imprime su salida");
+        out.println(
+                "    save|guardar <archivo>           Ejecuta y guarda la salida en un .txt junto"
+                        + " al fuente");
         out.println("    validation|validate <archivo>    Valida sintaxis/semántica sin ejecutar");
-        out.println("    formatting|format|fmt <archivo>  (no implementado todavía)");
+        out.println(
+                "    formatting|format|fmt <archivo> [config]   Formatea el archivo (reglas del"
+                        + " config)");
         out.println(
                 "    analyzing|analyze|lint <archivo> [config]  Lintea el archivo (reglas del"
                         + " config)");

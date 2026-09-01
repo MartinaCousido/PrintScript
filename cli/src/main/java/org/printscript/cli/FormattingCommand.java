@@ -6,13 +6,12 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-// el módulo formatter todavía no existe (ver docs/arquitectura.md); esta operación
-// queda expuesta en el choice cerrado de 4 que pide la consigna, pero falla de
-// forma clara y controlada en vez de simularse o silenciarse
+// formatea el .ps con el módulo formatter, aplicando las reglas del --config; escribe
+// el resultado por stdout o, con --output, a un archivo (nunca pisa el fuente)
 @Command(
         name = "formatting",
         aliases = {"format", "fmt"},
-        description = "Formatea un archivo PrintScript (no implementado todavía)")
+        description = "Formatea un archivo PrintScript con el formatter")
 final class FormattingCommand implements Callable<Integer> {
 
     @Parameters(index = "0", paramLabel = "ARCHIVO", description = "Archivo .ps a formatear")
@@ -23,15 +22,14 @@ final class FormattingCommand implements Callable<Integer> {
             description = "Archivo de configuración YAML/JSON de formato")
     private Path configFile;
 
+    @Option(
+            names = {"-o", "--output"},
+            paramLabel = "SALIDA",
+            description = "Escribe el código formateado en este archivo en vez de por stdout")
+    private Path outputFile;
+
     @Override
-    @SuppressWarnings("PMD.SystemPrintln")
     public Integer call() {
-        if (!FileArguments.requireExistingRegularFile(sourceFile, System.err)) {
-            return ExitCode.USAGE_ERROR.code();
-        }
-        System.err.println(
-                "Formatting no está implementado todavía: el módulo formatter no existe "
-                        + "(ver docs/arquitectura.md).");
-        return ExitCode.UNSUPPORTED_OPERATION.code();
+        return Formatting.run(sourceFile, configFile, outputFile, System.out, System.err).code();
     }
 }
