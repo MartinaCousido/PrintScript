@@ -8,7 +8,7 @@ El criterio de descomposición es el de Parnas: cada módulo esconde **una decis
 
 ## 1. Estado actual
 
-Diez módulos Gradle, cada uno con su propio set de dependencias, compilando por separado.
+Once módulos Gradle, cada uno con su propio set de dependencias, compilando por separado.
 
 ```mermaid
 flowchart TD
@@ -19,6 +19,7 @@ flowchart TD
         parser["parser"]
         interpreter["interpreter"]
         linter["linter"]
+        formatter["formatter"]
     end
 
     subgraph vocabulario["Vocabulario, puertos y configuración · estables, sin lógica"]
@@ -34,6 +35,7 @@ flowchart TD
     runner --> parser
     runner --> interpreter
     runner --> linter
+    runner --> formatter
     runner --> config
     runner --> runtimeapi
     runner --> common
@@ -49,6 +51,9 @@ flowchart TD
     linter --> ast
     linter --> config
     linter --> common
+    formatter --> ast
+    formatter --> config
+    formatter --> common
     token --> common
     ast --> common
     config --> common
@@ -56,9 +61,9 @@ flowchart TD
 
 Tres cosas para leer en ese grafo:
 
-- **Los cuatro motores no se conocen entre sí.** No hay ninguna flecha horizontal. Consumen vocabulario, nunca el módulo de al lado. El `linter` en particular no conoce al `parser`: recibe el flujo de sentencias ya armado.
+- **Los cinco motores no se conocen entre sí.** No hay ninguna flecha horizontal. Consumen vocabulario, nunca el módulo de al lado. El `linter` y el `formatter` en particular no conocen al `parser`: reciben el flujo de sentencias ya armado.
 - **`runtime-api` no depende de nada.** Es un módulo de puertos: no tiene nada debajo y todos lo tienen arriba.
-- **Nadie depende de `interpreter` ni de `linter`.** Son hojas: lo que más cambia está arriba de todo, donde romperlo no rompe a nadie.
+- **Nadie depende de `interpreter`, `linter` ni `formatter`.** Son hojas: lo que más cambia está arriba de todo, donde romperlo no rompe a nadie.
 
 ## 2. Estado completo previsto
 
@@ -74,7 +79,7 @@ flowchart TD
         parser["parser"]
         semantic["semantic"]:::previsto
         interpreter["interpreter"]
-        formatter["formatter"]:::previsto
+        formatter["formatter"]
         linter["linter"]
     end
 
@@ -105,7 +110,7 @@ flowchart TD
     semantic --> ast
     interpreter --> ast
     interpreter --> runtimeapi
-    formatter --> token
+    formatter --> ast
     formatter --> config
     linter --> ast
     linter --> config
@@ -123,7 +128,7 @@ Lo que cambia respecto de hoy:
 
 - Aparece **`semantic`** entre el parser y el interpreter. Es la etapa que valida tipos, scope y constancia, y la que hace que el modo Validation de la consigna valide de verdad la semántica y no solo la sintaxis.
 - Aparece **`runner`**, el único módulo del sistema donde el lexer y el parser se conocen. Es lo que permite publicar PrintScript como librería sin arrastrar la línea de comandos.
-- Aparece **`formatter`**, que cuelga del vocabulario sin conocer al parser: se puede formatear un programa con errores de tipos.
+- El **`formatter`** cuelga del `ast` sin conocer al parser: recibe el flujo de sentencias ya armado, así que se puede formatear un programa con errores de tipos.
 - Aparece **`cli`**, que depende solo de `runner`, `runtime-api` y `common`.
 
 ---
@@ -141,7 +146,7 @@ Lo que cambia respecto de hoy:
 | `interpreter` | Qué efecto produce cada nodo al ejecutarse | Cambia la semántica de ejecución | `common`, `ast`, `runtime-api` | ✅ |
 | `configuration` | En qué formato vive la configuración (JSON, YAML, mañana TOML) | Aparecen formatos nuevos | `common` | ✅ |
 | `semantic` | Qué programas bien formados tienen sentido | Cambian las reglas de tipos y scope | `common`, `ast` | ⬜ |
-| `formatter` | Cómo se ve el código | Cambian las reglas de estilo | `common`, `token`, `configuration` | ⬜ |
+| `formatter` | Cómo se ve el código | Cambian las reglas de estilo | `common`, `ast`, `configuration` | ✅ |
 | `linter` | Qué convenciones se exigen | Cambian las convenciones | `common`, `ast`, `configuration` | ✅ |
 | `runner` | Cómo se arma el pipeline de cada operación | Aparecen operaciones nuevas | todos los anteriores | ✅ |
 | `cli` | La experiencia de línea de comandos | Cambian argumentos, progreso, exit codes | `runner`, `runtime-api`, `common` | ⬜ |

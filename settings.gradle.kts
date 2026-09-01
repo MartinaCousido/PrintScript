@@ -15,4 +15,5 @@ include(
     "runner",
     "configuration",
     "linter",
+    "formatter",
 )
