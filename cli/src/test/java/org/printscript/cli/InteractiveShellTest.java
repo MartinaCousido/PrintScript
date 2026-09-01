@@ -88,13 +88,27 @@ class InteractiveShellTest {
     }
 
     @Test
-    void unsupportedOperationsReportClearly(@TempDir Path dir) throws IOException {
+    void formattingReportsNotImplemented(@TempDir Path dir) throws IOException {
         writeFile(dir.resolve("x.ps"), "println(1);\n");
 
-        Output result = run(dir, "format x.ps\nanalyze x.ps\nexit\n");
+        Output result = run(dir, "format x.ps\nexit\n");
 
         assertTrue(result.err().contains("Formatting no está implementado"));
-        assertTrue(result.err().contains("Analyzing no está implementado"));
+    }
+
+    @Test
+    void analyzesWithConfigReportingViolations(@TempDir Path dir) throws IOException {
+        writeFile(dir.resolve("snake.ps"), "let last_name: string = \"Doe\";\n");
+        writeFile(
+                dir.resolve("reglas.json"),
+                "{ \"identifier_format\": \"camel case\","
+                        + " \"mandatory-variable-or-literal-in-println\": true }");
+
+        Output result = run(dir, "analyze snake.ps reglas.json\nanalyze\nexit\n");
+
+        assertTrue(result.err().contains("lint:"), "reporta la violación de camelCase");
+        assertTrue(result.err().contains("last_name"), result.err());
+        assertTrue(result.err().contains("Falta el archivo"), "analyze sin archivo avisa");
     }
 
     @Test

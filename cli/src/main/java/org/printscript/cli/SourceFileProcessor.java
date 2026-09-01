@@ -10,21 +10,40 @@ import java.util.Iterator;
 import java.util.List;
 import org.printscript.common.Failure;
 
-// abre el archivo fuente, arma el iterator de líneas con progreso, delega en la
-// operación concreta y reporta las fallas. Es el único camino por el que cli lee un
-// .ps del filesystem: lo comparten los subcomandos (AbstractSourceFileCommand) y la
-// interfaz interactiva (InteractiveShell), así ambos se comportan idéntico.
+// abre el archivo fuente, arma el iterator de líneas con progreso y delega en el
+// caller. Es el único camino por el que cli lee un .ps del filesystem: lo comparten
+// los subcomandos (AbstractSourceFileCommand, AnalyzingCommand) y la interfaz
+// interactiva (InteractiveShell), así todos se comportan idéntico.
 final class SourceFileProcessor {
 
-    // la operación concreta (execution/validation) sobre el stream de líneas
+    // operación que produce fallas (execution/validation): read() se encarga de
+    // reportarlas y de traducir "hubo fallas" al exit code
     @FunctionalInterface
     interface Operation {
         List<Failure<?>> execute(Iterator<String> lines);
     }
 
+    // operación que produce su propio exit code (analyzing, que además reporta
+    // violaciones); recibe el iterator de líneas ya decorado con progreso
+    @FunctionalInterface
+    interface LineConsumer {
+        ExitCode consume(Iterator<String> lines);
+    }
+
     private SourceFileProcessor() {}
 
     static ExitCode process(Path sourceFile, Operation operation, PrintStream err) {
+        return read(
+                sourceFile,
+                lines -> {
+                    List<Failure<?>> failures = operation.execute(lines);
+                    new FailureReporter(err).report(failures);
+                    return failures.isEmpty() ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
+                },
+                err);
+    }
+
+    static ExitCode read(Path sourceFile, LineConsumer consumer, PrintStream err) {
         if (!FileArguments.requireExistingRegularFile(sourceFile, err)) {
             return ExitCode.USAGE_ERROR;
         }
@@ -35,9 +54,7 @@ final class SourceFileProcessor {
                     Files.newBufferedReader(sourceFile, StandardCharsets.UTF_8)) {
                 Iterator<String> lines =
                         new ProgressReportingIterator(reader.lines().iterator(), totalBytes, err);
-                List<Failure<?>> failures = operation.execute(lines);
-                new FailureReporter(err).report(failures);
-                return failures.isEmpty() ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
+                return consumer.consume(lines);
             }
         } catch (IOException e) {
             err.println("No se pudo leer '" + sourceFile + "': " + e.getMessage());

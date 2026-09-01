@@ -55,11 +55,7 @@ final class InteractiveShell {
                 "formatting",
                 "format",
                 "fmt");
-        register(
-                argument -> reportUnsupported("Analyzing", "linter/semantic"),
-                "analyzing",
-                "analyze",
-                "lint");
+        register(this::runAnalyzing, "analyzing", "analyze", "lint");
         register(argument -> running = false, "exit", "quit", "salir");
     }
 
@@ -134,6 +130,18 @@ final class InteractiveShell {
                 path ->
                         SourceFileProcessor.process(
                                 path, lines -> new ValidationRunner().validate(lines), err));
+    }
+
+    // analyze <archivo> [config]: el segundo token opcional es el archivo de reglas
+    private void runAnalyzing(String argument) {
+        if (argument.isEmpty()) {
+            err.println("Falta el archivo. Uso: analyze <archivo.ps> [config.json|yaml]");
+            return;
+        }
+        String[] parts = argument.split("\\s+", 2);
+        Path source = resolve(parts[0]);
+        Path config = parts.length > 1 ? resolve(parts[1]) : null;
+        LintAnalysis.run(source, config, err);
     }
 
     private void reportUnsupported(String operation, String missingModule) {
@@ -224,7 +232,9 @@ final class InteractiveShell {
         out.println("    execution|exec|run <archivo>     Ejecuta el archivo e imprime su salida");
         out.println("    validation|validate <archivo>    Valida sintaxis/semántica sin ejecutar");
         out.println("    formatting|format|fmt <archivo>  (no implementado todavía)");
-        out.println("    analyzing|analyze|lint <archivo> (no implementado todavía)");
+        out.println(
+                "    analyzing|analyze|lint <archivo> [config]  Lintea el archivo (reglas del"
+                        + " config)");
         out.println("  Navegación del filesystem");
         out.println("    pwd                  Muestra el directorio actual");
         out.println("    ls|dir [directorio]  Lista el contenido (por defecto, el actual)");

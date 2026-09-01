@@ -6,13 +6,12 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-// los módulos linter/semantic todavía no existen (ver docs/arquitectura.md); esta
-// operación queda expuesta en el choice cerrado de 4 que pide la consigna, pero
-// falla de forma clara y controlada en vez de simularse o silenciarse
+// analiza estáticamente el .ps con el módulo linter, aplicando las reglas del
+// archivo de configuración (--config); sin config, ninguna regla está prendida
 @Command(
         name = "analyzing",
         aliases = {"analyze", "lint"},
-        description = "Analiza estáticamente un archivo PrintScript (no implementado todavía)")
+        description = "Analiza estáticamente un archivo PrintScript con el linter")
 final class AnalyzingCommand implements Callable<Integer> {
 
     @Parameters(index = "0", paramLabel = "ARCHIVO", description = "Archivo .ps a analizar")
@@ -24,14 +23,7 @@ final class AnalyzingCommand implements Callable<Integer> {
     private Path configFile;
 
     @Override
-    @SuppressWarnings("PMD.SystemPrintln")
     public Integer call() {
-        if (!FileArguments.requireExistingRegularFile(sourceFile, System.err)) {
-            return ExitCode.USAGE_ERROR.code();
-        }
-        System.err.println(
-                "Analyzing no está implementado todavía: los módulos linter/semantic no existen "
-                        + "(ver docs/arquitectura.md).");
-        return ExitCode.UNSUPPORTED_OPERATION.code();
+        return LintAnalysis.run(sourceFile, configFile, System.err).code();
     }
 }

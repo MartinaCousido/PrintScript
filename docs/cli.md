@@ -54,7 +54,7 @@ Comandos disponibles:
 | `execution <archivo>` | `exec`, `run` | Ejecuta el archivo e imprime su salida |
 | `validation <archivo>` | `validate` | Valida sin ejecutar |
 | `formatting <archivo>` | `format`, `fmt` | No implementado todavía |
-| `analyzing <archivo>` | `analyze`, `lint` | No implementado todavía |
+| `analyzing <archivo> [config]` | `analyze`, `lint` | Lintea el archivo con las reglas del config (segundo token opcional) |
 | `pwd` | | Muestra el directorio actual |
 | `ls [directorio]` | `dir` | Lista el contenido (directorios primero, con `/`) |
 | `cd <directorio>` | | Cambia de directorio (acepta `..` y rutas absolutas) |
@@ -76,12 +76,34 @@ prompt con su propia salida de progreso; el binario de `installDist` no lo neces
 | `execution` | `exec` | Ejecuta el archivo: corre lexer → parser → intérprete e imprime la salida del programa por stdout |
 | `validation` | `validate` | Valida sintaxis (y semántica, cuando exista el módulo `semantic`) sin ejecutar nada |
 | `formatting` | `format`, `fmt` | **No implementado todavía** — el módulo `formatter` no existe |
-| `analyzing` | `analyze`, `lint` | **No implementado todavía** — los módulos `linter`/`semantic` no existen |
+| `analyzing` | `analyze`, `lint` | Analiza estáticamente con el módulo `linter`, aplicando las reglas del `--config` (sin config, ninguna regla está prendida) |
 
-Las cuatro quedan expuestas como choice cerrado porque así lo pide la consigna, aunque
-solo `execution` y `validation` tengan backend hoy: `formatting`/`analyzing` terminan
+Tres de las cuatro tienen backend hoy (`execution`, `validation`, `analyzing`); solo
+`formatting` sigue expuesta como stub porque el módulo `formatter` no existe: termina
 con un mensaje explícito de "no implementado" y exit code `3`, nunca con un resultado
 simulado.
+
+### `analyzing`: reglas del linter
+
+El linter aplica las reglas que declara el archivo `--config` (JSON o YAML). Una clave
+ausente deja su regla apagada; sin `--config`, no hay ninguna regla activa y el análisis
+no reporta nada. Reglas disponibles:
+
+| Clave | Qué exige | Valores |
+|---|---|---|
+| `identifier_format` | El formato de los identificadores | `camel case` (o `camelCase`, `camel_case`) |
+| `mandatory-variable-or-literal-in-println` | Que `println` reciba solo un identificador o un literal | `true` / `false` |
+
+```bash
+$ printscript analyzing programa.ps -c reglas.json
+lint: El identificador 'last_name' no está en camel case (línea 1, columna 5 a línea 1, columna 13)
+$ echo $?
+1
+```
+
+Las violaciones se reportan por `stderr` con el prefijo `lint:` y el rango exacto de lo
+que incumplen; los errores de sintaxis se reportan como en `validation`. El exit code es
+`1` si hay al menos una violación o un error, `0` si el archivo está limpio.
 
 ## Argumentos
 
@@ -93,7 +115,7 @@ printscript [-h] [-v=<version>] COMANDO ARCHIVO [-c=<config>]
 |---|---|---|
 | `ARCHIVO` | las 4 operaciones | Posicional, requerido. Debe existir y ser un archivo regular. |
 | `-v`, `--version` | global | Opcional, default `1.0`. Es la versión del **lenguaje** PrintScript a interpretar, no la versión de la CLI. Hoy solo se acepta `1.0`; cualquier otro valor falla con exit code `2`. |
-| `-c`, `--config` | `formatting`, `analyzing` | Archivo de configuración YAML/JSON de reglas. Se acepta y valida su forma, pero como esas operaciones no están implementadas todavía, no se usa. |
+| `-c`, `--config` | `formatting`, `analyzing` | Archivo de configuración YAML/JSON de reglas. En `analyzing` se lee y se aplica (ver arriba); en `formatting` se acepta su forma pero no se usa porque la operación no está implementada. El formato se detecta por la extensión (`.json`/`.yaml`/`.yml`). |
 | `-h`, `--help` | global | Muestra la ayuda de picocli para el comando (o subcomando) actual. |
 
 ## Códigos de salida
@@ -103,7 +125,7 @@ printscript [-h] [-v=<version>] COMANDO ARCHIVO [-c=<config>]
 | `0` | Éxito: sin errores reportados |
 | `1` | El archivo `.ps` tiene errores de validación o ejecución (sintácticos o semánticos) |
 | `2` | Error de uso: argumentos inválidos, versión no soportada, archivo inexistente |
-| `3` | La operación pedida (`formatting`/`analyzing`) todavía no está implementada |
+| `3` | La operación pedida (`formatting`) todavía no está implementada |
 
 ## Ejemplos
 

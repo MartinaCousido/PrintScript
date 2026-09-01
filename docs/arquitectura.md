@@ -285,7 +285,9 @@ El invariante del módulo: **compone, no decide**. No tiene ni una regla del len
 
 Es el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.main`) y el único módulo autorizado a tocar filesystem, `System.out`/`System.err` y códigos de salida — el resto son librerías puras. Traduce argumentos con **picocli** a un `RootCommand` con cuatro subcomandos, uno por operación de la consigna: `execution`, `validation`, `formatting` y `analyzing` (con sus alias). A partir de ahí nada depende de picocli salvo las clases de comando mismas.
 
-`ExecutionCommand` y `ValidationCommand` comparten `AbstractSourceFileCommand`: abre el archivo fuente, arma un `Iterator<String>` de líneas y delega en la operación concreta, que llama a `ExecutionRunner`/`ValidationRunner`. Cero lógica de lenguaje en `cli`: solo abre el archivo, arma el iterador y reporta lo que el `runner` devuelve.
+`ExecutionCommand` y `ValidationCommand` comparten `AbstractSourceFileCommand`, y `AnalyzingCommand` sigue el mismo patrón: todos abren el archivo fuente vía `SourceFileProcessor`, que arma un `Iterator<String>` de líneas con progreso y delega en la operación concreta (`ExecutionRunner`/`ValidationRunner`/`AnalyzingRunner`). Cero lógica de lenguaje en `cli`: solo abre archivos, arma el iterador y reporta lo que el `runner` devuelve.
+
+**Interfaz interactiva.** Correr `cli` sin argumentos abre `InteractiveShell`, un REPL que mantiene su propio directorio de trabajo para navegar el filesystem (`pwd`/`ls`/`cd`) y correr las operaciones sobre archivos relativos a él. No duplica nada: usa el mismo `SourceFileProcessor` y los mismos runners que los subcomandos, así que el resultado es idéntico al de la forma no interactiva.
 
 **Progreso durante el parseo.** `ProgressReportingIterator` decora el iterador de líneas: estima el porcentaje consumido con `Files.size` (una sola llamada, sin releer el archivo) y bytes acumulados por línea, y solo escribe a `System.err` cuando el porcentaje entero cambia. El lexer y el parser nunca se enteran de que existe.
 
@@ -293,9 +295,9 @@ Es el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.m
 
 **`--version` no viaja al `runner`.** La consigna pide un argumento de versión del lenguaje ("por ahora solo 1.0"); `cli` lo valida en el borde (`LanguageVersion`, un converter de picocli que rechaza cualquier valor que no sea `"1.0"`) pero no lo pasa a `ExecutionRunner`/`ValidationRunner`, que no tienen ese parámetro (ver sección 6). Cuando exista una 1.1 real, el punto de entrada para el despacho sigue siendo el que describe esa sección — las factories, no `cli`.
 
-**`formatting` y `analyzing` son stubs de superficie, no simulacros.** Los módulos `formatter`, `linter` y `semantic` todavía no existen, así que ambas operaciones están expuestas en el choice cerrado de 4 que pide la consigna (aceptan archivo y `--config`) pero terminan con un mensaje explícito de "no implementado todavía" y el exit code `3`, en vez de fingir un resultado.
+**`analyzing` corre el linter; `formatting` sigue siendo un stub.** `AnalyzingCommand` lee las reglas del `--config` (JSON/YAML) vía el módulo `configuration`, arma una `LinterConfiguration` y corre el `AnalyzingRunner`; `LintAnalysis` reporta las violaciones (prefijo `lint:` + rango) y los errores de sintaxis. Sin `--config`, ninguna regla está prendida. `formatting`, en cambio, sigue expuesta en el choice cerrado de 4 que pide la consigna pero termina con un mensaje explícito de "no implementado todavía" y exit code `3`, porque el módulo `formatter` (y `semantic`) todavía no existe, en vez de fingir un resultado.
 
-**Códigos de salida:** `0` éxito, `1` el programa `.ps` tiene errores de validación o ejecución, `2` error de uso (argumentos inválidos, versión no soportada, archivo inexistente), `3` operación pedida pero no implementada. Guía de uso completa con ejemplos en [`docs/cli.md`](cli.md).
+**Códigos de salida:** `0` éxito, `1` el programa `.ps` tiene errores de validación/ejecución o el análisis encontró violaciones, `2` error de uso (argumentos inválidos, versión no soportada, archivo o configuración inexistente o mal formada), `3` operación pedida pero no implementada. Guía de uso completa con ejemplos en [`docs/cli.md`](cli.md).
 
 ## 10. El módulo `linter`
 
