@@ -12,6 +12,7 @@ dependencies {
     implementation(project(":interpreter"))
     api(project(":configuration"))
     api(project(":linter"))
+    api(project(":formatter"))
 }
 
 tasks.register<JavaExec>("playground") {

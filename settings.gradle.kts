@@ -15,5 +15,6 @@ include(
     "runner",
     "configuration",
     "linter",
+    "formatter",
     "cli",
 )

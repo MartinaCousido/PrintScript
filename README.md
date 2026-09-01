@@ -145,7 +145,7 @@ propia) existe `git commit --no-verify`; la red que no se puede saltear es el CI
 
 ## Módulos
 
-Once módulos Gradle, cada uno con su propio set de dependencias y compilando por
+Doce módulos Gradle, cada uno con su propio set de dependencias y compilando por
 separado. La configuración común vive en un convention plugin en `buildSrc/`, no
 duplicada en cada módulo.
 
@@ -159,10 +159,11 @@ duplicada en cada módulo.
 | `parser` | La gramática y cómo se construye el árbol |
 | `configuration` | En qué formato vive la configuración de las herramientas (JSON, YAML) |
 | `linter` | Qué convenciones se le exigen a un programa PrintScript |
+| `formatter` | Cómo se ve el código PrintScript ya formateado |
 | `runner` | Cómo se arma el pipeline de cada operación |
 | `cli` | La experiencia de línea de comandos: argumentos, progreso, exit codes |
 
-Faltan `semantic` y `formatter`. El grafo completo está en
+Falta `semantic`. El grafo completo está en
 [`docs/arquitectura.md`](docs/arquitectura.md).
 
 ## Cómo usar la CLI

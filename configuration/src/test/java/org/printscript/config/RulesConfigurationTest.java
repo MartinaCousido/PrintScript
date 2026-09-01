@@ -14,6 +14,7 @@ class RulesConfigurationTest {
     private static final String FORMAT = "identifier_format";
     private static final String ENABLED = "enabled";
     private static final String CAMEL = "camel case";
+    private static final String BREAKS = "line-breaks-before-println";
 
     @Test
     void readsAStringValueByKey() {
@@ -61,5 +62,19 @@ class RulesConfigurationTest {
         source.put(FORMAT, "otra cosa");
 
         assertEquals(Optional.of(CAMEL), configuration.getString(FORMAT));
+    }
+
+    @Test
+    void readsAnIntegerValueByKey() {
+        RulesConfiguration configuration = new RulesConfiguration(Map.of(BREAKS, 2));
+
+        assertEquals(Optional.of(2), configuration.getInt(BREAKS));
+    }
+
+    @Test
+    void aValueOfAnotherTypeIsNotReadAsAnInteger() {
+        RulesConfiguration configuration = new RulesConfiguration(Map.of(BREAKS, CAMEL));
+
+        assertTrue(configuration.getInt(BREAKS).isEmpty());
     }
 }

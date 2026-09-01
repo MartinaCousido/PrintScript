@@ -19,6 +19,10 @@ public final class RulesConfiguration {
         return valueOf(key, Boolean.class);
     }
 
+    public Optional<Integer> getInt(String key) {
+        return valueOf(key, Integer.class);
+    }
+
     private <T> Optional<T> valueOf(String key, Class<T> type) {
         return Optional.ofNullable(values.get(key)).filter(type::isInstance).map(type::cast);
     }
