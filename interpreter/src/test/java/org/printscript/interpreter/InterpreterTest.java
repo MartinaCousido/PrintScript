@@ -1,8 +1,8 @@
 package org.printscript.interpreter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,16 +69,19 @@ class InterpreterTest {
     }
 
     private static Result<Statement> declaration(String name, double value) {
-        Statement statement = new VariableDeclaration(
-            name,
-            new TypeName("number", ANY),
-            Optional.of(new NumberLiteral(value, ANY)),
-            ANY);
+        Statement statement =
+                new VariableDeclaration(
+                        new Identifier(name, ANY),
+                        new TypeName("number", ANY),
+                        Optional.of(new NumberLiteral(value, ANY)),
+                        ANY);
         return new Success<>(statement);
     }
 
     private static Result<Statement> assignment(String name, double value, Range range) {
-        return new Success<>(new AssignmentStatement(name, new NumberLiteral(value, ANY), range));
+        return new Success<>(
+                new AssignmentStatement(
+                        new Identifier(name, ANY), new NumberLiteral(value, ANY), range));
     }
 
     private static Result<Statement> println(String name) {
@@ -88,9 +91,14 @@ class InterpreterTest {
     @Test
     void aStreamOfValidStatementsIsExecutedInOrder() {
         InMemoryPrinter printer = new InMemoryPrinter();
-        Interpreter interpreter = interpreterOf(
-            printer,
-            List.of(declaration("x", 1), println("x"), assignment("x", 2, ANY), println("x")));
+        Interpreter interpreter =
+                interpreterOf(
+                        printer,
+                        List.of(
+                                declaration("x", 1),
+                                println("x"),
+                                assignment("x", 2, ANY),
+                                println("x")));
 
         List<Result<?>> results = drain(interpreter);
 
@@ -102,8 +110,8 @@ class InterpreterTest {
     void aFailureFromAPreviousStageIsPassedThroughWithoutExecuting() {
         Range range = rangeAt(7, 3, 7, 9);
         InMemoryPrinter printer = new InMemoryPrinter();
-        Interpreter interpreter = interpreterOf(
-            printer, List.of(new Failure<>("falta un punto y coma", range)));
+        Interpreter interpreter =
+                interpreterOf(printer, List.of(new Failure<>("falta un punto y coma", range)));
 
         Result<?> result = interpreter.getNext();
 
@@ -117,9 +125,10 @@ class InterpreterTest {
     void aStatementThatFailsAtRuntimeDoesNotPreventTheNextOne() {
         Range range = rangeAt(4, 1, 4, 6);
         InMemoryPrinter printer = new InMemoryPrinter();
-        Interpreter interpreter = interpreterOf(
-            printer,
-            List.of(assignment("nunca", 9, range), declaration("y", 7), println("y")));
+        Interpreter interpreter =
+                interpreterOf(
+                        printer,
+                        List.of(assignment("nunca", 9, range), declaration("y", 7), println("y")));
 
         List<Result<?>> results = drain(interpreter);
 
@@ -128,7 +137,8 @@ class InterpreterTest {
         assertEquals(List.of("7"), printer.lines);
     }
 
-    private static Interpreter interpreterOf(OutputPrinter printer, List<Result<Statement>> results) {
+    private static Interpreter interpreterOf(
+            OutputPrinter printer, List<Result<Statement>> results) {
         return new Interpreter(new ResultStream(results), new Executor(new Environment(), printer));
     }
 

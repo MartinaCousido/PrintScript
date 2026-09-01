@@ -1,0 +1,88 @@
+package org.printscript.config;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
+
+class ConfigurationReaderTest {
+
+    private static final String JSON = "json";
+    private static final String YAML = "yaml";
+    private static final String FORMAT = "identifier_format";
+    private static final String CAMEL = "camel case";
+    private static final String OTRA = "otra";
+
+    private final ConfigurationReader reader =
+            new ConfigurationReader(
+                    List.of(new JsonConfigurationMapper(), new YamlConfigurationMapper()));
+
+    private static InputStream streamOf(String content) {
+        return new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void readsAJsonConfiguration() {
+        RulesConfiguration configuration =
+                reader.read(
+                        streamOf("{\"" + FORMAT + "\": \"" + CAMEL + "\", \"" + OTRA + "\": true}"),
+                        JSON);
+
+        assertEquals(Optional.of(CAMEL), configuration.getString(FORMAT));
+        assertEquals(Optional.of(true), configuration.getBoolean(OTRA));
+    }
+
+    @Test
+    void readsAYamlConfiguration() {
+        RulesConfiguration configuration =
+                reader.read(streamOf(FORMAT + ": " + CAMEL + "\n" + OTRA + ": true\n"), YAML);
+
+        assertEquals(Optional.of(CAMEL), configuration.getString(FORMAT));
+        assertEquals(Optional.of(true), configuration.getBoolean(OTRA));
+    }
+
+    @Test
+    void theShortYamlExtensionIsAlsoYaml() {
+        RulesConfiguration configuration = reader.read(streamOf(OTRA + ": false\n"), "yml");
+
+        assertEquals(Optional.of(false), configuration.getBoolean(OTRA));
+    }
+
+    @Test
+    void theFormatIsMatchedRegardlessOfCase() {
+        RulesConfiguration configuration =
+                reader.read(streamOf("{\"" + OTRA + "\": true}"), "JSON");
+
+        assertEquals(Optional.of(true), configuration.getBoolean(OTRA));
+    }
+
+    @Test
+    void anEmptyConfigurationIsValidAndHasNoKeys() {
+        RulesConfiguration configuration = reader.read(streamOf("{}"), JSON);
+
+        assertTrue(configuration.getString(FORMAT).isEmpty());
+    }
+
+    @Test
+    void anUnsupportedFormatFailsNamingTheFormat() {
+        IllegalArgumentException thrown =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> reader.read(streamOf("clave = 1"), "toml"));
+
+        assertTrue(thrown.getMessage().contains("toml"), thrown.getMessage());
+    }
+
+    @Test
+    void malformedContentFailsInsteadOfReturningAnEmptyConfiguration() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> reader.read(streamOf("{esto no es json"), JSON));
+    }
+}

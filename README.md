@@ -136,7 +136,8 @@ propia) existe `git commit --no-verify`; la red que no se puede saltear es el CI
 
 - Estas herramientas operan sobre **nuestro código Java**. No son el `formatter` ni el
   `linter` de PrintScript que pide la consigna: esos operan sobre los programas `.ps`
-  del usuario y se configuran con un JSON o un YAML.
+  del usuario y se configuran con un JSON o un YAML. El linter de PrintScript ya
+  existe y está documentado más abajo, en [su propia sección](#el-linter-de-printscript).
 - No usamos ktlint ni Detekt sobre el código del proyecto porque son herramientas de
   Kotlin y nuestro código es Java; sus equivalentes acá son google-java-format,
   Checkstyle y PMD. ktlint aparece únicamente para formatear los `.gradle.kts` del
@@ -144,7 +145,7 @@ propia) existe `git commit --no-verify`; la red que no se puede saltear es el CI
 
 ## Módulos
 
-Nueve módulos Gradle, cada uno con su propio set de dependencias y compilando por
+Once módulos Gradle, cada uno con su propio set de dependencias y compilando por
 separado. La configuración común vive en un convention plugin en `buildSrc/`, no
 duplicada en cada módulo.
 
@@ -156,42 +157,88 @@ duplicada en cada módulo.
 | `runtime-api` | Cómo habla un programa en ejecución con el mundo exterior |
 | `lexer` | Cómo se reconoce un token dentro del texto |
 | `parser` | La gramática y cómo se construye el árbol |
-| `interpreter` | Qué efecto produce cada nodo al ejecutarse |
-| `runner` | Cómo se arma el pipeline lexer→parser→intérprete de punta a punta |
+| `configuration` | En qué formato vive la configuración de las herramientas (JSON, YAML) |
+| `linter` | Qué convenciones se le exigen a un programa PrintScript |
+| `runner` | Cómo se arma el pipeline de cada operación |
 | `cli` | La experiencia de línea de comandos: argumentos, progreso, exit codes |
 
-Faltan `semantic`, `config`, `formatter` y `linter`. El grafo completo está en
+Faltan `semantic` y `formatter`. El grafo completo está en
 [`docs/arquitectura.md`](docs/arquitectura.md).
 
 ## Cómo usar la CLI
 
 El módulo `cli` expone las cuatro operaciones de la consigna (`execution`,
-`validation`, `formatting`, `analyzing`) como subcomandos:
+`validation`, `formatting`, `analyzing`) como subcomandos, y además abre una
+interfaz interactiva (REPL) cuando se lo corre sin argumentos:
 
 ```bash
 # el working directory de la tarea run es cli/, por eso la ruta es relativa a ahí
 ./gradlew :cli:run --args="execution src/test/resources/examples/valid-hello.ps"
 
+# sin argumentos: interfaz interactiva para navegar y correr operaciones
+./gradlew :cli:run --console=plain
+
 ./gradlew :cli:installDist
 cli/build/install/printscript/bin/printscript execution ruta/al/archivo.ps
 ```
 
-Referencia completa de argumentos, códigos de salida y ejemplos de salida (éxito y
-error con fila/columna) en [`docs/cli.md`](docs/cli.md).
+Referencia completa de argumentos, códigos de salida, la interfaz interactiva y
+ejemplos de salida (éxito y error con fila/columna) en [`docs/cli.md`](docs/cli.md).
 
 ## Qué reconoce hoy
 
-PrintScript 1.0, con una excepción marcada:
+PrintScript 1.0 completo:
 
 | Construcción | Ejemplo | Estado |
 |---|---|---|
 | Declaración | `let x: number = 12;` | ✅ |
 | Declaración sin valor | `let x: number;` | ✅ |
-| Asignación | `x = 5;` | el nodo del AST y su ejecución existen; falta el parseo |
+| Asignación | `x = 5;` | ✅ |
 | Println | `println(a + " " + b);` | ✅ |
 | Aritmética | `+ - * /` con precedencia y paréntesis | ✅ |
 | Concatenación | `string + number` en cualquier orden | ✅ |
 | Strings | comillas simples y dobles | ✅ |
+
+## El linter de PrintScript
+
+El *static code analyzer* de la consigna. Analiza los programas del usuario, no nuestro
+código Java: **no confundirlo con Checkstyle y PMD**, que están más arriba en este
+mismo README.
+
+```java
+AnalysisReport reporte = new AnalyzingRunner().analyze(lineas, configuracion, "json");
+
+reporte.violations();  // lo que incumple una convención, con su Range exacto
+reporte.failures();    // los errores de sintaxis, en una lista aparte
+```
+
+Las dos listas están separadas a propósito: "esto no compila" y "esto no respeta una
+convención" son cosas distintas y quien las consume decide qué hacer con cada una.
+Ninguna violación corta el análisis: se reportan todas, de todas las sentencias.
+
+### Las reglas y su configuración
+
+Se configura con un JSON o un YAML, y cada regla se prende poniendo su clave.
+
+| Clave | Qué exige | Valores |
+|---|---|---|
+| `identifier_format` | Que los identificadores tengan un formato | `camel case`, `camelCase` o `camel_case` |
+| `mandatory-variable-or-literal-in-println` | Que `println` reciba solo un identificador o un literal, nunca una expresión | `true` / `false` |
+
+```json
+{
+  "identifier_format": "camel case",
+  "mandatory-variable-or-literal-in-println": true
+}
+```
+
+Una clave que no está deja su regla apagada. Un valor **desconocido** en
+`identifier_format` no apaga la regla en silencio: rompe con un mensaje que nombra el
+valor recibido y los soportados.
+
+**`snake case` no está soportado.** La consigna admite camel case o snake case y el
+equipo eligió uno solo. Agregarlo es implementar `IdentifierFormatChecker` y sumar un
+valor al enum `IdentifierFormat`: no cambia nada de lo que ya está escrito.
 
 ## Integración continua
 
@@ -211,8 +258,9 @@ config/pmd/               ruleset de análisis estático
 config/githooks/          hook de pre-commit versionado
 common/  token/  ast/     vocabulario y contratos, sin lógica
 runtime-api/              puertos de E/S del programa en ejecución
+configuration/            lectura de la configuración de las herramientas de PrintScript
 lexer/  parser/           etapas del pipeline
-interpreter/
+interpreter/  linter/
 runner/                   orquesta el pipeline de punta a punta
 cli/                      línea de comandos: la única que toca filesystem, System.out/err y exit codes
 docs/arquitectura.md      diagramas de componentes y responsabilidades

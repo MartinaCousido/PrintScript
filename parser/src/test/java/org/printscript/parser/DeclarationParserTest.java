@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Statement;
 import org.printscript.ast.TypeName;
@@ -63,7 +64,7 @@ class DeclarationParserTest {
 
         Statement expected =
                 new VariableDeclaration(
-                        "x",
+                        new Identifier("x", range(5, 5)),
                         new TypeName(NUMBER, range(8, 13)),
                         Optional.of(new NumberLiteral(5.0, range(17, 17))),
                         range(1, 18));
@@ -84,7 +85,10 @@ class DeclarationParserTest {
 
         Statement expected =
                 new VariableDeclaration(
-                        "x", new TypeName(NUMBER, range(8, 13)), Optional.empty(), range(1, 15));
+                        new Identifier("x", range(5, 5)),
+                        new TypeName(NUMBER, range(8, 13)),
+                        Optional.empty(),
+                        range(1, 15));
         assertEquals(new Success<>(expected), result);
     }
 
