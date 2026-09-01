@@ -24,6 +24,51 @@ toolchain del proyecto, hoy Java 25; si tu `java` por defecto es más viejo, us�
 cli/build/install/printscript/bin/printscript execution ruta/al/archivo.ps
 ```
 
+## Interfaz interactiva (REPL)
+
+Si se corre la CLI **sin argumentos**, en vez de fallar por falta de operación se abre
+una interfaz interactiva dentro de la terminal, donde se navega el filesystem y se
+corren todas las operaciones sin volver a invocar el proceso cada vez:
+
+```bash
+./gradlew :cli:run --console=plain    # o el binario: printscript (sin argumentos)
+```
+
+```
+PrintScript — interfaz interactiva. Escribí 'help' para ver los comandos.
+Directorio actual: /home/…/programas
+printscript:programas> ls
+subcarpeta/
+saludo.ps
+printscript:programas> exec saludo.ps
+Hola, Tute
+printscript:programas> validate roto.ps
+error: Expected ':' after the variable name (línea 1, columna 7 a línea 1, columna 12)
+printscript:programas> exit
+```
+
+Comandos disponibles:
+
+| Comando | Alias | Qué hace |
+|---|---|---|
+| `execution <archivo>` | `exec`, `run` | Ejecuta el archivo e imprime su salida |
+| `validation <archivo>` | `validate` | Valida sin ejecutar |
+| `formatting <archivo>` | `format`, `fmt` | No implementado todavía |
+| `analyzing <archivo>` | `analyze`, `lint` | No implementado todavía |
+| `pwd` | | Muestra el directorio actual |
+| `ls [directorio]` | `dir` | Lista el contenido (directorios primero, con `/`) |
+| `cd <directorio>` | | Cambia de directorio (acepta `..` y rutas absolutas) |
+| `help` | `?` | Muestra la ayuda con todos los comandos |
+| `exit` | `quit` | Sale de la interfaz (también con Ctrl-D) |
+
+Las rutas de archivo son relativas al directorio actual del REPL (el que muestra
+`pwd`), no al working directory del proceso. Cada operación usa exactamente el mismo
+camino de lectura, progreso y reporte de errores que su subcomando equivalente
+(`SourceFileProcessor`), así que el resultado es idéntico al de la forma no interactiva.
+
+Bajo `./gradlew :cli:run` conviene pasar `--console=plain` para que Gradle no pise el
+prompt con su propia salida de progreso; el binario de `installDist` no lo necesita.
+
 ## Operaciones
 
 | Operación | Alias | Qué hace |
