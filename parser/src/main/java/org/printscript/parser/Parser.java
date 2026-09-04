@@ -44,7 +44,7 @@ public final class Parser implements PrintScriptIterator<Result<Statement>> {
             if (current.isEmpty()) {
                 Token last = statement.getLast();
                 buffer.commit(statement.size());
-                return new Failure<>(delimiter.unterminatedMessage(), last.range());
+                return new Failure<>(delimiter.unterminatedMessage(statement), last.range());
             }
             Token token = current.get();
             int position = statement.size();

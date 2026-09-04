@@ -202,7 +202,7 @@ class ParserTest {
                     }
 
                     @Override
-                    public String unterminatedMessage() {
+                    public String unterminatedMessage(List<Token> accumulated) {
                         return "Expected an identifier before the end of the stream";
                     }
                 };
@@ -235,7 +235,7 @@ class ParserTest {
                     }
 
                     @Override
-                    public String unterminatedMessage() {
+                    public String unterminatedMessage(List<Token> accumulated) {
                         return "Expected the moon before the end of the stream";
                     }
                 };

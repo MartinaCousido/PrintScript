@@ -47,6 +47,8 @@ public final class LexerFactory {
             case V11 ->
                     Map.of(
                             "const", TokenType.KEYWORD,
+                            "if", TokenType.KEYWORD,
+                            "else", TokenType.KEYWORD,
                             "boolean", TokenType.KEYWORD,
                             "true", TokenType.BOOLEAN,
                             "false", TokenType.BOOLEAN);
@@ -70,8 +72,8 @@ public final class LexerFactory {
 
     private static Map<String, TokenType> symbolsAddedIn(Version version) {
         return switch (version) {
-            // las llaves de 1.1 entran con el if
-            case V10, V11 -> Map.of();
+            case V10 -> Map.of();
+            case V11 -> Map.of("{", TokenType.PUNCTUATION, "}", TokenType.PUNCTUATION);
         };
     }
 }
