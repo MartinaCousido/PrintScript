@@ -22,8 +22,13 @@ class FormattingEndToEndTest {
         private final List<String> collected = new ArrayList<>();
 
         @Override
-        public void print(String line) {
+        public void println(String line) {
             collected.add(line);
+        }
+
+        @Override
+        public void print(String text) {
+            collected.add(text);
         }
 
         private List<String> printed() {

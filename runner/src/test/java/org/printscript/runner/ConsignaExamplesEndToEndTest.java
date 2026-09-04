@@ -15,8 +15,13 @@ class ConsignaExamplesEndToEndTest {
         private final List<String> lines = new ArrayList<>();
 
         @Override
-        public void print(String line) {
+        public void println(String line) {
             lines.add(line);
+        }
+
+        @Override
+        public void print(String text) {
+            lines.add(text);
         }
     }
 

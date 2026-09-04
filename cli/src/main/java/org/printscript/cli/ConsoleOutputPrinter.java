@@ -20,7 +20,13 @@ final class ConsoleOutputPrinter implements OutputPrinter {
     }
 
     @Override
-    public void print(String line) {
+    public void println(String line) {
         target.println(line);
+    }
+
+    @Override
+    public void print(String text) {
+        target.print(text);
+        target.flush();
     }
 }

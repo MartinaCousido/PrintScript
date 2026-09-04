@@ -105,7 +105,7 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
         if (evaluated instanceof Failure<Object> failure) {
             return propagate(failure);
         }
-        printer.print(ExpressionEvaluator.asText(valueOf(evaluated)));
+        printer.println(ExpressionEvaluator.asText(valueOf(evaluated)));
         return new Success<>(null);
     }
 

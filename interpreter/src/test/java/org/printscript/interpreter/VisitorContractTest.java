@@ -22,6 +22,7 @@ import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
+import org.printscript.runtime.OutputPrinter;
 
 // El intérprete usa dos visitors sobre el mismo árbol: uno ejecuta sentencias y el otro
 // evalúa expresiones. Cada uno tiene que rechazar explícitamente lo que no le toca, en
@@ -32,7 +33,7 @@ class VisitorContractTest {
     private static final String NOT_AN_EXPRESSION = "No es una expresión evaluable";
     private static final Range RANGE = new Range(new Position(1, 1), new Position(1, 4));
 
-    private final Executor executor = new Executor(new Environment(), line -> {});
+    private final Executor executor = new Executor(new Environment(), new Discarding());
     private final ExpressionEvaluator evaluator = new ExpressionEvaluator(new Environment());
 
     private String executing(Expression expression) {
@@ -110,5 +111,19 @@ class VisitorContractTest {
         assertEquals(
                 "No se puede aplicar MINUS entre boolean y number",
                 assertInstanceOf(Failure.class, expression.accept(evaluator)).message());
+    }
+
+    // no le interesa la salida, pero OutputPrinter ya no es funcional: son dos métodos
+    private static final class Discarding implements OutputPrinter {
+
+        @Override
+        public void println(String line) {
+            // descartado a propósito
+        }
+
+        @Override
+        public void print(String text) {
+            // descartado a propósito
+        }
     }
 }

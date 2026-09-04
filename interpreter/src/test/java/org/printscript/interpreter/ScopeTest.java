@@ -34,7 +34,19 @@ class ScopeTest {
     private static final String NUMBER = "number";
 
     private final List<String> printed = new ArrayList<>();
-    private final OutputPrinter printer = printed::add;
+    private final OutputPrinter printer =
+            new OutputPrinter() {
+
+                @Override
+                public void println(String line) {
+                    printed.add(line);
+                }
+
+                @Override
+                public void print(String text) {
+                    printed.add(text);
+                }
+            };
     private final Executor executor = new Executor(new Environment(), printer);
 
     private static Statement declare(String name, Object value) {

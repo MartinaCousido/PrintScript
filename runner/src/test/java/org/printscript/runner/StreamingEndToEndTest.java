@@ -59,7 +59,12 @@ class StreamingEndToEndTest {
         }
 
         @Override
-        public void print(String line) {
+        public void println(String line) {
+            consumedAtEachPrint.add(source.consumed);
+        }
+
+        @Override
+        public void print(String text) {
             consumedAtEachPrint.add(source.consumed);
         }
     }

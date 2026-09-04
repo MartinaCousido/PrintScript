@@ -11,6 +11,7 @@ import org.printscript.common.Failure;
 import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.linter.config.IdentifierFormat;
 import org.printscript.linter.config.LinterConfiguration;
+import org.printscript.runtime.OutputPrinter;
 
 // El formatter y el linter no pasan por semantic a propósito: se tiene que poder
 // formatear y lintear código con errores de tipos, que es justo cuando más falta hace.
@@ -60,8 +61,22 @@ class ToolsToleratesTypeErrorsEndToEndTest {
     @Test
     void executionRejectsTheProgramBeforeRunningIt() {
         List<Failure<?>> failures =
-                new ExecutionRunner().run(List.of(TYPE_ERROR).iterator(), line -> {});
+                new ExecutionRunner().run(List.of(TYPE_ERROR).iterator(), new Discarding());
 
         assertFalse(failures.isEmpty());
+    }
+
+    // no le interesa la salida, pero OutputPrinter ya no es funcional: son dos métodos
+    private static final class Discarding implements OutputPrinter {
+
+        @Override
+        public void println(String line) {
+            // descartado a propósito
+        }
+
+        @Override
+        public void print(String text) {
+            // descartado a propósito
+        }
     }
 }

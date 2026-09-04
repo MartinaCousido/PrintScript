@@ -30,7 +30,8 @@ tasks.named<Pmd>("pmdMain") {
 tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
     classDirectories.setFrom(
         classDirectories.files.map {
-            fileTree(it) { exclude("**/Playground.class") }
+            // también las clases anidadas del Playground, que no son parte del sistema
+            fileTree(it) { exclude("**/Playground.class", "**/Playground$*.class") }
         },
     )
 }
