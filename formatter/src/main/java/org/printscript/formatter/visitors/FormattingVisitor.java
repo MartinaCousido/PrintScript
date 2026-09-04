@@ -17,6 +17,7 @@ import org.printscript.ast.Operator;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.ReadEnv;
 import org.printscript.ast.ReadInput;
+import org.printscript.ast.Statement;
 import org.printscript.ast.StringLiteral;
 import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
@@ -25,7 +26,6 @@ import org.printscript.formatter.visitors.Parentheses.Side;
 
 public final class FormattingVisitor implements ASTVisitor<String> {
 
-    private static final String ONE_LEVEL = "    ";
     private static final String LINE_BREAK = "\n";
 
     private static final String END_OF_STATEMENT = ";";
@@ -94,10 +94,6 @@ public final class FormattingVisitor implements ASTVisitor<String> {
                 constDeclaration.initializer());
     }
 
-    // Provisional: la sangría es fija y la llave va siempre en la misma línea. Es lo
-    // que se puede hacer sin canal de error (este visitor devuelve String, no Result) y
-    // sin claves de configuración, que entran en la tarea 15 junto con la distinción
-    // entre "else if" y "else { if }".
     @Override
     public String visitBlock(Block block) {
         return block.statements().stream()
@@ -107,23 +103,30 @@ public final class FormattingVisitor implements ASTVisitor<String> {
 
     @Override
     public String visitIfStatement(IfStatement ifStatement) {
-        String head =
+        String conditional =
                 "if ("
                         + ifStatement.condition().accept(this)
-                        + ") {"
+                        + ")"
+                        + separators.openingBrace()
                         + LINE_BREAK
                         + ifStatement.thenBlock().accept(this)
                         + "}";
-        return head
-                + ifStatement
-                        .elseBranch()
-                        .map(branch -> " else {" + LINE_BREAK + indent(branch.accept(this)) + "}")
-                        .orElse("");
+        return conditional + ifStatement.elseBranch().map(this::elseBranch).orElse("");
     }
 
-    private static String indent(String text) {
+    // un else seguido de otro if se imprime en la misma línea; un else con un bloque que
+    // adentro tiene un if se imprime anidado. Son dos árboles distintos y por eso se
+    // pueden distinguir: el primero trae un IfStatement pelado y el segundo un Block.
+    private String elseBranch(Statement branch) {
+        if (branch instanceof IfStatement) {
+            return " else " + branch.accept(this);
+        }
+        return " else" + separators.openingBrace() + LINE_BREAK + branch.accept(this) + "}";
+    }
+
+    private String indent(String text) {
         return text.lines()
-                .map(line -> ONE_LEVEL + line + LINE_BREAK)
+                .map(line -> separators.indentation() + line + LINE_BREAK)
                 .collect(Collectors.joining());
     }
 
