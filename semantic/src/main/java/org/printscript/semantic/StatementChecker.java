@@ -8,6 +8,7 @@ import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
 import org.printscript.ast.IfStatement;
 import org.printscript.ast.PrintlnStatement;
+import org.printscript.ast.Statement;
 import org.printscript.ast.StatementOnlyVisitor;
 import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
@@ -65,14 +66,18 @@ public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
             return new Failure<>("Tipo desconocido: " + annotation.name(), annotation.range());
         }
 
-        if (symbols.read(name).isPresent()) {
+        // la tabla decide si ya estaba declarada, y solo mira el scope actual: el mismo
+        // nombre en un bloque más interno es sombra, no redeclaración
+        Optional<SymbolTable> updated =
+                symbols.declare(name, new Symbol(declared.get(), immutable));
+        if (updated.isEmpty()) {
             // el rango es el de la declaración entera, como venía reportándolo el
             // intérprete: lo que está de más es la sentencia, no el nombre
             return new Failure<>("Variable ya declarada: " + name, statement);
         }
         // se declara aunque el inicializador esté mal, así un error no arrastra a las
         // sentencias que usan la variable después
-        symbols = symbols.declare(name, new Symbol(declared.get(), immutable)).orElseThrow();
+        symbols = updated.get();
 
         if (initializer.isEmpty()) {
             return success();
@@ -95,20 +100,44 @@ public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
         return checkAssignable(assignment.expression(), declared.get().type());
     }
 
+    // un Block es exactamente un scope: se abre un frame al entrar y se cierra al
+    // salir, también cuando una sentencia de adentro falló. Es la misma regla para el
+    // then, para el else y para el bloque de un else if, porque los tres son Block.
     @Override
     public Result<Void> visitBlock(Block block) {
-        return notCheckedYet(block.range());
+        symbols = symbols.openScope();
+        try {
+            for (Statement statement : block.statements()) {
+                Result<Void> checked = statement.accept(this);
+                if (checked instanceof Failure<Void>) {
+                    return checked;
+                }
+            }
+            return success();
+        } finally {
+            symbols = symbols.closeScope();
+        }
     }
 
     @Override
     public Result<Void> visitIfStatement(IfStatement ifStatement) {
-        return notCheckedYet(ifStatement.range());
-    }
-
-    // el scope de bloque y la regla de la condición booleana entran con el if; hasta
-    // entonces el error viaja como dato en vez de dejar pasar algo sin validar
-    private static Result<Void> notCheckedYet(Range range) {
-        return new Failure<>("semantic todavía no valida bloques ni if", range);
+        // la condición se evalúa en el scope de afuera, que es lo correcto y sale solo
+        Result<Type> condition = ExpressionTyper.typeOf(ifStatement.condition(), symbols);
+        if (condition instanceof Failure<Type> failure) {
+            return propagate(failure);
+        }
+        if (((Success<Type>) condition).value() != Type.BOOLEAN) {
+            return new Failure<>(
+                    "La condición de un if tiene que ser boolean", ifStatement.condition().range());
+        }
+        Result<Void> thenChecked = ifStatement.thenBlock().accept(this);
+        if (thenChecked instanceof Failure<Void>) {
+            return thenChecked;
+        }
+        return ifStatement
+                .elseBranch()
+                .map(branch -> branch.accept(this))
+                .orElseGet(StatementChecker::success);
     }
 
     @Override
