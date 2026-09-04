@@ -13,6 +13,7 @@ public final class ParserFactory {
                 List.of(
                         new DeclarationParser(expressionBuilder),
                         new AssignmentParser(expressionBuilder),
-                        new PrintlnParser(expressionBuilder)));
+                        new PrintlnParser(expressionBuilder)),
+                new SemicolonDelimiter());
     }
 }
