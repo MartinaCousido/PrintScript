@@ -41,6 +41,16 @@ class OnlyVisitorsTest {
         public String visitPrintlnStatement(PrintlnStatement println) {
             return "println";
         }
+
+        @Override
+        public String visitBlock(Block block) {
+            return "bloque";
+        }
+
+        @Override
+        public String visitIfStatement(IfStatement ifStatement) {
+            return "if";
+        }
     }
 
     private static final class RejectingExpressions extends ExpressionOnlyVisitor<String> {
@@ -92,11 +102,14 @@ class OnlyVisitorsTest {
     private static List<Statement> everyStatement() {
         Identifier name = new Identifier("x", RANGE);
         TypeName type = new TypeName("number", RANGE);
+        Block block = new Block(List.of(), RANGE);
         return List.of(
                 new VariableDeclaration(name, type, Optional.empty(), RANGE),
                 new ConstDeclaration(name, type, Optional.empty(), RANGE),
                 new AssignmentStatement(name, new NumberLiteral(1, RANGE), RANGE),
-                new PrintlnStatement(new NumberLiteral(1, RANGE), RANGE));
+                new PrintlnStatement(new NumberLiteral(1, RANGE), RANGE),
+                block,
+                new IfStatement(new BooleanLiteral(true, RANGE), block, Optional.empty(), RANGE));
     }
 
     @Test
@@ -113,7 +126,7 @@ class OnlyVisitorsTest {
         RejectingStatements visitor = new RejectingStatements();
 
         assertEquals(
-                List.of("let", "const", "asignacion", "println"),
+                List.of("let", "const", "asignacion", "println", "bloque", "if"),
                 everyStatement().stream().map(statement -> statement.accept(visitor)).toList());
     }
 

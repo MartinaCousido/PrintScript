@@ -22,4 +22,8 @@ public interface ASTVisitor<T> {
     T visitAssignmentStatement(AssignmentStatement assignmentStatement);
 
     T visitPrintlnStatement(PrintlnStatement printlnStatement);
+
+    T visitBlock(Block block);
+
+    T visitIfStatement(IfStatement ifStatement);
 }

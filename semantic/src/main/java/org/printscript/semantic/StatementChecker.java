@@ -3,8 +3,10 @@ package org.printscript.semantic;
 import java.util.Optional;
 import java.util.Set;
 import org.printscript.ast.AssignmentStatement;
+import org.printscript.ast.Block;
 import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
+import org.printscript.ast.IfStatement;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.StatementOnlyVisitor;
 import org.printscript.ast.TypeName;
@@ -91,6 +93,22 @@ public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
             return new Failure<>("No se puede reasignar la constante " + name, assignment.range());
         }
         return checkAssignable(assignment.expression(), declared.get().type());
+    }
+
+    @Override
+    public Result<Void> visitBlock(Block block) {
+        return notCheckedYet(block.range());
+    }
+
+    @Override
+    public Result<Void> visitIfStatement(IfStatement ifStatement) {
+        return notCheckedYet(ifStatement.range());
+    }
+
+    // el scope de bloque y la regla de la condición booleana entran con el if; hasta
+    // entonces el error viaja como dato en vez de dejar pasar algo sin validar
+    private static Result<Void> notCheckedYet(Range range) {
+        return new Failure<>("semantic todavía no valida bloques ni if", range);
     }
 
     @Override

@@ -2,13 +2,16 @@ package org.printscript.formatter.visitors;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.Block;
 import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
+import org.printscript.ast.IfStatement;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
 import org.printscript.ast.PrintlnStatement;
@@ -19,6 +22,9 @@ import org.printscript.formatter.config.Separators;
 import org.printscript.formatter.visitors.Parentheses.Side;
 
 public final class FormattingVisitor implements ASTVisitor<String> {
+
+    private static final String ONE_LEVEL = "    ";
+    private static final String LINE_BREAK = "\n";
 
     private static final String END_OF_STATEMENT = ";";
 
@@ -74,6 +80,39 @@ public final class FormattingVisitor implements ASTVisitor<String> {
                 constDeclaration.name(),
                 constDeclaration.type(),
                 constDeclaration.initializer());
+    }
+
+    // Provisional: la sangría es fija y la llave va siempre en la misma línea. Es lo
+    // que se puede hacer sin canal de error (este visitor devuelve String, no Result) y
+    // sin claves de configuración, que entran en la tarea 15 junto con la distinción
+    // entre "else if" y "else { if }".
+    @Override
+    public String visitBlock(Block block) {
+        return block.statements().stream()
+                .map(statement -> indent(statement.accept(this)))
+                .collect(Collectors.joining());
+    }
+
+    @Override
+    public String visitIfStatement(IfStatement ifStatement) {
+        String head =
+                "if ("
+                        + ifStatement.condition().accept(this)
+                        + ") {"
+                        + LINE_BREAK
+                        + ifStatement.thenBlock().accept(this)
+                        + "}";
+        return head
+                + ifStatement
+                        .elseBranch()
+                        .map(branch -> " else {" + LINE_BREAK + indent(branch.accept(this)) + "}")
+                        .orElse("");
+    }
+
+    private static String indent(String text) {
+        return text.lines()
+                .map(line -> ONE_LEVEL + line + LINE_BREAK)
+                .collect(Collectors.joining());
     }
 
     private String declaration(

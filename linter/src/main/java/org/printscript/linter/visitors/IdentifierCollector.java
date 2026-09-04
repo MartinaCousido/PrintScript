@@ -5,10 +5,12 @@ import java.util.stream.Stream;
 import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.Block;
 import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
+import org.printscript.ast.IfStatement;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.StringLiteral;
@@ -63,6 +65,20 @@ public final class IdentifierCollector implements ASTVisitor<List<Identifier>> {
     @Override
     public List<Identifier> visitPrintlnStatement(PrintlnStatement printlnStatement) {
         return in(printlnStatement.expression());
+    }
+
+    @Override
+    public List<Identifier> visitBlock(Block block) {
+        return block.statements().stream()
+                .flatMap(statement -> statement.accept(this).stream())
+                .toList();
+    }
+
+    @Override
+    public List<Identifier> visitIfStatement(IfStatement ifStatement) {
+        return join(
+                join(in(ifStatement.condition()), ifStatement.thenBlock().accept(this)),
+                ifStatement.elseBranch().map(branch -> branch.accept(this)).orElseGet(List::of));
     }
 
     private List<Identifier> in(Expression expression) {

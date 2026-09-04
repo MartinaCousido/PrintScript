@@ -28,4 +28,14 @@ public abstract class ExpressionOnlyVisitor<T> implements ASTVisitor<T> {
     public T visitPrintlnStatement(PrintlnStatement printlnStatement) {
         return notAnExpression(printlnStatement.range());
     }
+
+    @Override
+    public T visitBlock(Block block) {
+        return notAnExpression(block.range());
+    }
+
+    @Override
+    public T visitIfStatement(IfStatement ifStatement) {
+        return notAnExpression(ifStatement.range());
+    }
 }

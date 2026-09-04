@@ -2,8 +2,10 @@ package org.printscript.interpreter;
 
 import java.util.Optional;
 import org.printscript.ast.AssignmentStatement;
+import org.printscript.ast.Block;
 import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
+import org.printscript.ast.IfStatement;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.StatementOnlyVisitor;
 import org.printscript.ast.VariableDeclaration;
@@ -54,6 +56,22 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
                 .assign(assignmentStatement.name().name(), valueOf(evaluated))
                 .<Result<Void>>map(this::commit)
                 .orElseGet(() -> rejectedAssignment(assignmentStatement));
+    }
+
+    @Override
+    public Result<Void> visitBlock(Block block) {
+        return notSupportedYet(block.range());
+    }
+
+    @Override
+    public Result<Void> visitIfStatement(IfStatement ifStatement) {
+        return notSupportedYet(ifStatement.range());
+    }
+
+    // el bloque y el if todavía no se ejecutan; el error viaja como dato, como
+    // cualquier otro, en vez de romper con una excepción
+    private static Result<Void> notSupportedYet(Range range) {
+        return new Failure<>("El intérprete todavía no ejecuta bloques ni if", range);
     }
 
     @Override

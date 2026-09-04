@@ -77,6 +77,28 @@ class ASTVisitorTest {
         }
 
         @Override
+        public String visitBlock(Block block) {
+            return block.statements().stream()
+                    .map(statement -> statement.accept(this))
+                    .collect(java.util.stream.Collectors.joining(" "));
+        }
+
+        @Override
+        public String visitIfStatement(IfStatement ifStatement) {
+            String head =
+                    "if ("
+                            + ifStatement.condition().accept(this)
+                            + ") { "
+                            + ifStatement.thenBlock().accept(this)
+                            + " }";
+            return head
+                    + ifStatement
+                            .elseBranch()
+                            .map(branch -> " else " + branch.accept(this))
+                            .orElse("");
+        }
+
+        @Override
         public String visitAssignmentStatement(AssignmentStatement assignmentStatement) {
             return assignmentStatement.name().name()
                     + " = "
