@@ -19,6 +19,7 @@ import org.printscript.parser.Parser;
 import org.printscript.parser.ParserFactory;
 import org.printscript.parser.TokenBuffer;
 import org.printscript.runtime.OutputPrinter;
+import org.printscript.runtime.RuntimePorts;
 
 class StreamingEndToEndTest {
 
@@ -73,7 +74,11 @@ class StreamingEndToEndTest {
         Lexer lexer = LexerFactory.create(lines, Version.V10);
         TokenBuffer buffer = new TokenBuffer(lexer);
         Parser parser = ParserFactory.create(buffer, Version.V10);
-        return InterpreterFactory.create(parser, printer, Version.V10);
+        return InterpreterFactory.create(
+                parser,
+                new RuntimePorts(
+                        printer, java.util.Optional::empty, name -> java.util.Optional.empty()),
+                Version.V10);
     }
 
     @Test

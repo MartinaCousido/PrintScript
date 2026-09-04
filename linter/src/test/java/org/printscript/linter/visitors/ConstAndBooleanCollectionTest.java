@@ -11,6 +11,8 @@ import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.IfStatement;
 import org.printscript.ast.PrintlnStatement;
+import org.printscript.ast.ReadEnv;
+import org.printscript.ast.ReadInput;
 import org.printscript.ast.TypeName;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -93,6 +95,20 @@ class ConstAndBooleanCollectionTest {
                         RANGE);
 
         assertEquals(List.of(CONDICION), namesIn(conditional));
+    }
+
+    @Test
+    void aReadContributesTheNamesOfItsArgument() {
+        assertEquals(
+                List.of("el_mensaje"),
+                namesIn(
+                        new PrintlnStatement(
+                                new ReadInput(new Identifier("el_mensaje", RANGE), RANGE), RANGE)));
+        assertEquals(
+                List.of("la_variable"),
+                namesIn(
+                        new PrintlnStatement(
+                                new ReadEnv(new Identifier("la_variable", RANGE), RANGE), RANGE)));
     }
 
     @Test

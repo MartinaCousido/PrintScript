@@ -14,17 +14,17 @@ import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
-import org.printscript.runtime.OutputPrinter;
+import org.printscript.runtime.RuntimePorts;
 
 // ejecuta las sentencias
 public final class Executor extends StatementOnlyVisitor<Result<Void>> {
 
-    private final OutputPrinter printer;
+    private final RuntimePorts ports;
     private Environment environment;
 
-    public Executor(Environment environment, OutputPrinter printer) {
+    public Executor(Environment environment, RuntimePorts ports) {
         this.environment = environment;
-        this.printer = printer;
+        this.ports = ports;
     }
 
     @Override
@@ -53,8 +53,23 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
         if (evaluated instanceof Failure<Object> failure) {
             return propagate(failure);
         }
+        String name = assignmentStatement.name().name();
+        Optional<Variable> existing = environment.read(name);
+        if (existing.isEmpty()) {
+            return new Failure<>("Variable no declarada: " + name, assignmentStatement.range());
+        }
+        // la conversión se aplica siempre; para cualquier inicializador que no sea una
+        // lectura externa es un no-op, porque semantic ya garantizó que el tipo coincide
+        Result<Object> converted =
+                Conversions.toDeclaredType(
+                        existing.get().declaredType(),
+                        valueOf(evaluated),
+                        assignmentStatement.range());
+        if (converted instanceof Failure<Object> failure) {
+            return propagate(failure);
+        }
         return environment
-                .assign(assignmentStatement.name().name(), valueOf(evaluated))
+                .assign(name, valueOf(converted))
                 .<Result<Void>>map(this::commit)
                 .orElseGet(() -> rejectedAssignment(assignmentStatement));
     }
@@ -105,12 +120,12 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
         if (evaluated instanceof Failure<Object> failure) {
             return propagate(failure);
         }
-        printer.println(ExpressionEvaluator.asText(valueOf(evaluated)));
+        ports.printer().println(ExpressionEvaluator.asText(valueOf(evaluated)));
         return new Success<>(null);
     }
 
     private Result<Object> evaluate(Expression expression) {
-        return expression.accept(new ExpressionEvaluator(environment));
+        return expression.accept(new ExpressionEvaluator(environment, ports));
     }
 
     // evalúa el inicializador si lo hay y guarda la variable
@@ -126,7 +141,12 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
             if (evaluated instanceof Failure<Object> failure) {
                 return propagate(failure);
             }
-            value = valueOf(evaluated);
+            Result<Object> converted =
+                    Conversions.toDeclaredType(declaredType, valueOf(evaluated), range);
+            if (converted instanceof Failure<Object> failure) {
+                return propagate(failure);
+            }
+            value = valueOf(converted);
         }
         return environment
                 .declare(name, declaredType, value, immutable)

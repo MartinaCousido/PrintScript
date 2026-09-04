@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.printscript.ast.ConstDeclaration;
+import org.printscript.ast.ReadEnv;
+import org.printscript.ast.ReadInput;
 import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Version;
 
@@ -19,7 +21,7 @@ public final class ParserFactory {
 
     // agregar una sentencia a una versión es agregar un parser a esta lista
     private static List<StatementParser> statementParsers(Version version) {
-        ExpressionBuilder expressionBuilder = new ExpressionBuilder();
+        ExpressionBuilder expressionBuilder = new ExpressionBuilder(reads(version));
         List<StatementParser> common =
                 List.of(
                         new DeclarationParser(expressionBuilder, declarators(version)),
@@ -41,6 +43,14 @@ public final class ParserFactory {
         List<StatementParser> all = new ArrayList<>(parsers);
         all.add(one);
         return List.copyOf(all);
+    }
+
+    // agregar una función de lectura es agregar una entrada acá
+    private static Map<String, ReadFactory> reads(Version version) {
+        return switch (version) {
+            case V10 -> Map.of();
+            case V11 -> Map.of("readInput", ReadInput::new, "readEnv", ReadEnv::new);
+        };
     }
 
     // agregar un declarador es agregar una entrada acá: el DeclarationParser no cambia

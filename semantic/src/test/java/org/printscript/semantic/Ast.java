@@ -10,6 +10,8 @@ import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
 import org.printscript.ast.PrintlnStatement;
+import org.printscript.ast.ReadEnv;
+import org.printscript.ast.ReadInput;
 import org.printscript.ast.Statement;
 import org.printscript.ast.StringLiteral;
 import org.printscript.ast.TypeName;
@@ -65,6 +67,14 @@ final class Ast {
 
     static Expression bool(boolean value, Range range) {
         return new BooleanLiteral(value, range);
+    }
+
+    static Expression readInput(Expression prompt) {
+        return new ReadInput(prompt, ANY);
+    }
+
+    static Expression readEnv(Expression name) {
+        return new ReadEnv(name, ANY);
     }
 
     static Statement constant(String variable, String type, Expression initializer) {

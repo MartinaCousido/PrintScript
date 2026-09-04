@@ -7,6 +7,8 @@ import org.printscript.ast.ExpressionOnlyVisitor;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
+import org.printscript.ast.ReadEnv;
+import org.printscript.ast.ReadInput;
 import org.printscript.ast.StringLiteral;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
@@ -36,6 +38,29 @@ final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
     @Override
     public Result<Type> visitBooleanLiteral(BooleanLiteral booleanLiteral) {
         return new Success<>(Type.BOOLEAN);
+    }
+
+    // las dos lecturas externas valen string: lo que entra de afuera es texto
+    @Override
+    public Result<Type> visitReadInput(ReadInput readInput) {
+        return stringArgument(readInput.prompt(), "readInput");
+    }
+
+    @Override
+    public Result<Type> visitReadEnv(ReadEnv readEnv) {
+        return stringArgument(readEnv.name(), "readEnv");
+    }
+
+    private Result<Type> stringArgument(Expression argument, String function) {
+        Result<Type> actual = argument.accept(this);
+        if (actual instanceof Failure<Type> failure) {
+            return failure;
+        }
+        if (((Success<Type>) actual).value() != Type.STRING) {
+            return new Failure<>(
+                    "El argumento de " + function + " tiene que ser string", argument.range());
+        }
+        return new Success<>(Type.STRING);
     }
 
     @Override

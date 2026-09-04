@@ -47,7 +47,7 @@ class ScopeTest {
                     printed.add(text);
                 }
             };
-    private final Executor executor = new Executor(new Environment(), printer);
+    private final Executor executor = new Executor(new Environment(), Ports.of(printer));
 
     private static Statement declare(String name, Object value) {
         return new VariableDeclaration(

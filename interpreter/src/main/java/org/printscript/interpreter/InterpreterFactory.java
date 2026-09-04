@@ -11,7 +11,7 @@ import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Version;
-import org.printscript.runtime.OutputPrinter;
+import org.printscript.runtime.RuntimePorts;
 
 // acá vive todo lo que el intérprete sabe de cada versión: qué construcciones puede
 // ejecutar. Es la compuerta que hace que un programa 1.1 corrido como 1.0 falle con un
@@ -22,9 +22,9 @@ public final class InterpreterFactory {
 
     public static Interpreter create(
             PrintScriptIterator<Result<Statement>> statements,
-            OutputPrinter printer,
+            RuntimePorts ports,
             Version version) {
-        Executor executor = new Executor(new Environment(), printer);
+        Executor executor = new Executor(new Environment(), ports);
         return new Interpreter(statements, executor, supportedNodes(version));
     }
 

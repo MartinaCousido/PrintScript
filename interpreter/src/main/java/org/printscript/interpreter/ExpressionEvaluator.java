@@ -7,19 +7,24 @@ import org.printscript.ast.ExpressionOnlyVisitor;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
+import org.printscript.ast.ReadEnv;
+import org.printscript.ast.ReadInput;
 import org.printscript.ast.StringLiteral;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
+import org.printscript.runtime.RuntimePorts;
 
 // calcula cuánto vale una expresión, recorriendo su árbol
 public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Object>> {
 
     private final Environment environment;
+    private final RuntimePorts ports;
 
-    public ExpressionEvaluator(Environment environment) {
+    public ExpressionEvaluator(Environment environment, RuntimePorts ports) {
         this.environment = environment;
+        this.ports = ports;
     }
 
     @Override
@@ -35,6 +40,42 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
     @Override
     public Result<Object> visitBooleanLiteral(BooleanLiteral booleanLiteral) {
         return new Success<>(booleanLiteral.value());
+    }
+
+    // el prompt se escribe sin salto de línea, para que quede en la misma línea que lo
+    // que el usuario tipea
+    @Override
+    public Result<Object> visitReadInput(ReadInput readInput) {
+        Result<Object> prompt = readInput.prompt().accept(this);
+        if (prompt instanceof Failure<Object> failure) {
+            return failure;
+        }
+        ports.printer().print(asText(((Success<Object>) prompt).value()));
+        return ports.input()
+                .readLine()
+                .<Result<Object>>map(Success::new)
+                .orElseGet(
+                        () ->
+                                new Failure<>(
+                                        "No hay más entrada disponible para readInput",
+                                        readInput.range()));
+    }
+
+    @Override
+    public Result<Object> visitReadEnv(ReadEnv readEnv) {
+        Result<Object> name = readEnv.name().accept(this);
+        if (name instanceof Failure<Object> failure) {
+            return failure;
+        }
+        String variable = asText(((Success<Object>) name).value());
+        return ports.env()
+                .read(variable)
+                .<Result<Object>>map(Success::new)
+                .orElseGet(
+                        () ->
+                                new Failure<>(
+                                        "La variable de entorno " + variable + " no está definida",
+                                        readEnv.range()));
     }
 
     @Override

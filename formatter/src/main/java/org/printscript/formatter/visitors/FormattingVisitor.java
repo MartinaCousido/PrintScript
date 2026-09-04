@@ -15,6 +15,8 @@ import org.printscript.ast.IfStatement;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
 import org.printscript.ast.PrintlnStatement;
+import org.printscript.ast.ReadEnv;
+import org.printscript.ast.ReadInput;
 import org.printscript.ast.StringLiteral;
 import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
@@ -47,6 +49,16 @@ public final class FormattingVisitor implements ASTVisitor<String> {
     @Override
     public String visitBooleanLiteral(BooleanLiteral booleanLiteral) {
         return Boolean.toString(booleanLiteral.value());
+    }
+
+    @Override
+    public String visitReadInput(ReadInput readInput) {
+        return "readInput(" + readInput.prompt().accept(this) + ")";
+    }
+
+    @Override
+    public String visitReadEnv(ReadEnv readEnv) {
+        return "readEnv(" + readEnv.name().accept(this) + ")";
     }
 
     @Override

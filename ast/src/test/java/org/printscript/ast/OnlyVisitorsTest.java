@@ -84,6 +84,16 @@ class OnlyVisitorsTest {
         public String visitBinaryExpression(BinaryExpression binary) {
             return "binaria";
         }
+
+        @Override
+        public String visitReadInput(ReadInput readInput) {
+            return "readInput";
+        }
+
+        @Override
+        public String visitReadEnv(ReadEnv readEnv) {
+            return "readEnv";
+        }
     }
 
     private static List<Expression> everyExpression() {
@@ -96,7 +106,9 @@ class OnlyVisitorsTest {
                         new NumberLiteral(1, RANGE),
                         Operator.PLUS,
                         new NumberLiteral(2, RANGE),
-                        RANGE));
+                        RANGE),
+                new ReadInput(new StringLiteral("x", RANGE), RANGE),
+                new ReadEnv(new StringLiteral("X", RANGE), RANGE));
     }
 
     private static List<Statement> everyStatement() {
@@ -144,7 +156,14 @@ class OnlyVisitorsTest {
         RejectingExpressions visitor = new RejectingExpressions();
 
         assertEquals(
-                List.of("number", "string", "boolean", "identificador", "binaria"),
+                List.of(
+                        "number",
+                        "string",
+                        "boolean",
+                        "identificador",
+                        "binaria",
+                        "readInput",
+                        "readEnv"),
                 everyExpression().stream().map(expression -> expression.accept(visitor)).toList());
     }
 }

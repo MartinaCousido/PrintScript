@@ -8,6 +8,8 @@ import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
 import org.printscript.ast.IfStatement;
 import org.printscript.ast.PrintlnStatement;
+import org.printscript.ast.ReadEnv;
+import org.printscript.ast.ReadInput;
 import org.printscript.ast.Statement;
 import org.printscript.ast.StatementOnlyVisitor;
 import org.printscript.ast.TypeName;
@@ -156,6 +158,12 @@ public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
             return propagate(failure);
         }
         Type type = ((Success<Type>) actual).value();
+        // excepción acotada: lo que entra de afuera es texto, y el tipo declarado manda
+        // la conversión. Vale solo cuando el inicializador es exactamente una lectura;
+        // adentro de una expresión es un string común, o si no deja de ser checkeable.
+        if (isExternalRead(expression)) {
+            return success();
+        }
         if (type != declared) {
             return new Failure<>(
                     "No se puede asignar "
@@ -165,6 +173,10 @@ public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
                     expression.range());
         }
         return success();
+    }
+
+    private static boolean isExternalRead(Expression expression) {
+        return expression instanceof ReadInput || expression instanceof ReadEnv;
     }
 
     private static Result<Void> success() {

@@ -4,7 +4,13 @@ import org.printscript.common.Range;
 
 // algo que vale algo.
 public sealed interface Expression
-        permits NumberLiteral, StringLiteral, BooleanLiteral, Identifier, BinaryExpression {
+        permits NumberLiteral,
+                StringLiteral,
+                BooleanLiteral,
+                Identifier,
+                BinaryExpression,
+                ReadInput,
+                ReadEnv {
 
     Range range();
 

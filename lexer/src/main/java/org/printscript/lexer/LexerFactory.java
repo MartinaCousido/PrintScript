@@ -49,6 +49,8 @@ public final class LexerFactory {
                             "const", TokenType.KEYWORD,
                             "if", TokenType.KEYWORD,
                             "else", TokenType.KEYWORD,
+                            "readInput", TokenType.KEYWORD,
+                            "readEnv", TokenType.KEYWORD,
                             "boolean", TokenType.KEYWORD,
                             "true", TokenType.BOOLEAN,
                             "false", TokenType.BOOLEAN);

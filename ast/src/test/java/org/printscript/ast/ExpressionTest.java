@@ -19,6 +19,8 @@ class ExpressionTest {
             case BooleanLiteral bool -> "boolean:" + bool.value();
             case Identifier identifier -> "identifier:" + identifier.name();
             case BinaryExpression binary -> "binary:" + binary.operator();
+            case ReadInput _ -> "readInput";
+            case ReadEnv _ -> "readEnv";
         };
     }
 
@@ -37,6 +39,12 @@ class ExpressionTest {
                         rangeAt(1, 5));
 
         assertEquals("binary:PLUS", describe(sum));
+        assertEquals(
+                "readInput",
+                describe(new ReadInput(new StringLiteral("p", rangeAt(1, 1)), rangeAt(1, 1))));
+        assertEquals(
+                "readEnv",
+                describe(new ReadEnv(new StringLiteral("P", rangeAt(1, 1)), rangeAt(1, 1))));
     }
 
     @Test

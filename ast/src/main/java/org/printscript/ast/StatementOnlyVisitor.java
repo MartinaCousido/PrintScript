@@ -34,4 +34,14 @@ public abstract class StatementOnlyVisitor<T> implements ASTVisitor<T> {
     public T visitBinaryExpression(BinaryExpression binaryExpression) {
         return notAStatement(binaryExpression.range());
     }
+
+    @Override
+    public T visitReadInput(ReadInput readInput) {
+        return notAStatement(readInput.range());
+    }
+
+    @Override
+    public T visitReadEnv(ReadEnv readEnv) {
+        return notAStatement(readEnv.range());
+    }
 }

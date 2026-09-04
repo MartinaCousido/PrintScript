@@ -26,6 +26,8 @@ class StatementCheckerTest {
     private static final String NUMBER = "number";
     private static final String STRING = "string";
     private static final String HOLA = "hola";
+    private static final String STRING_EN_NUMBER =
+            "No se puede asignar string a una variable number";
     private static final String NOT_A_STATEMENT = "No es una sentencia";
 
     private final StatementChecker checker =
@@ -63,7 +65,7 @@ class StatementCheckerTest {
 
         Failure<Void> failure = failureOf(declare("x", NUMBER, text(HOLA, initializer)));
 
-        assertEquals("No se puede asignar string a una variable number", failure.message());
+        assertEquals(STRING_EN_NUMBER, failure.message());
         assertEquals(initializer, failure.range());
     }
 
@@ -121,7 +123,7 @@ class StatementCheckerTest {
 
         Failure<Void> failure = failureOf(assign("x", Ast.ANY, text(HOLA, expression)));
 
-        assertEquals("No se puede asignar string a una variable number", failure.message());
+        assertEquals(STRING_EN_NUMBER, failure.message());
         assertEquals(expression, failure.range());
     }
 
@@ -241,7 +243,7 @@ class StatementCheckerTest {
     void aConstantStillHasToMatchItsDeclaredType() {
         Failure<Void> failure = failureOf(Ast.constant("x", NUMBER, text(HOLA, Ast.ANY)));
 
-        assertEquals("No se puede asignar string a una variable number", failure.message());
+        assertEquals(STRING_EN_NUMBER, failure.message());
     }
 
     @Test
@@ -284,6 +286,41 @@ class StatementCheckerTest {
                                                 Operator.PLUS,
                                                 Ast.bool(false, Ast.ANY))))
                         .message());
+    }
+
+    // --- lecturas externas ---
+
+    @Test
+    void aReadIsCompatibleWithAnyDeclaredType() {
+        assertPasses(declare("n", NUMBER, Ast.readInput(text(HOLA, Ast.ANY))));
+        assertPasses(declare("s", STRING, Ast.readInput(text(HOLA, Ast.ANY))));
+        assertPasses(declare("b", "boolean", Ast.readEnv(text(HOLA, Ast.ANY))));
+    }
+
+    @Test
+    void theExceptionDoesNotReachInsideAnExpression() {
+        // adentro de una expresión es un string común: si no, deja de ser checkeable
+        Expression concatenation =
+                binary(Ast.readInput(text(HOLA, Ast.ANY)), Operator.PLUS, text(HOLA, Ast.ANY));
+
+        assertEquals(STRING_EN_NUMBER, failureOf(declare("n", NUMBER, concatenation)).message());
+    }
+
+    @Test
+    void theArgumentOfAReadHasToBeAString() {
+        assertEquals(
+                "El argumento de readInput tiene que ser string",
+                failureOf(declare("n", STRING, Ast.readInput(number(5, Ast.ANY)))).message());
+        assertEquals(
+                "El argumento de readEnv tiene que ser string",
+                failureOf(declare("otra", STRING, Ast.readEnv(Ast.bool(true, Ast.ANY)))).message());
+    }
+
+    @Test
+    void aReadCanBeAssignedToAnAlreadyDeclaredVariable() {
+        assertPasses(declare("n", NUMBER, number(1, Ast.ANY)));
+
+        assertPasses(assign("n", Ast.ANY, Ast.readInput(text(HOLA, Ast.ANY))));
     }
 
     // --- una expresión suelta no es una sentencia ---

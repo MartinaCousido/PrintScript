@@ -33,6 +33,9 @@ class ExpressionTyperTest {
         assertEquals(NOT_AN_EXPRESSION, visit(assign("x", range, number(1, range))).message());
         assertEquals(NOT_AN_EXPRESSION, visit(println(number(1, range))).message());
         assertEquals(
+                NOT_AN_EXPRESSION,
+                visit(new org.printscript.ast.Block(java.util.List.of(), range)).message());
+        assertEquals(
                 NOT_AN_EXPRESSION, visit(Ast.constant("x", "number", number(1, range))).message());
     }
 }

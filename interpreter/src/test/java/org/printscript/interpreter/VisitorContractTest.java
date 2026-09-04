@@ -33,8 +33,9 @@ class VisitorContractTest {
     private static final String NOT_AN_EXPRESSION = "No es una expresión evaluable";
     private static final Range RANGE = new Range(new Position(1, 1), new Position(1, 4));
 
-    private final Executor executor = new Executor(new Environment(), new Discarding());
-    private final ExpressionEvaluator evaluator = new ExpressionEvaluator(new Environment());
+    private final Executor executor = new Executor(new Environment(), Ports.of(new Discarding()));
+    private final ExpressionEvaluator evaluator =
+            new ExpressionEvaluator(new Environment(), Ports.of(new Discarding()));
 
     private String executing(Expression expression) {
         return assertInstanceOf(Failure.class, expression.accept(executor)).message();

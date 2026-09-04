@@ -15,6 +15,10 @@ public interface ASTVisitor<T> {
 
     T visitBinaryExpression(BinaryExpression binaryExpression);
 
+    T visitReadInput(ReadInput readInput);
+
+    T visitReadEnv(ReadEnv readEnv);
+
     T visitVariableDeclaration(VariableDeclaration variableDeclaration);
 
     T visitConstDeclaration(ConstDeclaration constDeclaration);

@@ -74,7 +74,7 @@ class InterpreterNodeGateTest {
             OutputPrinter printer, List<Result<Statement>> results) {
         return new Interpreter(
                 new ResultStream(results),
-                new Executor(new Environment(), printer),
+                new Executor(new Environment(), Ports.of(printer)),
                 Set.of(PrintlnStatement.class));
     }
 

@@ -14,7 +14,17 @@ import org.printscript.token.TokenType;
 final class Lexemes {
 
     private static final Set<String> KEYWORDS =
-            Set.of("let", "const", "if", "else", "println", "number", "string", "boolean");
+            Set.of(
+                    "let",
+                    "const",
+                    "if",
+                    "else",
+                    "println",
+                    "number",
+                    "string",
+                    "boolean",
+                    "readInput",
+                    "readEnv");
     private static final Set<String> BOOLEANS = Set.of("true", "false");
     private static final Set<String> PUNCTUATION = Set.of("{", "}", "(", ")", ";", ":");
     private static final Set<String> OPERATORS = Set.of("+", "-", "*", "/", "=");
@@ -50,6 +60,9 @@ final class Lexemes {
         }
         if (Character.isDigit(lexeme.charAt(0))) {
             return TokenType.NUMBER;
+        }
+        if (lexeme.startsWith("'")) {
+            return TokenType.STRING;
         }
         return TokenType.IDENTIFIER;
     }

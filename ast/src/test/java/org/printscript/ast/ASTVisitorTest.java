@@ -51,6 +51,16 @@ class ASTVisitorTest {
         }
 
         @Override
+        public String visitReadInput(ReadInput readInput) {
+            return "readInput(" + readInput.prompt().accept(this) + ")";
+        }
+
+        @Override
+        public String visitReadEnv(ReadEnv readEnv) {
+            return "readEnv(" + readEnv.name().accept(this) + ")";
+        }
+
+        @Override
         public String visitVariableDeclaration(VariableDeclaration variableDeclaration) {
             String head =
                     "let "

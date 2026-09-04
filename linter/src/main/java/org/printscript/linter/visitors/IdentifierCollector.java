@@ -13,6 +13,8 @@ import org.printscript.ast.Identifier;
 import org.printscript.ast.IfStatement;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.PrintlnStatement;
+import org.printscript.ast.ReadEnv;
+import org.printscript.ast.ReadInput;
 import org.printscript.ast.StringLiteral;
 import org.printscript.ast.VariableDeclaration;
 
@@ -79,6 +81,16 @@ public final class IdentifierCollector implements ASTVisitor<List<Identifier>> {
         return join(
                 join(in(ifStatement.condition()), ifStatement.thenBlock().accept(this)),
                 ifStatement.elseBranch().map(branch -> branch.accept(this)).orElseGet(List::of));
+    }
+
+    @Override
+    public List<Identifier> visitReadInput(ReadInput readInput) {
+        return in(readInput.prompt());
+    }
+
+    @Override
+    public List<Identifier> visitReadEnv(ReadEnv readEnv) {
+        return in(readEnv.name());
     }
 
     private List<Identifier> in(Expression expression) {
