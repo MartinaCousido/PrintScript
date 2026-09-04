@@ -2,15 +2,12 @@ package org.printscript.semantic;
 
 import java.util.Optional;
 import java.util.Set;
-import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
-import org.printscript.ast.BinaryExpression;
-import org.printscript.ast.BooleanLiteral;
+import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
-import org.printscript.ast.Identifier;
-import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.PrintlnStatement;
-import org.printscript.ast.StringLiteral;
+import org.printscript.ast.StatementOnlyVisitor;
+import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
@@ -20,7 +17,7 @@ import org.printscript.common.Success;
 // las reglas semánticas de PrintScript 1.0
 // el estado de error es por sentencia y no acumulado: una sentencia inválida no
 // condena a las que siguen. Lo único que se arrastra es la tabla de tipos.
-public final class StatementChecker implements ASTVisitor<Result<Void>> {
+public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
 
     private final Set<Type> supportedTypes;
     private SymbolTable symbols;
@@ -32,23 +29,49 @@ public final class StatementChecker implements ASTVisitor<Result<Void>> {
 
     @Override
     public Result<Void> visitVariableDeclaration(VariableDeclaration declaration) {
-        Optional<Type> declared = Type.fromWrittenName(declaration.type().name(), supportedTypes);
-        if (declared.isEmpty()) {
+        return declare(
+                declaration.name().name(),
+                declaration.type(),
+                declaration.initializer(),
+                declaration.range(),
+                false);
+    }
+
+    @Override
+    public Result<Void> visitConstDeclaration(ConstDeclaration declaration) {
+        if (declaration.initializer().isEmpty()) {
+            // una constante sin valor no se puede completar después: nace inservible
             return new Failure<>(
-                    "Tipo desconocido: " + declaration.type().name(), declaration.type().range());
+                    "Una constante tiene que declararse con un valor", declaration.range());
+        }
+        return declare(
+                declaration.name().name(),
+                declaration.type(),
+                declaration.initializer(),
+                declaration.range(),
+                true);
+    }
+
+    private Result<Void> declare(
+            String name,
+            TypeName annotation,
+            Optional<Expression> initializer,
+            Range statement,
+            boolean immutable) {
+        Optional<Type> declared = Type.fromWrittenName(annotation.name(), supportedTypes);
+        if (declared.isEmpty()) {
+            return new Failure<>("Tipo desconocido: " + annotation.name(), annotation.range());
         }
 
-        String name = declaration.name().name();
         if (symbols.read(name).isPresent()) {
             // el rango es el de la declaración entera, como venía reportándolo el
             // intérprete: lo que está de más es la sentencia, no el nombre
-            return new Failure<>("Variable ya declarada: " + name, declaration.range());
+            return new Failure<>("Variable ya declarada: " + name, statement);
         }
         // se declara aunque el inicializador esté mal, así un error no arrastra a las
         // sentencias que usan la variable después
-        symbols = symbols.declare(name, declared.get()).orElseThrow();
+        symbols = symbols.declare(name, new Symbol(declared.get(), immutable)).orElseThrow();
 
-        Optional<Expression> initializer = declaration.initializer();
         if (initializer.isEmpty()) {
             return success();
         }
@@ -58,13 +81,16 @@ public final class StatementChecker implements ASTVisitor<Result<Void>> {
     @Override
     public Result<Void> visitAssignmentStatement(AssignmentStatement assignment) {
         String name = assignment.name().name();
-        Optional<Type> declared = symbols.read(name);
+        Optional<Symbol> declared = symbols.read(name);
         if (declared.isEmpty()) {
             // en una asignación la sentencia entera es la que no tiene sentido; cuando
             // el nombre aparece dentro de una expresión, el rango es el del uso
             return new Failure<>("Variable no declarada: " + name, assignment.range());
         }
-        return checkAssignable(assignment.expression(), declared.get());
+        if (declared.get().immutable()) {
+            return new Failure<>("No se puede reasignar la constante " + name, assignment.range());
+        }
+        return checkAssignable(assignment.expression(), declared.get().type());
     }
 
     @Override
@@ -94,31 +120,6 @@ public final class StatementChecker implements ASTVisitor<Result<Void>> {
         return success();
     }
 
-    @Override
-    public Result<Void> visitNumberLiteral(NumberLiteral numberLiteral) {
-        return notAStatement(numberLiteral.range());
-    }
-
-    @Override
-    public Result<Void> visitStringLiteral(StringLiteral stringLiteral) {
-        return notAStatement(stringLiteral.range());
-    }
-
-    @Override
-    public Result<Void> visitBooleanLiteral(BooleanLiteral booleanLiteral) {
-        return notAStatement(booleanLiteral.range());
-    }
-
-    @Override
-    public Result<Void> visitIdentifier(Identifier identifier) {
-        return notAStatement(identifier.range());
-    }
-
-    @Override
-    public Result<Void> visitBinaryExpression(BinaryExpression binaryExpression) {
-        return notAStatement(binaryExpression.range());
-    }
-
     private static Result<Void> success() {
         return new Success<>(null);
     }
@@ -127,7 +128,8 @@ public final class StatementChecker implements ASTVisitor<Result<Void>> {
         return new Failure<>(failure.message(), failure.range());
     }
 
-    private static Result<Void> notAStatement(Range range) {
+    @Override
+    protected Result<Void> notAStatement(Range range) {
         return new Failure<>("No es una sentencia", range);
     }
 }

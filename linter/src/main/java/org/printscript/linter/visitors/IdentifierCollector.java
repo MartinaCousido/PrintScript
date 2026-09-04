@@ -6,6 +6,7 @@ import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
 import org.printscript.ast.BooleanLiteral;
+import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -45,6 +46,13 @@ public final class IdentifierCollector implements ASTVisitor<List<Identifier>> {
         return join(
                 List.of(variableDeclaration.name()),
                 variableDeclaration.initializer().map(this::in).orElseGet(List::of));
+    }
+
+    @Override
+    public List<Identifier> visitConstDeclaration(ConstDeclaration constDeclaration) {
+        return join(
+                List.of(constDeclaration.name()),
+                constDeclaration.initializer().map(this::in).orElseGet(List::of));
     }
 
     @Override

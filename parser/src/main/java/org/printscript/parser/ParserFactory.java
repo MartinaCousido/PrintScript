@@ -1,6 +1,9 @@
 package org.printscript.parser;
 
 import java.util.List;
+import java.util.Map;
+import org.printscript.ast.ConstDeclaration;
+import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Version;
 
 // acá vive todo lo que el parser sabe de cada versión del lenguaje: qué sentencias
@@ -18,12 +21,23 @@ public final class ParserFactory {
         ExpressionBuilder expressionBuilder = new ExpressionBuilder();
         List<StatementParser> common =
                 List.of(
-                        new DeclarationParser(expressionBuilder),
+                        new DeclarationParser(expressionBuilder, declarators(version)),
                         new AssignmentParser(expressionBuilder),
                         new PrintlnParser(expressionBuilder));
         return switch (version) {
             // el parser del if entra en 1.1 junto con los nodos Block e IfStatement
             case V10, V11 -> common;
+        };
+    }
+
+    // agregar un declarador es agregar una entrada acá: el DeclarationParser no cambia
+    private static Map<String, DeclarationFactory> declarators(Version version) {
+        return switch (version) {
+            case V10 -> Map.of("let", VariableDeclaration::new);
+            case V11 ->
+                    Map.of(
+                            "let", VariableDeclaration::new,
+                            "const", ConstDeclaration::new);
         };
     }
 

@@ -1,16 +1,19 @@
 package org.printscript.formatter.visitors;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
 import org.printscript.ast.BooleanLiteral;
+import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.StringLiteral;
+import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
 import org.printscript.formatter.config.Separators;
 import org.printscript.formatter.visitors.Parentheses.Side;
@@ -57,15 +60,28 @@ public final class FormattingVisitor implements ASTVisitor<String> {
 
     @Override
     public String visitVariableDeclaration(VariableDeclaration variableDeclaration) {
-        String declared =
-                "let "
-                        + variableDeclaration.name().accept(this)
-                        + separators.colon()
-                        + variableDeclaration.type().name();
+        return declaration(
+                "let",
+                variableDeclaration.name(),
+                variableDeclaration.type(),
+                variableDeclaration.initializer());
+    }
+
+    @Override
+    public String visitConstDeclaration(ConstDeclaration constDeclaration) {
+        return declaration(
+                "const",
+                constDeclaration.name(),
+                constDeclaration.type(),
+                constDeclaration.initializer());
+    }
+
+    private String declaration(
+            String declarator, Identifier name, TypeName type, Optional<Expression> initializer) {
+        String declared = declarator + " " + name.accept(this) + separators.colon() + type.name();
         String initialized =
-                variableDeclaration
-                        .initializer()
-                        .map(initializer -> separators.assign() + initializer.accept(this))
+                initializer
+                        .map(expression -> separators.assign() + expression.accept(this))
                         .orElse("");
         return declared + initialized + END_OF_STATEMENT;
     }

@@ -15,39 +15,41 @@ class SymbolTableTest {
 
     @Test
     void aDeclaredNameIsReadBackWithItsType() {
-        SymbolTable table = new SymbolTable().declare("x", Type.NUMBER).orElseThrow();
+        SymbolTable table =
+                new SymbolTable().declare("x", new Symbol(Type.NUMBER, false)).orElseThrow();
 
-        assertEquals(Optional.of(Type.NUMBER), table.read("x"));
+        assertEquals(Optional.of(new Symbol(Type.NUMBER, false)), table.read("x"));
     }
 
     @Test
     void declaringTheSameNameTwiceIsRejected() {
-        SymbolTable table = new SymbolTable().declare("x", Type.NUMBER).orElseThrow();
+        SymbolTable table =
+                new SymbolTable().declare("x", new Symbol(Type.NUMBER, false)).orElseThrow();
 
-        assertEquals(Optional.empty(), table.declare("x", Type.STRING));
+        assertEquals(Optional.empty(), table.declare("x", new Symbol(Type.STRING, false)));
     }
 
     @Test
     void declaringDoesNotModifyTheTableItCameFrom() {
         SymbolTable original = new SymbolTable();
 
-        SymbolTable derived = original.declare("x", Type.STRING).orElseThrow();
+        SymbolTable derived = original.declare("x", new Symbol(Type.STRING, false)).orElseThrow();
 
         assertEquals(Optional.empty(), original.read("x"));
-        assertEquals(Optional.of(Type.STRING), derived.read("x"));
+        assertEquals(Optional.of(new Symbol(Type.STRING, false)), derived.read("x"));
     }
 
     @Test
     void differentNamesCoexist() {
         SymbolTable table =
                 new SymbolTable()
-                        .declare("x", Type.NUMBER)
+                        .declare("x", new Symbol(Type.NUMBER, false))
                         .orElseThrow()
-                        .declare("y", Type.STRING)
+                        .declare("y", new Symbol(Type.STRING, false))
                         .orElseThrow();
 
-        assertEquals(Optional.of(Type.NUMBER), table.read("x"));
-        assertEquals(Optional.of(Type.STRING), table.read("y"));
+        assertEquals(Optional.of(new Symbol(Type.NUMBER, false)), table.read("x"));
+        assertEquals(Optional.of(new Symbol(Type.STRING, false)), table.read("y"));
         assertTrue(table.read("z").isEmpty());
     }
 }

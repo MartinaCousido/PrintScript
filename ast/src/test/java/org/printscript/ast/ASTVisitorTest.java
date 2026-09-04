@@ -64,6 +64,19 @@ class ASTVisitorTest {
         }
 
         @Override
+        public String visitConstDeclaration(ConstDeclaration constDeclaration) {
+            String head =
+                    "const "
+                            + constDeclaration.name().name()
+                            + ": "
+                            + constDeclaration.type().name();
+            return constDeclaration
+                    .initializer()
+                    .map(expression -> head + " = " + expression.accept(this) + ";")
+                    .orElse(head + ";");
+        }
+
+        @Override
         public String visitAssignmentStatement(AssignmentStatement assignmentStatement) {
             return assignmentStatement.name().name()
                     + " = "

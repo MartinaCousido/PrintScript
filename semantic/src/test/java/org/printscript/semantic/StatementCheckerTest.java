@@ -28,7 +28,8 @@ class StatementCheckerTest {
     private static final String HOLA = "hola";
     private static final String NOT_A_STATEMENT = "No es una sentencia";
 
-    private final StatementChecker checker = new StatementChecker(Set.of(Type.NUMBER, Type.STRING));
+    private final StatementChecker checker =
+            new StatementChecker(Set.of(Type.NUMBER, Type.STRING, Type.BOOLEAN));
 
     private Result<Void> check(Statement statement) {
         return statement.accept(checker);
@@ -70,10 +71,9 @@ class StatementCheckerTest {
     void aDeclarationWithATypeThatDoesNotExistFailsAtTheTypeAnnotation() {
         Range type = at(1, 8);
 
-        Failure<Void> failure =
-                failureOf(declare("x", Ast.ANY, "boolean", type, number(1, Ast.ANY)));
+        Failure<Void> failure = failureOf(declare("x", Ast.ANY, "float", type, number(1, Ast.ANY)));
 
-        assertEquals("Tipo desconocido: boolean", failure.message());
+        assertEquals("Tipo desconocido: float", failure.message());
         assertEquals(type, failure.range());
     }
 
@@ -212,6 +212,80 @@ class StatementCheckerTest {
         assertEquals(use, failure.range());
     }
 
+    // --- constantes ---
+
+    @Test
+    void aConstantWithAMatchingInitializerPasses() {
+        assertPasses(Ast.constant("x", NUMBER, number(1, Ast.ANY)));
+    }
+
+    @Test
+    void aConstantWithoutAValueIsRejected() {
+        // una constante sin valor no se puede completar después: nace inservible
+        Failure<Void> failure = failureOf(Ast.constant("x", NUMBER, null));
+
+        assertEquals("Una constante tiene que declararse con un valor", failure.message());
+        assertEquals(Ast.ANY, failure.range());
+    }
+
+    @Test
+    void aConstantCannotBeReassigned() {
+        assertPasses(Ast.constant("x", NUMBER, number(1, Ast.ANY)));
+
+        Failure<Void> failure = failureOf(assign("x", Ast.ANY, number(2, Ast.ANY)));
+
+        assertEquals("No se puede reasignar la constante x", failure.message());
+    }
+
+    @Test
+    void aConstantStillHasToMatchItsDeclaredType() {
+        Failure<Void> failure = failureOf(Ast.constant("x", NUMBER, text(HOLA, Ast.ANY)));
+
+        assertEquals("No se puede asignar string a una variable number", failure.message());
+    }
+
+    @Test
+    void aConstantSharesTheNamespaceWithTheVariables() {
+        assertPasses(declare("x", NUMBER, number(1, Ast.ANY)));
+
+        assertEquals(
+                "Variable ya declarada: x",
+                failureOf(Ast.constant("x", NUMBER, number(2, Ast.ANY))).message());
+    }
+
+    // --- booleanos ---
+
+    @Test
+    void aBooleanInitializerMatchesABooleanDeclaration() {
+        assertPasses(declare("ok", "boolean", Ast.bool(true, Ast.ANY)));
+    }
+
+    @Test
+    void aBooleanDoesNotTakePartInBinaryOperations() {
+        assertEquals(
+                "No se puede aplicar PLUS entre boolean y number",
+                failureOf(
+                                declare(
+                                        "x",
+                                        NUMBER,
+                                        binary(
+                                                Ast.bool(true, Ast.ANY),
+                                                Operator.PLUS,
+                                                number(1, Ast.ANY))))
+                        .message());
+        assertEquals(
+                "No se puede aplicar PLUS entre string y boolean",
+                failureOf(
+                                declare(
+                                        "y",
+                                        STRING,
+                                        binary(
+                                                text(HOLA, Ast.ANY),
+                                                Operator.PLUS,
+                                                Ast.bool(false, Ast.ANY))))
+                        .message());
+    }
+
     // --- una expresión suelta no es una sentencia ---
 
     @Test
@@ -223,6 +297,7 @@ class StatementCheckerTest {
         assertEquals(NOT_A_STATEMENT, visit(number(1, range)).message());
         assertEquals(NOT_A_STATEMENT, visit(text(HOLA, range)).message());
         assertEquals(NOT_A_STATEMENT, visit(name("x", range)).message());
+        assertEquals(NOT_A_STATEMENT, visit(Ast.bool(true, range)).message());
         assertEquals(
                 NOT_A_STATEMENT,
                 visit(binary(number(1, range), Operator.PLUS, number(2, range))).message());

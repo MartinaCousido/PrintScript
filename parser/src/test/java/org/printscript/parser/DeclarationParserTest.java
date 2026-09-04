@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.printscript.ast.Identifier;
@@ -26,7 +27,8 @@ class DeclarationParserTest {
     private static final String LET = "let";
     private static final String NUMBER = "number";
 
-    private final DeclarationParser parser = new DeclarationParser(new ExpressionBuilder());
+    private final DeclarationParser parser =
+            new DeclarationParser(new ExpressionBuilder(), Map.of("let", VariableDeclaration::new));
 
     private static Range range(int startColumn, int endColumn) {
         return new Range(new Position(1, startColumn), new Position(1, endColumn));

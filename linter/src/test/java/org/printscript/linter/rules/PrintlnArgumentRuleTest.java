@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -42,6 +43,14 @@ class PrintlnArgumentRuleTest {
     @Test
     void printlnWithAStringLiteralIsAllowed() {
         Statement println = new PrintlnStatement(new StringLiteral("hola", ANY), ANY);
+
+        assertTrue(rule.check(println).isEmpty());
+    }
+
+    @Test
+    void printlnWithABooleanLiteralIsAllowed() {
+        // un literal booleano es un literal: println(true) no es una expresión
+        Statement println = new PrintlnStatement(new BooleanLiteral(true, ANY), ANY);
 
         assertTrue(rule.check(println).isEmpty());
     }

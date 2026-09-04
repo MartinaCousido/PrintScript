@@ -11,6 +11,8 @@ import org.printscript.common.Range;
 
 class StatementTest {
 
+    private static final String NUMBER = "number";
+
     private static Range rangeAt(int startColumn, int endColumn) {
         return new Range(new Position(1, startColumn), new Position(1, endColumn));
     }
@@ -18,6 +20,7 @@ class StatementTest {
     private static String describe(Statement statement) {
         return switch (statement) {
             case VariableDeclaration declaration -> "declaration:" + declaration.name().name();
+            case ConstDeclaration declaration -> "const:" + declaration.name().name();
             case AssignmentStatement assignment -> "assignment:" + assignment.name().name();
             case PrintlnStatement _ -> "println";
         };
@@ -29,16 +32,30 @@ class StatementTest {
         VariableDeclaration declaration =
                 new VariableDeclaration(
                         new Identifier("x", rangeAt(5, 5)),
-                        new TypeName("number", rangeAt(8, 13)),
+                        new TypeName(NUMBER, rangeAt(8, 13)),
                         Optional.of(initializer),
                         rangeAt(1, 14));
 
         assertTrue(declaration.initializer().isPresent());
         assertEquals(initializer, declaration.initializer().get());
         assertEquals("x", declaration.name().name());
-        assertEquals("number", declaration.type().name());
+        assertEquals(NUMBER, declaration.type().name());
         assertEquals(rangeAt(8, 13), declaration.type().range());
         assertEquals("declaration:x", describe(declaration));
+    }
+
+    @Test
+    void aConstantIsItsOwnKindOfStatement() {
+        // es un nodo propio y no un flag: por eso el switch lo distingue sin mirar nada
+        ConstDeclaration constant =
+                new ConstDeclaration(
+                        new Identifier("x", rangeAt(7, 7)),
+                        new TypeName(NUMBER, rangeAt(10, 15)),
+                        Optional.of(new NumberLiteral(8.0, rangeAt(19, 19))),
+                        rangeAt(1, 20));
+
+        assertEquals("const:x", describe(constant));
+        assertEquals(rangeAt(1, 20), constant.range());
     }
 
     @Test
@@ -86,7 +103,7 @@ class StatementTest {
         VariableDeclaration declaration =
                 new VariableDeclaration(
                         name,
-                        new TypeName("number", rangeAt(8, 13)),
+                        new TypeName(NUMBER, rangeAt(8, 13)),
                         Optional.empty(),
                         rangeAt(1, 13));
 

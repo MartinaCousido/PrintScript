@@ -3,6 +3,8 @@ package org.printscript.semantic;
 import java.util.Optional;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.BooleanLiteral;
+import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -58,6 +60,18 @@ final class Ast {
                 name(variable, variableRange),
                 new TypeName(type, typeRange),
                 Optional.ofNullable(init),
+                ANY);
+    }
+
+    static Expression bool(boolean value, Range range) {
+        return new BooleanLiteral(value, range);
+    }
+
+    static Statement constant(String variable, String type, Expression initializer) {
+        return new ConstDeclaration(
+                name(variable, ANY),
+                new TypeName(type, ANY),
+                Optional.ofNullable(initializer),
                 ANY);
     }
 

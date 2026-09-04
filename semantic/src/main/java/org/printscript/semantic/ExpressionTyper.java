@@ -1,16 +1,13 @@
 package org.printscript.semantic;
 
-import org.printscript.ast.ASTVisitor;
-import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
 import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.Expression;
+import org.printscript.ast.ExpressionOnlyVisitor;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
-import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.StringLiteral;
-import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
@@ -18,7 +15,7 @@ import org.printscript.common.Success;
 
 // calcula qué tipo tiene una expresión, sin evaluarla
 // mira la tabla de tipos pero no la modifica: declarar es cosa de las sentencias
-final class ExpressionTyper implements ASTVisitor<Result<Type>> {
+final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
 
     private final SymbolTable symbols;
 
@@ -44,6 +41,7 @@ final class ExpressionTyper implements ASTVisitor<Result<Type>> {
     @Override
     public Result<Type> visitIdentifier(Identifier identifier) {
         return symbols.read(identifier.name())
+                .map(Symbol::type)
                 .<Result<Type>>map(Success::new)
                 .orElseGet(
                         () ->
@@ -101,21 +99,7 @@ final class ExpressionTyper implements ASTVisitor<Result<Type>> {
     }
 
     @Override
-    public Result<Type> visitVariableDeclaration(VariableDeclaration variableDeclaration) {
-        return notAnExpression(variableDeclaration.range());
-    }
-
-    @Override
-    public Result<Type> visitAssignmentStatement(AssignmentStatement assignmentStatement) {
-        return notAnExpression(assignmentStatement.range());
-    }
-
-    @Override
-    public Result<Type> visitPrintlnStatement(PrintlnStatement printlnStatement) {
-        return notAnExpression(printlnStatement.range());
-    }
-
-    private static Result<Type> notAnExpression(Range range) {
+    protected Result<Type> notAnExpression(Range range) {
         return new Failure<>("No es una expresión evaluable", range);
     }
 

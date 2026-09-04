@@ -17,6 +17,8 @@ public interface ASTVisitor<T> {
 
     T visitVariableDeclaration(VariableDeclaration variableDeclaration);
 
+    T visitConstDeclaration(ConstDeclaration constDeclaration);
+
     T visitAssignmentStatement(AssignmentStatement assignmentStatement);
 
     T visitPrintlnStatement(PrintlnStatement printlnStatement);

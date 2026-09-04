@@ -1,7 +1,9 @@
 package org.printscript.interpreter;
 
+import java.util.HashSet;
 import java.util.Set;
 import org.printscript.ast.AssignmentStatement;
+import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
 import org.printscript.ast.VariableDeclaration;
@@ -25,6 +27,14 @@ public final class InterpreterFactory {
         return new Interpreter(statements, executor, supportedNodes(version));
     }
 
+    @SafeVarargs
+    private static Set<Class<? extends Statement>> union(
+            Set<Class<? extends Statement>> base, Class<? extends Statement>... extra) {
+        Set<Class<? extends Statement>> all = new HashSet<>(base);
+        all.addAll(Set.of(extra));
+        return Set.copyOf(all);
+    }
+
     private static Set<Class<? extends Statement>> supportedNodes(Version version) {
         Set<Class<? extends Statement>> common =
                 Set.of(
@@ -32,8 +42,9 @@ public final class InterpreterFactory {
                         AssignmentStatement.class,
                         PrintlnStatement.class);
         return switch (version) {
-            // 1.1 suma ConstDeclaration e IfStatement cuando esos nodos existan
-            case V10, V11 -> common;
+            case V10 -> common;
+            // 1.1 sumará también IfStatement cuando ese nodo exista
+            case V11 -> union(common, ConstDeclaration.class);
         };
     }
 }

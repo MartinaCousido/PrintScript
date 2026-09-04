@@ -1,23 +1,20 @@
 package org.printscript.interpreter;
 
 import java.math.BigDecimal;
-import org.printscript.ast.ASTVisitor;
-import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
 import org.printscript.ast.BooleanLiteral;
+import org.printscript.ast.ExpressionOnlyVisitor;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
-import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.StringLiteral;
-import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 
 // calcula cuánto vale una expresión, recorriendo su árbol
-public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
+public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Object>> {
 
     private final Environment environment;
 
@@ -69,21 +66,6 @@ public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
                 binaryExpression.range());
     }
 
-    @Override
-    public Result<Object> visitVariableDeclaration(VariableDeclaration variableDeclaration) {
-        return notAnExpression(variableDeclaration.range());
-    }
-
-    @Override
-    public Result<Object> visitAssignmentStatement(AssignmentStatement assignmentStatement) {
-        return notAnExpression(assignmentStatement.range());
-    }
-
-    @Override
-    public Result<Object> visitPrintlnStatement(PrintlnStatement printlnStatement) {
-        return notAnExpression(printlnStatement.range());
-    }
-
     // pasa un número a texto
     static String asText(Object value) {
         if (value instanceof Double number && Double.isFinite(number)) {
@@ -126,7 +108,8 @@ public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
         return value instanceof Boolean ? "boolean" : "number";
     }
 
-    private static Result<Object> notAnExpression(Range range) {
+    @Override
+    protected Result<Object> notAnExpression(Range range) {
         return new Failure<>("No es una expresión evaluable", range);
     }
 }

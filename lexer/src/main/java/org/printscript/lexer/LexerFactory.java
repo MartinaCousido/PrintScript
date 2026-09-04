@@ -46,6 +46,7 @@ public final class LexerFactory {
             case V10 -> Map.of();
             case V11 ->
                     Map.of(
+                            "const", TokenType.KEYWORD,
                             "boolean", TokenType.KEYWORD,
                             "true", TokenType.BOOLEAN,
                             "false", TokenType.BOOLEAN);
