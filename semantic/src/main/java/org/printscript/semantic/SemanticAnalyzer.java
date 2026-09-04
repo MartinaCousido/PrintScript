@@ -14,9 +14,10 @@ public final class SemanticAnalyzer implements PrintScriptIterator<Result<Statem
     private final PrintScriptIterator<Result<Statement>> statements;
     private final StatementChecker checker;
 
-    public SemanticAnalyzer(PrintScriptIterator<Result<Statement>> statements) {
+    public SemanticAnalyzer(
+            PrintScriptIterator<Result<Statement>> statements, StatementChecker checker) {
         this.statements = statements;
-        this.checker = new StatementChecker();
+        this.checker = checker;
     }
 
     @Override

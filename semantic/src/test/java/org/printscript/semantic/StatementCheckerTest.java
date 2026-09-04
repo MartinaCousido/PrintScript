@@ -11,6 +11,7 @@ import static org.printscript.semantic.Ast.number;
 import static org.printscript.semantic.Ast.println;
 import static org.printscript.semantic.Ast.text;
 
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Operator;
@@ -27,7 +28,7 @@ class StatementCheckerTest {
     private static final String HOLA = "hola";
     private static final String NOT_A_STATEMENT = "No es una sentencia";
 
-    private final StatementChecker checker = new StatementChecker();
+    private final StatementChecker checker = new StatementChecker(Set.of(Type.NUMBER, Type.STRING));
 
     private Result<Void> check(Statement statement) {
         return statement.accept(checker);

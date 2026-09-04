@@ -1,6 +1,7 @@
 package org.printscript.semantic;
 
 import java.util.Optional;
+import java.util.Set;
 import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
@@ -20,15 +21,17 @@ import org.printscript.common.Success;
 // condena a las que siguen. Lo único que se arrastra es la tabla de tipos.
 public final class StatementChecker implements ASTVisitor<Result<Void>> {
 
+    private final Set<Type> supportedTypes;
     private SymbolTable symbols;
 
-    public StatementChecker() {
+    public StatementChecker(Set<Type> supportedTypes) {
+        this.supportedTypes = Set.copyOf(supportedTypes);
         this.symbols = new SymbolTable();
     }
 
     @Override
     public Result<Void> visitVariableDeclaration(VariableDeclaration declaration) {
-        Optional<Type> declared = Type.fromWrittenName(declaration.type().name());
+        Optional<Type> declared = Type.fromWrittenName(declaration.type().name(), supportedTypes);
         if (declared.isEmpty()) {
             return new Failure<>(
                     "Tipo desconocido: " + declaration.type().name(), declaration.type().range());

@@ -7,13 +7,19 @@ import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
 import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
+import org.printscript.common.Version;
 
 public final class ValidationRunner {
 
-    // valida sintaxis y semántica sin ejecutar nada, como pide la consigna
+    // la consigna define la versión como argumento opcional, con 1.0 por defecto
     public List<Failure<?>> validate(Iterator<String> lines) {
+        return validate(lines, Version.V10);
+    }
+
+    // valida sintaxis y semántica sin ejecutar nada, como pide la consigna
+    public List<Failure<?>> validate(Iterator<String> lines, Version version) {
         PrintScriptIterator<Result<Statement>> statements =
-                StatementStreams.validatedStatementStream(lines);
+                StatementStreams.validatedStatementStream(lines, version);
         List<Failure<?>> failures = new ArrayList<>();
         while (statements.hasNext()) {
             Result<?> result = statements.getNext();

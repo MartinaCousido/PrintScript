@@ -19,6 +19,7 @@ import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
+import org.printscript.common.Version;
 
 class SemanticAnalyzerTest {
 
@@ -50,6 +51,11 @@ class SemanticAnalyzerTest {
         }
     }
 
+    // pasa por la factory a propósito: así el cableado por versión también queda probado
+    private static SemanticAnalyzer analyzerOver(PrintScriptIterator<Result<Statement>> source) {
+        return SemanticFactory.create(source, Version.V10);
+    }
+
     private static Range rangeAt(int line, int column) {
         Position position = new Position(line, column);
         return new Range(position, position);
@@ -63,7 +69,7 @@ class SemanticAnalyzerTest {
     @Test
     void aSyntaxErrorTravelsThroughUnchanged() {
         Failure<Statement> syntaxError = new Failure<>(MISSING_SEMICOLON, rangeAt(3, 7));
-        SemanticAnalyzer analyzer = new SemanticAnalyzer(new Statements(List.of(syntaxError)));
+        SemanticAnalyzer analyzer = analyzerOver(new Statements(List.of(syntaxError)));
 
         Result<Statement> result = analyzer.getNext();
 
@@ -73,7 +79,7 @@ class SemanticAnalyzerTest {
     @Test
     void aSyntaxErrorKeepsItsMessageAndItsRange() {
         SemanticAnalyzer analyzer =
-                new SemanticAnalyzer(
+                analyzerOver(
                         new Statements(List.of(new Failure<>(MISSING_SEMICOLON, rangeAt(3, 7)))));
 
         Failure<Statement> failure = assertInstanceOf(Failure.class, analyzer.getNext());
@@ -87,8 +93,7 @@ class SemanticAnalyzerTest {
         Statement first = println("a", rangeAt(1, 1));
         Statement second = println("b", rangeAt(2, 1));
         SemanticAnalyzer analyzer =
-                new SemanticAnalyzer(
-                        new Statements(List.of(new Success<>(first), new Success<>(second))));
+                analyzerOver(new Statements(List.of(new Success<>(first), new Success<>(second))));
 
         assertEquals(first, assertInstanceOf(Success.class, analyzer.getNext()).value());
         assertEquals(second, assertInstanceOf(Success.class, analyzer.getNext()).value());
@@ -99,7 +104,7 @@ class SemanticAnalyzerTest {
     void anErrorDoesNotStopTheStatementsThatFollow() {
         Statement valid = println("a", rangeAt(2, 1));
         SemanticAnalyzer analyzer =
-                new SemanticAnalyzer(
+                analyzerOver(
                         new Statements(
                                 List.of(
                                         new Failure<>(MISSING_SEMICOLON, rangeAt(1, 5)),
@@ -114,7 +119,7 @@ class SemanticAnalyzerTest {
         Range use = rangeAt(2, 9);
         Statement printUndeclared = new PrintlnStatement(new Identifier("x", use), rangeAt(2, 1));
         SemanticAnalyzer analyzer =
-                new SemanticAnalyzer(new Statements(List.of(new Success<>(printUndeclared))));
+                analyzerOver(new Statements(List.of(new Success<>(printUndeclared))));
 
         Failure<Statement> failure = assertInstanceOf(Failure.class, analyzer.getNext());
 
@@ -128,7 +133,7 @@ class SemanticAnalyzerTest {
                 new PrintlnStatement(new Identifier("x", rangeAt(1, 9)), rangeAt(1, 1));
         Statement valid = println("hola", rangeAt(2, 1));
         SemanticAnalyzer analyzer =
-                new SemanticAnalyzer(
+                analyzerOver(
                         new Statements(
                                 List.of(new Success<>(printUndeclared), new Success<>(valid))));
 
@@ -138,10 +143,9 @@ class SemanticAnalyzerTest {
 
     @Test
     void followsTheSourceWhenAskedWhetherThereIsMore() {
-        SemanticAnalyzer empty = new SemanticAnalyzer(new Statements(List.of()));
+        SemanticAnalyzer empty = analyzerOver(new Statements(List.of()));
         SemanticAnalyzer withOne =
-                new SemanticAnalyzer(
-                        new Statements(List.of(new Success<>(println("a", rangeAt(1, 1))))));
+                analyzerOver(new Statements(List.of(new Success<>(println("a", rangeAt(1, 1))))));
 
         assertFalse(empty.hasNext());
         assertTrue(withOne.hasNext());

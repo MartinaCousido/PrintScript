@@ -9,6 +9,7 @@ import org.printscript.common.Failure;
 import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
+import org.printscript.common.Version;
 import org.printscript.config.ConfigurationReader;
 import org.printscript.config.JsonConfigurationMapper;
 import org.printscript.config.YamlConfigurationMapper;
@@ -19,10 +20,17 @@ import org.printscript.linter.config.LinterConfiguration;
 
 public final class AnalyzingRunner {
 
+    // la consigna define la versión como argumento opcional, con 1.0 por defecto
     public AnalysisReport analyze(Iterator<String> lines, LinterConfiguration configuration) {
+        return analyze(lines, configuration, Version.V10);
+    }
+
+    public AnalysisReport analyze(
+            Iterator<String> lines, LinterConfiguration configuration, Version version) {
         // sin semantic a propósito: se tiene que poder trabajar sobre código con
         // errores de tipos (ver StatementStreams)
-        PrintScriptIterator<Result<Statement>> statements = StatementStreams.statementStream(lines);
+        PrintScriptIterator<Result<Statement>> statements =
+                StatementStreams.statementStream(lines, version);
         Linter linter = LinterFactory.create(statements, configuration);
         List<Violation> violations = new ArrayList<>();
         List<Failure<?>> failures = new ArrayList<>();

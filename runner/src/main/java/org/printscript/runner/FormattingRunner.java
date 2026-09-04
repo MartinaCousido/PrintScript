@@ -12,6 +12,7 @@ import org.printscript.common.Failure;
 import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
+import org.printscript.common.Version;
 import org.printscript.config.ConfigurationReader;
 import org.printscript.config.JsonConfigurationMapper;
 import org.printscript.config.YamlConfigurationMapper;
@@ -20,11 +21,21 @@ import org.printscript.formatter.config.FormatterConfiguration;
 
 public final class FormattingRunner {
 
+    // la consigna define la versión como argumento opcional, con 1.0 por defecto
     public List<Failure<?>> format(
             Iterator<String> lines, FormatterConfiguration configuration, Writer destination) {
+        return format(lines, configuration, destination, Version.V10);
+    }
+
+    public List<Failure<?>> format(
+            Iterator<String> lines,
+            FormatterConfiguration configuration,
+            Writer destination,
+            Version version) {
         // sin semantic a propósito: se tiene que poder trabajar sobre código con
         // errores de tipos (ver StatementStreams)
-        PrintScriptIterator<Result<Statement>> statements = StatementStreams.statementStream(lines);
+        PrintScriptIterator<Result<Statement>> statements =
+                StatementStreams.statementStream(lines, version);
         Formatter formatter = new Formatter(statements, configuration);
         List<Failure<?>> failures = new ArrayList<>();
         while (formatter.hasNext()) {
