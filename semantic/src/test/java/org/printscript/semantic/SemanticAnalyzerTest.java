@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
+import org.printscript.ast.StringLiteral;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
 import org.printscript.common.PrintScriptIterator;
@@ -54,8 +55,9 @@ class SemanticAnalyzerTest {
         return new Range(position, position);
     }
 
-    private static Statement println(String name, Range range) {
-        return new PrintlnStatement(new Identifier(name, range), range);
+    // un println de un literal: sintáctica y semánticamente válido siempre
+    private static Statement println(String literal, Range range) {
+        return new PrintlnStatement(new StringLiteral(literal, range), range);
     }
 
     @Test
@@ -81,7 +83,7 @@ class SemanticAnalyzerTest {
     }
 
     @Test
-    void withoutRulesEveryStatementGoesThrough() {
+    void aStatementThatPassesTheRulesTravelsThroughUnchanged() {
         Statement first = println("a", rangeAt(1, 1));
         Statement second = println("b", rangeAt(2, 1));
         SemanticAnalyzer analyzer =
@@ -102,6 +104,33 @@ class SemanticAnalyzerTest {
                                 List.of(
                                         new Failure<>(MISSING_SEMICOLON, rangeAt(1, 5)),
                                         new Success<>(valid))));
+
+        assertInstanceOf(Failure.class, analyzer.getNext());
+        assertInstanceOf(Success.class, analyzer.getNext());
+    }
+
+    @Test
+    void aSemanticErrorComesOutAsAFailureWithItsMessageAndRange() {
+        Range use = rangeAt(2, 9);
+        Statement printUndeclared = new PrintlnStatement(new Identifier("x", use), rangeAt(2, 1));
+        SemanticAnalyzer analyzer =
+                new SemanticAnalyzer(new Statements(List.of(new Success<>(printUndeclared))));
+
+        Failure<Statement> failure = assertInstanceOf(Failure.class, analyzer.getNext());
+
+        assertEquals("Variable no declarada: x", failure.message());
+        assertEquals(use, failure.range());
+    }
+
+    @Test
+    void aSemanticErrorDoesNotCondemnTheStatementsThatFollow() {
+        Statement printUndeclared =
+                new PrintlnStatement(new Identifier("x", rangeAt(1, 9)), rangeAt(1, 1));
+        Statement valid = println("hola", rangeAt(2, 1));
+        SemanticAnalyzer analyzer =
+                new SemanticAnalyzer(
+                        new Statements(
+                                List.of(new Success<>(printUndeclared), new Success<>(valid))));
 
         assertInstanceOf(Failure.class, analyzer.getNext());
         assertInstanceOf(Success.class, analyzer.getNext());
