@@ -7,6 +7,7 @@ import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
 import org.printscript.ast.IfStatement;
 import org.printscript.ast.PrintlnStatement;
+import org.printscript.ast.Statement;
 import org.printscript.ast.StatementOnlyVisitor;
 import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Failure;
@@ -58,20 +59,44 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
                 .orElseGet(() -> rejectedAssignment(assignmentStatement));
     }
 
+    // el frame se abre al entrar al bloque y se cierra al salir, también cuando una
+    // sentencia de adentro falló: es la misma regla y el mismo lugar que en semantic
     @Override
     public Result<Void> visitBlock(Block block) {
-        return notSupportedYet(block.range());
+        environment = environment.openScope();
+        try {
+            for (Statement statement : block.statements()) {
+                Result<Void> executed = statement.accept(this);
+                if (executed instanceof Failure<Void>) {
+                    return executed;
+                }
+            }
+            return new Success<>(null);
+        } finally {
+            environment = environment.closeScope();
+        }
     }
 
     @Override
     public Result<Void> visitIfStatement(IfStatement ifStatement) {
-        return notSupportedYet(ifStatement.range());
-    }
-
-    // el bloque y el if todavía no se ejecutan; el error viaja como dato, como
-    // cualquier otro, en vez de romper con una excepción
-    private static Result<Void> notSupportedYet(Range range) {
-        return new Failure<>("El intérprete todavía no ejecuta bloques ni if", range);
+        Result<Object> condition = evaluate(ifStatement.condition());
+        if (condition instanceof Failure<Object> failure) {
+            return propagate(failure);
+        }
+        Object value = valueOf(condition);
+        // semantic ya garantizó que es booleana; si igual no lo es, se falla de forma
+        // explícita en vez de elegir una rama por defecto y seguir como si nada
+        if (!(value instanceof Boolean taken)) {
+            return new Failure<>(
+                    "La condición de un if tiene que ser boolean", ifStatement.condition().range());
+        }
+        if (taken) {
+            return ifStatement.thenBlock().accept(this);
+        }
+        return ifStatement
+                .elseBranch()
+                .map(branch -> branch.accept(this))
+                .orElseGet(() -> new Success<>(null));
     }
 
     @Override

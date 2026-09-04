@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.ConstDeclaration;
+import org.printscript.ast.IfStatement;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
 import org.printscript.ast.VariableDeclaration;
@@ -43,8 +44,7 @@ public final class InterpreterFactory {
                         PrintlnStatement.class);
         return switch (version) {
             case V10 -> common;
-            // 1.1 sumará también IfStatement cuando ese nodo exista
-            case V11 -> union(common, ConstDeclaration.class);
+            case V11 -> union(common, ConstDeclaration.class, IfStatement.class);
         };
     }
 }
