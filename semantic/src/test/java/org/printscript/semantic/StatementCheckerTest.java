@@ -77,15 +77,13 @@ class StatementCheckerTest {
     }
 
     @Test
-    void declaringTheSameNameTwiceFailsAtTheName() {
-        Range second = at(2, 5);
+    void declaringTheSameNameTwiceFailsAtTheWholeDeclaration() {
         assertPasses(declare("x", NUMBER, number(1, Ast.ANY)));
 
-        Failure<Void> failure =
-                failureOf(declare("x", second, NUMBER, Ast.ANY, number(2, Ast.ANY)));
+        Failure<Void> failure = failureOf(declare("x", NUMBER, number(2, Ast.ANY)));
 
         assertEquals("Variable ya declarada: x", failure.message());
-        assertEquals(second, failure.range());
+        assertEquals(Ast.ANY, failure.range());
     }
 
     @Test
@@ -106,13 +104,13 @@ class StatementCheckerTest {
     }
 
     @Test
-    void assigningToAVariableThatWasNeverDeclaredFailsAtTheName() {
-        Range variable = at(4, 1);
-
-        Failure<Void> failure = failureOf(assign("x", variable, number(5, Ast.ANY)));
+    void assigningToAVariableThatWasNeverDeclaredFailsAtTheWholeStatement() {
+        // en una asignación la sentencia entera es la que no tiene sentido; cuando el
+        // nombre aparece dentro de una expresión, el rango es el del uso
+        Failure<Void> failure = failureOf(assign("x", at(4, 1), number(5, Ast.ANY)));
 
         assertEquals("Variable no declarada: x", failure.message());
-        assertEquals(variable, failure.range());
+        assertEquals(Ast.ANY, failure.range());
     }
 
     @Test
@@ -143,25 +141,27 @@ class StatementCheckerTest {
     }
 
     @Test
-    void arithmeticOnAStringFailsAtTheOffendingLeftOperand() {
-        Range left = at(1, 15);
-        Expression subtraction = binary(text(HOLA, left), Operator.MINUS, number(2, Ast.ANY));
+    void arithmeticOnAStringNamesBothOperandTypes() {
+        // mismo mensaje y mismo rango que reportaba el intérprete para este error
+        Expression subtraction = binary(text(HOLA, Ast.ANY), Operator.MINUS, text(HOLA, Ast.ANY));
 
         Failure<Void> failure = failureOf(declare("x", NUMBER, subtraction));
 
-        assertEquals(
-                "El operador MINUS requiere operandos number y recibió string", failure.message());
-        assertEquals(left, failure.range());
+        assertEquals("No se puede aplicar MINUS entre string y string", failure.message());
+        assertEquals(Ast.ANY, failure.range());
     }
 
     @Test
-    void arithmeticOnAStringFailsAtTheOffendingRightOperand() {
-        Range right = at(1, 25);
-        Expression division = binary(number(2, Ast.ANY), Operator.DIVIDE, text(HOLA, right));
+    void arithmeticFailsWhicheverSideIsNotANumber() {
+        Expression division = binary(number(2, Ast.ANY), Operator.DIVIDE, text(HOLA, Ast.ANY));
+        Expression product = binary(text(HOLA, Ast.ANY), Operator.MULTIPLY, number(2, Ast.ANY));
 
-        Failure<Void> failure = failureOf(declare("x", NUMBER, division));
-
-        assertEquals(right, failure.range());
+        assertEquals(
+                "No se puede aplicar DIVIDE entre number y string",
+                failureOf(declare("x", NUMBER, division)).message());
+        assertEquals(
+                "No se puede aplicar MULTIPLY entre string y number",
+                failureOf(declare("y", NUMBER, product)).message());
     }
 
     @Test

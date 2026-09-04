@@ -70,22 +70,23 @@ final class ExpressionTyper implements ASTVisitor<Result<Type>> {
             boolean anyString = left == Type.STRING || right == Type.STRING;
             return new Success<>(anyString ? Type.STRING : Type.NUMBER);
         }
-        if (left != Type.NUMBER) {
-            return arithmeticFailure(operator, left, expression.left().range());
-        }
-        if (right != Type.NUMBER) {
-            return arithmeticFailure(operator, right, expression.right().range());
+        if (left != Type.NUMBER || right != Type.NUMBER) {
+            return arithmeticFailure(operator, left, right, expression.range());
         }
         return new Success<>(Type.NUMBER);
     }
 
-    // el rango apunta al operando que está mal, no a la expresión entera
-    private static Result<Type> arithmeticFailure(Operator operator, Type actual, Range range) {
+    // mismo mensaje y mismo rango que usaba el intérprete para este error: la etapa
+    // cambia, pero lo que ve el usuario tiene que seguir siendo lo mismo
+    private static Result<Type> arithmeticFailure(
+            Operator operator, Type left, Type right, Range range) {
         return new Failure<>(
-                "El operador "
+                "No se puede aplicar "
                         + operator
-                        + " requiere operandos number y recibió "
-                        + actual.writtenName(),
+                        + " entre "
+                        + left.writtenName()
+                        + " y "
+                        + right.writtenName(),
                 range);
     }
 

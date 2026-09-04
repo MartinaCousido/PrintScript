@@ -36,7 +36,9 @@ public final class StatementChecker implements ASTVisitor<Result<Void>> {
 
         String name = declaration.name().name();
         if (symbols.read(name).isPresent()) {
-            return new Failure<>("Variable ya declarada: " + name, declaration.name().range());
+            // el rango es el de la declaración entera, como venía reportándolo el
+            // intérprete: lo que está de más es la sentencia, no el nombre
+            return new Failure<>("Variable ya declarada: " + name, declaration.range());
         }
         // se declara aunque el inicializador esté mal, así un error no arrastra a las
         // sentencias que usan la variable después
@@ -54,7 +56,9 @@ public final class StatementChecker implements ASTVisitor<Result<Void>> {
         String name = assignment.name().name();
         Optional<Type> declared = symbols.read(name);
         if (declared.isEmpty()) {
-            return new Failure<>("Variable no declarada: " + name, assignment.name().range());
+            // en una asignación la sentencia entera es la que no tiene sentido; cuando
+            // el nombre aparece dentro de una expresión, el rango es el del uso
+            return new Failure<>("Variable no declarada: " + name, assignment.range());
         }
         return checkAssignable(assignment.expression(), declared.get());
     }

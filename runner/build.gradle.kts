@@ -9,6 +9,7 @@ dependencies {
     api(project(":runtime-api"))
     implementation(project(":lexer"))
     implementation(project(":parser"))
+    implementation(project(":semantic"))
     implementation(project(":interpreter"))
     api(project(":configuration"))
     api(project(":linter"))

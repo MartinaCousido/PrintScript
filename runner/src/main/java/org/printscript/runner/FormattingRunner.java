@@ -7,7 +7,9 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
+import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.config.ConfigurationReader;
@@ -15,14 +17,15 @@ import org.printscript.config.JsonConfigurationMapper;
 import org.printscript.config.YamlConfigurationMapper;
 import org.printscript.formatter.Formatter;
 import org.printscript.formatter.config.FormatterConfiguration;
-import org.printscript.parser.Parser;
 
 public final class FormattingRunner {
 
     public List<Failure<?>> format(
             Iterator<String> lines, FormatterConfiguration configuration, Writer destination) {
-        Parser parser = StatementStreams.statementStream(lines);
-        Formatter formatter = new Formatter(parser, configuration);
+        // sin semantic a propósito: se tiene que poder trabajar sobre código con
+        // errores de tipos (ver StatementStreams)
+        PrintScriptIterator<Result<Statement>> statements = StatementStreams.statementStream(lines);
+        Formatter formatter = new Formatter(statements, configuration);
         List<Failure<?>> failures = new ArrayList<>();
         while (formatter.hasNext()) {
             write(formatter.getNext(), destination, failures);

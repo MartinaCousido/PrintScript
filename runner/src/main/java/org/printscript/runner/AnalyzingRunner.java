@@ -4,7 +4,9 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
+import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.config.ConfigurationReader;
@@ -14,13 +16,14 @@ import org.printscript.linter.Linter;
 import org.printscript.linter.LinterFactory;
 import org.printscript.linter.Violation;
 import org.printscript.linter.config.LinterConfiguration;
-import org.printscript.parser.Parser;
 
 public final class AnalyzingRunner {
 
     public AnalysisReport analyze(Iterator<String> lines, LinterConfiguration configuration) {
-        Parser parser = StatementStreams.statementStream(lines);
-        Linter linter = LinterFactory.create(parser, configuration);
+        // sin semantic a propósito: se tiene que poder trabajar sobre código con
+        // errores de tipos (ver StatementStreams)
+        PrintScriptIterator<Result<Statement>> statements = StatementStreams.statementStream(lines);
+        Linter linter = LinterFactory.create(statements, configuration);
         List<Violation> violations = new ArrayList<>();
         List<Failure<?>> failures = new ArrayList<>();
         while (linter.hasNext()) {
