@@ -38,10 +38,17 @@ public final class LexerFactory {
     }
 
     // agregar una keyword de una versión es agregar una entrada acá: el Lexer no cambia
+    // true y false salen por la misma tabla porque KeywordTokenConstructor consume la
+    // palabra entera: "trueValue" es una sola palabra que no está en la tabla, así que
+    // queda como identificador sin que haya que programar nada
     private static Map<String, TokenType> keywordsAddedIn(Version version) {
         return switch (version) {
-            // las de 1.1 entran con boolean, const, if y las funciones de lectura
-            case V10, V11 -> Map.of();
+            case V10 -> Map.of();
+            case V11 ->
+                    Map.of(
+                            "boolean", TokenType.KEYWORD,
+                            "true", TokenType.BOOLEAN,
+                            "false", TokenType.BOOLEAN);
         };
     }
 

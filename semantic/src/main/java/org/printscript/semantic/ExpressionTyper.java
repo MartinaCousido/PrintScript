@@ -3,6 +3,7 @@ package org.printscript.semantic;
 import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -36,6 +37,11 @@ final class ExpressionTyper implements ASTVisitor<Result<Type>> {
     }
 
     @Override
+    public Result<Type> visitBooleanLiteral(BooleanLiteral booleanLiteral) {
+        return new Success<>(Type.BOOLEAN);
+    }
+
+    @Override
     public Result<Type> visitIdentifier(Identifier identifier) {
         return symbols.read(identifier.name())
                 .<Result<Type>>map(Success::new)
@@ -64,8 +70,12 @@ final class ExpressionTyper implements ASTVisitor<Result<Type>> {
     }
 
     // la concatenación es el único caso donde los dos lados pueden tener tipos distintos
+    // un boolean no participa de ninguna: ni se suma, ni se resta, ni se concatena
     private static Result<Type> combine(
             Type left, Operator operator, Type right, BinaryExpression expression) {
+        if (left == Type.BOOLEAN || right == Type.BOOLEAN) {
+            return arithmeticFailure(operator, left, right, expression.range());
+        }
         if (operator == Operator.PLUS) {
             boolean anyString = left == Type.STRING || right == Type.STRING;
             return new Success<>(anyString ? Type.STRING : Type.NUMBER);

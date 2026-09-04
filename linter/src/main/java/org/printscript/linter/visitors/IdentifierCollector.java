@@ -5,6 +5,7 @@ import java.util.stream.Stream;
 import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -21,6 +22,11 @@ public final class IdentifierCollector implements ASTVisitor<List<Identifier>> {
 
     @Override
     public List<Identifier> visitStringLiteral(StringLiteral stringLiteral) {
+        return List.of();
+    }
+
+    @Override
+    public List<Identifier> visitBooleanLiteral(BooleanLiteral booleanLiteral) {
         return List.of();
     }
 

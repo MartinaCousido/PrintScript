@@ -8,7 +8,8 @@ import java.util.Set;
 // uno es sintaxis y el otro es semántica, y por eso viven en módulos distintos
 public enum Type {
     NUMBER("number"),
-    STRING("string");
+    STRING("string"),
+    BOOLEAN("boolean");
 
     private final String written;
 

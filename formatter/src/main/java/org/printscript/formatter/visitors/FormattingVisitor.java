@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -32,6 +33,11 @@ public final class FormattingVisitor implements ASTVisitor<String> {
     @Override
     public String visitStringLiteral(StringLiteral stringLiteral) {
         return "\"" + stringLiteral.value() + "\"";
+    }
+
+    @Override
+    public String visitBooleanLiteral(BooleanLiteral booleanLiteral) {
+        return Boolean.toString(booleanLiteral.value());
     }
 
     @Override

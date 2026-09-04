@@ -19,8 +19,8 @@ public final class SemanticFactory {
 
     private static Set<Type> supportedTypes(Version version) {
         return switch (version) {
-            // 1.1 suma BOOLEAN
-            case V10, V11 -> Set.of(Type.NUMBER, Type.STRING);
+            case V10 -> Set.of(Type.NUMBER, Type.STRING);
+            case V11 -> Set.of(Type.NUMBER, Type.STRING, Type.BOOLEAN);
         };
     }
 }

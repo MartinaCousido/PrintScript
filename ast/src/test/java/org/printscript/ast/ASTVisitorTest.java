@@ -30,6 +30,11 @@ class ASTVisitorTest {
         }
 
         @Override
+        public String visitBooleanLiteral(BooleanLiteral booleanLiteral) {
+            return Boolean.toString(booleanLiteral.value());
+        }
+
+        @Override
         public String visitIdentifier(Identifier identifier) {
             return identifier.name();
         }

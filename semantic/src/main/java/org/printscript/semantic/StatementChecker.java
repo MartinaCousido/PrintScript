@@ -5,6 +5,7 @@ import java.util.Set;
 import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -101,6 +102,11 @@ public final class StatementChecker implements ASTVisitor<Result<Void>> {
     @Override
     public Result<Void> visitStringLiteral(StringLiteral stringLiteral) {
         return notAStatement(stringLiteral.range());
+    }
+
+    @Override
+    public Result<Void> visitBooleanLiteral(BooleanLiteral booleanLiteral) {
+        return notAStatement(booleanLiteral.range());
     }
 
     @Override

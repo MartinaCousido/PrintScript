@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import org.printscript.ast.ASTVisitor;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
@@ -14,7 +15,8 @@ import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
-//calcula cuánto vale una expresión, recorriendo su árbol
+
+// calcula cuánto vale una expresión, recorriendo su árbol
 public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
 
     private final Environment environment;
@@ -34,11 +36,20 @@ public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
     }
 
     @Override
+    public Result<Object> visitBooleanLiteral(BooleanLiteral booleanLiteral) {
+        return new Success<>(booleanLiteral.value());
+    }
+
+    @Override
     public Result<Object> visitIdentifier(Identifier identifier) {
-        return environment.read(identifier.name())
-            .<Result<Object>>map(variable -> new Success<>(variable.value()))
-            .orElseGet(() -> new Failure<>(
-                "Variable no declarada: " + identifier.name(), identifier.range()));
+        return environment
+                .read(identifier.name())
+                .<Result<Object>>map(variable -> new Success<>(variable.value()))
+                .orElseGet(
+                        () ->
+                                new Failure<>(
+                                        "Variable no declarada: " + identifier.name(),
+                                        identifier.range()));
     }
 
     @Override
@@ -52,10 +63,10 @@ public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
             return failure;
         }
         return combine(
-            ((Success<Object>) left).value(),
-            binaryExpression.operator(),
-            ((Success<Object>) right).value(),
-            binaryExpression.range());
+                ((Success<Object>) left).value(),
+                binaryExpression.operator(),
+                ((Success<Object>) right).value(),
+                binaryExpression.range());
     }
 
     @Override
@@ -73,7 +84,7 @@ public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
         return notAnExpression(printlnStatement.range());
     }
 
-    //pasa un número a texto
+    // pasa un número a texto
     static String asText(Object value) {
         if (value instanceof Double number && Double.isFinite(number)) {
             return BigDecimal.valueOf(number).stripTrailingZeros().toPlainString();
@@ -81,7 +92,8 @@ public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
         return String.valueOf(value);
     }
 
-    private static Result<Object> combine(Object left, Operator operator, Object right, Range range) {
+    private static Result<Object> combine(
+            Object left, Operator operator, Object right, Range range) {
         if (left instanceof Double leftNumber && right instanceof Double rightNumber) {
             return new Success<>(arithmetic(leftNumber, operator, rightNumber));
         }
@@ -89,8 +101,13 @@ public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
             return new Success<>(asText(left) + asText(right));
         }
         return new Failure<>(
-            "No se puede aplicar " + operator + " entre " + typeOf(left) + " y " + typeOf(right),
-            range);
+                "No se puede aplicar "
+                        + operator
+                        + " entre "
+                        + typeOf(left)
+                        + " y "
+                        + typeOf(right),
+                range);
     }
 
     private static double arithmetic(double left, Operator operator, double right) {
@@ -103,7 +120,10 @@ public final class ExpressionEvaluator implements ASTVisitor<Result<Object>> {
     }
 
     private static String typeOf(Object value) {
-        return value instanceof String ? "string" : "number";
+        if (value instanceof String) {
+            return "string";
+        }
+        return value instanceof Boolean ? "boolean" : "number";
     }
 
     private static Result<Object> notAnExpression(Range range) {

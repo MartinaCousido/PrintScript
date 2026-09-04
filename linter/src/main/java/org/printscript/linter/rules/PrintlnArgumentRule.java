@@ -2,6 +2,7 @@ package org.printscript.linter.rules;
 
 import java.util.List;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -29,7 +30,8 @@ public final class PrintlnArgumentRule implements LintRule {
 
     private static boolean isSimple(Expression expression) {
         return switch (expression) {
-            case Identifier _, NumberLiteral _, StringLiteral _ -> true;
+            // un literal booleano es un literal: println(true) es un argumento simple
+            case Identifier _, NumberLiteral _, StringLiteral _, BooleanLiteral _ -> true;
             case BinaryExpression _ -> false;
         };
     }
