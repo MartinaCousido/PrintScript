@@ -1,5 +1,6 @@
 package org.printscript.parser;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.printscript.ast.ConstDeclaration;
@@ -25,9 +26,21 @@ public final class ParserFactory {
                         new AssignmentParser(expressionBuilder),
                         new PrintlnParser(expressionBuilder));
         return switch (version) {
-            // el parser del if entra en 1.1 junto con los nodos Block e IfStatement
-            case V10, V11 -> common;
+            case V10 -> common;
+            // el if se pasa la lista como Supplier porque se contiene a sí mismo: es uno
+            // de los parsers que puede aparecer adentro de su propio cuerpo
+            case V11 ->
+                    concat(
+                            common,
+                            new IfParser(expressionBuilder, () -> statementParsers(Version.V11)));
         };
+    }
+
+    private static List<StatementParser> concat(
+            List<StatementParser> parsers, StatementParser one) {
+        List<StatementParser> all = new ArrayList<>(parsers);
+        all.add(one);
+        return List.copyOf(all);
     }
 
     // agregar un declarador es agregar una entrada acá: el DeclarationParser no cambia
@@ -43,8 +56,8 @@ public final class ParserFactory {
 
     private static StatementDelimiter delimiter(Version version) {
         return switch (version) {
-            // 1.1 pasa a cortar también en la llave que cierra un bloque
-            case V10, V11 -> new SemicolonDelimiter();
+            case V10 -> new SemicolonDelimiter();
+            case V11 -> new BlockAwareDelimiter();
         };
     }
 }
