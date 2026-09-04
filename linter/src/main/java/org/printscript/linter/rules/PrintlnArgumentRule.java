@@ -12,22 +12,26 @@ import org.printscript.ast.ReadInput;
 import org.printscript.ast.Statement;
 import org.printscript.ast.StringLiteral;
 import org.printscript.linter.Violation;
+import org.printscript.linter.visitors.PrintlnCollector;
 
 public final class PrintlnArgumentRule implements LintRule {
 
+    private final PrintlnCollector collector = new PrintlnCollector();
+
+    // recorre para encontrar también los println de adentro de un bloque, y reporta
+    // todos los incumplimientos, no solo el primero
     @Override
     public List<Violation> check(Statement statement) {
-        if (!(statement instanceof PrintlnStatement println)) {
-            return List.of();
-        }
-        Expression argument = println.expression();
-        if (isSimple(argument)) {
-            return List.of();
-        }
-        return List.of(
-                new Violation(
-                        "println solo puede llamarse con un identificador o un literal",
-                        argument.range()));
+        return statement.accept(collector).stream()
+                .map(PrintlnStatement::expression)
+                .filter(argument -> !isSimple(argument))
+                .map(PrintlnArgumentRule::violationFor)
+                .toList();
+    }
+
+    private static Violation violationFor(Expression argument) {
+        return new Violation(
+                "println solo puede llamarse con un identificador o un literal", argument.range());
     }
 
     private static boolean isSimple(Expression expression) {
