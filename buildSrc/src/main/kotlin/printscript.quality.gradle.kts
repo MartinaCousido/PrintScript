@@ -45,6 +45,7 @@ val pisosDeCobertura = mapOf(
     "ast" to "0.95",
     "lexer" to "0.95",
     "parser" to "0.90",
+    "semantic" to "0.95",
     "runner" to "0.95",
     "configuration" to "0.95",
     "linter" to "0.95",

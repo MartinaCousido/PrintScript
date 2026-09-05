@@ -14,9 +14,16 @@ final class TeeOutputPrinter implements OutputPrinter {
     }
 
     @Override
-    public void print(String line) {
+    public void println(String line) {
         for (OutputPrinter target : targets) {
-            target.print(line);
+            target.println(line);
+        }
+    }
+
+    @Override
+    public void print(String text) {
+        for (OutputPrinter target : targets) {
+            target.print(text);
         }
     }
 }

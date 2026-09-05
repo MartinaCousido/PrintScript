@@ -5,6 +5,7 @@ import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine.ParentCommand;
 
 @Command(
         name = "execution",
@@ -21,8 +22,12 @@ final class ExecutionCommand implements Callable<Integer> {
             description = "Guarda la salida del programa en este archivo, además de mostrarla")
     private Path outputFile;
 
+    @ParentCommand private RootCommand root;
+
     @Override
     public Integer call() {
-        return ExecutionOutput.run(sourceFile, outputFile, System.out, System.err).code();
+        return ExecutionOutput.run(
+                        sourceFile, outputFile, System.out, System.err, root.language(), null)
+                .code();
     }
 }

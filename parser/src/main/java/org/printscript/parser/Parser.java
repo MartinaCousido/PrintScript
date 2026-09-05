@@ -9,17 +9,22 @@ import org.printscript.common.Failure;
 import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.token.Token;
-import org.printscript.token.TokenType;
-//pieza principal del módulo
-//entrega una sentencia por vez, como el lexer entrega un token por vez
+
+// pieza principal del módulo
+// entrega una sentencia por vez, como el lexer entrega un token por vez
 public final class Parser implements PrintScriptIterator<Result<Statement>> {
 
     private final TokenBuffer buffer;
     private final List<StatementParser> statementParsers;
+    private final StatementDelimiter delimiter;
 
-    public Parser(TokenBuffer buffer, List<StatementParser> statementParsers) {
+    public Parser(
+            TokenBuffer buffer,
+            List<StatementParser> statementParsers,
+            StatementDelimiter delimiter) {
         this.buffer = buffer;
         this.statementParsers = List.copyOf(statementParsers);
+        this.delimiter = delimiter;
     }
 
     @Override
@@ -27,7 +32,7 @@ public final class Parser implements PrintScriptIterator<Result<Statement>> {
         return buffer.lookahead(0).isPresent();
     }
 
-    //junta tokens hasta encotrar un ;
+    // junta los tokens de una sentencia; dónde termina lo decide el delimitador
     @Override
     public Result<Statement> getNext() {
         if (!hasNext()) {
@@ -39,10 +44,14 @@ public final class Parser implements PrintScriptIterator<Result<Statement>> {
             if (current.isEmpty()) {
                 Token last = statement.getLast();
                 buffer.commit(statement.size());
-                return new Failure<>("Expected ';' before the end of the stream", last.range());
+                return new Failure<>(delimiter.unterminatedMessage(statement), last.range());
             }
-            statement.add(current.get());
-            if (isSemicolon(current.get())) {
+            Token token = current.get();
+            int position = statement.size();
+            boolean ends =
+                    delimiter.endsStatement(statement, token, () -> buffer.lookahead(position + 1));
+            statement.add(token);
+            if (ends) {
                 break;
             }
         }
@@ -54,9 +63,5 @@ public final class Parser implements PrintScriptIterator<Result<Statement>> {
             }
         }
         return new Failure<>("Unrecognized statement", statement.getFirst().range());
-    }
-
-    private static boolean isSemicolon(Token token) {
-        return token.type() == TokenType.PUNCTUATION && ";".equals(token.value());
     }
 }

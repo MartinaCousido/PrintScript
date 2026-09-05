@@ -17,10 +17,14 @@ final class WriterOutputPrinter implements OutputPrinter {
     }
 
     @Override
-    public void print(String line) {
+    public void println(String line) {
+        print(line + "\n");
+    }
+
+    @Override
+    public void print(String text) {
         try {
-            writer.write(line);
-            writer.write("\n");
+            writer.write(text);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

@@ -7,11 +7,14 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.BinaryExpression;
+import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
 import org.printscript.ast.PrintlnStatement;
+import org.printscript.ast.ReadEnv;
+import org.printscript.ast.ReadInput;
 import org.printscript.ast.Statement;
 import org.printscript.ast.StringLiteral;
 import org.printscript.ast.TypeName;
@@ -44,6 +47,26 @@ class PrintlnArgumentRuleTest {
         Statement println = new PrintlnStatement(new StringLiteral("hola", ANY), ANY);
 
         assertTrue(rule.check(println).isEmpty());
+    }
+
+    @Test
+    void printlnWithABooleanLiteralIsAllowed() {
+        // un literal booleano es un literal: println(true) no es una expresión
+        Statement println = new PrintlnStatement(new BooleanLiteral(true, ANY), ANY);
+
+        assertTrue(rule.check(println).isEmpty());
+    }
+
+    @Test
+    void printlnWithAReadIsNotAllowed() {
+        // una lectura externa es un llamado, no un identificador ni un literal
+        Statement conReadInput =
+                new PrintlnStatement(new ReadInput(new StringLiteral("p", ANY), ANY), ANY);
+        Statement conReadEnv =
+                new PrintlnStatement(new ReadEnv(new StringLiteral("P", ANY), ANY), ANY);
+
+        assertEquals(1, rule.check(conReadInput).size());
+        assertEquals(1, rule.check(conReadEnv).size());
     }
 
     @Test

@@ -5,6 +5,7 @@ import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine.ParentCommand;
 
 // formatea el .ps con el módulo formatter, aplicando las reglas del --config; escribe
 // el resultado por stdout o, con --output, a un archivo (nunca pisa el fuente)
@@ -13,6 +14,8 @@ import picocli.CommandLine.Parameters;
         aliases = {"format", "fmt"},
         description = "Formatea un archivo PrintScript con el formatter")
 final class FormattingCommand implements Callable<Integer> {
+
+    @ParentCommand private RootCommand root;
 
     @Parameters(index = "0", paramLabel = "ARCHIVO", description = "Archivo .ps a formatear")
     private Path sourceFile;
@@ -30,6 +33,8 @@ final class FormattingCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        return Formatting.run(sourceFile, configFile, outputFile, System.out, System.err).code();
+        return Formatting.run(
+                        sourceFile, configFile, outputFile, System.out, System.err, root.language())
+                .code();
     }
 }

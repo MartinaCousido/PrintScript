@@ -34,8 +34,13 @@ class InterpreterNodeGateTest {
         private final List<String> lines = new ArrayList<>();
 
         @Override
-        public void print(String line) {
+        public void println(String line) {
             lines.add(line);
+        }
+
+        @Override
+        public void print(String text) {
+            lines.add(text);
         }
     }
 
@@ -69,7 +74,7 @@ class InterpreterNodeGateTest {
             OutputPrinter printer, List<Result<Statement>> results) {
         return new Interpreter(
                 new ResultStream(results),
-                new Executor(new Environment(), printer),
+                new Executor(new Environment(), Ports.of(printer)),
                 Set.of(PrintlnStatement.class));
     }
 

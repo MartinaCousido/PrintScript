@@ -1,6 +1,7 @@
 package org.printscript.cli;
 
 import java.util.concurrent.Callable;
+import org.printscript.common.Version;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ScopeType;
@@ -27,8 +28,12 @@ public final class RootCommand implements Callable<Integer> {
             converter = LanguageVersion.Converter.class,
             defaultValue = "1.0",
             scope = ScopeType.INHERIT,
-            description = "Versión del lenguaje a interpretar (por ahora solo 1.0)")
+            description = "Versión del lenguaje a interpretar (1.0 o 1.1)")
     private LanguageVersion version;
+
+    Version language() {
+        return version.domain();
+    }
 
     @Option(
             names = {"-h", "--help"},

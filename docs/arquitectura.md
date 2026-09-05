@@ -8,7 +8,7 @@ El criterio de descomposición es el de Parnas: cada módulo esconde **una decis
 
 ## 1. Estado actual
 
-Doce módulos Gradle, cada uno con su propio set de dependencias, compilando por separado.
+Trece módulos Gradle, cada uno con su propio set de dependencias, compilando por separado.
 
 ```mermaid
 flowchart TD
@@ -18,78 +18,13 @@ flowchart TD
     subgraph motores["Motores · una etapa del pipeline cada uno"]
         lexer["lexer"]
         parser["parser"]
+        semantic["semantic"]
         interpreter["interpreter"]
-        linter["linter"]
         formatter["formatter"]
+        linter["linter"]
     end
 
     subgraph vocabulario["Vocabulario, puertos y configuración · estables, sin lógica"]
-        token["token"]
-        ast["ast"]
-        runtimeapi["runtime-api"]
-        config["configuration"]
-    end
-
-    common["common"]
-
-    cli --> runner
-    cli --> runtimeapi
-    cli --> common
-
-    runner --> lexer
-    runner --> parser
-    runner --> interpreter
-    runner --> linter
-    runner --> formatter
-    runner --> config
-    runner --> runtimeapi
-    runner --> common
-
-    lexer --> token
-    lexer --> common
-    parser --> token
-    parser --> ast
-    parser --> common
-    interpreter --> ast
-    interpreter --> runtimeapi
-    interpreter --> common
-    linter --> ast
-    linter --> config
-    linter --> common
-    formatter --> ast
-    formatter --> config
-    formatter --> common
-    token --> common
-    ast --> common
-    config --> common
-```
-
-Cuatro cosas para leer en ese grafo:
-
-- **Los cinco motores no se conocen entre sí.** No hay ninguna flecha horizontal. Consumen vocabulario, nunca el módulo de al lado. El `linter` y el `formatter` en particular no conocen al `parser`: reciben el flujo de sentencias ya armado.
-- **`runtime-api` no depende de nada.** Es un módulo de puertos: no tiene nada debajo y todos lo tienen arriba.
-- **Nadie depende de `interpreter`, `linter` ni `formatter`.** Son hojas: lo que más cambia está arriba de todo, donde romperlo no rompe a nadie.
-- **`cli` es el único que toca filesystem, `System.out`/`System.err` y códigos de salida**, y el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.main`). No depende de `lexer`, `parser`, `interpreter`, `ast` ni `token`: solo de `runner`, `runtime-api` y `common`. Ver sección 9.
-
-## 2. Estado completo previsto
-
-Trece módulos. Los de borde punteado todavía no existen.
-
-```mermaid
-flowchart TD
-    cli["cli"]
-    runner["runner"]
-
-    subgraph motores["Motores"]
-        lexer["lexer"]
-        parser["parser"]
-        semantic["semantic"]:::previsto
-        interpreter["interpreter"]
-        formatter["formatter"]
-        linter["linter"]
-    end
-
-    subgraph vocabulario["Vocabulario, puertos y configuración"]
         token["token"]
         ast["ast"]
         runtimeapi["runtime-api"]
@@ -124,34 +59,34 @@ flowchart TD
     token --> common
     ast --> common
     config --> common
-
-    classDef previsto stroke-dasharray: 5 5
+    runtimeapi --> common
 ```
 
-> Las aristas hacia `common` desde los seis motores, `runner` y `cli` se omiten por legibilidad: **todos dependen de `common`**. `runtime-api` es la única excepción — no necesita nada de él.
+> Las aristas hacia `common` desde los seis motores, `runner` y `cli` se omiten por legibilidad: **todos dependen de `common`**.
 
-Lo que cambia respecto de hoy:
+Cinco cosas para leer en ese grafo:
 
-- Aparece **`semantic`** entre el parser y el interpreter. Es la etapa que valida tipos, scope y constancia, y la que hace que el modo Validation de la consigna valide de verdad la semántica y no solo la sintaxis.
-- Aparece **`runner`**, el único módulo del sistema donde el lexer y el parser se conocen. Es lo que permite publicar PrintScript como librería sin arrastrar la línea de comandos.
-- El **`formatter`** cuelga del `ast` sin conocer al parser: recibe el flujo de sentencias ya armado, así que se puede formatear un programa con errores de tipos.
-- Aparece **`cli`**, que depende solo de `runner`, `runtime-api` y `common`.
+- **Los seis motores no se conocen entre sí.** No hay ninguna flecha horizontal. Consumen vocabulario, nunca el módulo de al lado. El `linter` y el `formatter` en particular no conocen al `parser`: reciben el flujo de sentencias ya armado.
+- **`semantic` está entre el parser y el interpreter**, y es lo que hace que el modo Validation de la consigna valide de verdad la semántica y no solo la sintaxis. Depende de `ast` y no de `parser`: consume el vocabulario, no la gramática.
+- **`runtime-api` es un módulo de puertos**: `OutputPrinter`, `InputProvider` y `EnvProvider`, más el `RuntimePorts` que los junta. Solo depende de `common`.
+- **Nadie depende de `interpreter`, `linter` ni `formatter`.** Son hojas: lo que más cambia está arriba de todo, donde romperlo no rompe a nadie.
+- **`cli` es el único que toca filesystem, `System.out`/`System.err`, `System.getenv` y códigos de salida**, y el único punto de entrada ejecutable (`org.printscript.cli.Cli.main`). No depende de `lexer`, `parser`, `interpreter`, `ast` ni `token`: solo de `runner`, `runtime-api` y `common`.
 
 ---
 
-## 3. Responsabilidad de cada módulo
+## 2. Responsabilidad de cada módulo
 
 | Módulo | Decisión que esconde | Cambia cuando… | Depende de | Estado |
 |---|---|---|---|---|
 | `common` | Cómo viaja un dato o un error por el pipeline y cómo se ubica algo en el fuente | Casi nunca: cambiaría la forma del pipeline | — | ✅ |
 | `token` | Qué es un token y qué categorías existen | Casi nunca: cambia la noción de token, no el lenguaje | `common` | ✅ |
 | `ast` | La forma del árbol y el contrato de recorrido | El lenguaje gana construcciones | `common` | ✅ |
-| `runtime-api` | Cómo habla un programa en ejecución con el mundo exterior | Cambian los canales de E/S del programa | — | ✅ |
+| `runtime-api` | Cómo habla un programa en ejecución con el mundo exterior | Cambian los canales de E/S del programa | `common` | ✅ |
 | `lexer` | Cómo se reconoce un token dentro del texto | Cambian las reglas léxicas | `common`, `token` | ✅ |
 | `parser` | La gramática y cómo se construye el árbol | Cambian las reglas sintácticas | `common`, `token`, `ast` | ✅ |
 | `interpreter` | Qué efecto produce cada nodo al ejecutarse | Cambia la semántica de ejecución | `common`, `ast`, `runtime-api` | ✅ |
 | `configuration` | En qué formato vive la configuración (JSON, YAML, mañana TOML) | Aparecen formatos nuevos | `common` | ✅ |
-| `semantic` | Qué programas bien formados tienen sentido | Cambian las reglas de tipos y scope | `common`, `ast` | ⬜ |
+| `semantic` | Qué programas bien formados tienen sentido | Cambian las reglas de tipos y scope | `common`, `ast` | ✅ |
 | `formatter` | Cómo se ve el código | Cambian las reglas de estilo | `common`, `ast`, `configuration` | ✅ |
 | `linter` | Qué convenciones se exigen | Cambian las convenciones | `common`, `ast`, `configuration` | ✅ |
 | `runner` | Cómo se arma el pipeline de cada operación | Aparecen operaciones nuevas | todos los anteriores | ✅ |
@@ -159,11 +94,11 @@ Lo que cambia respecto de hoy:
 
 ---
 
-## 4. Cómo interactúan: el pipeline en streaming
+## 3. Cómo interactúan: el pipeline en streaming
 
 La consigna exige que un fuente que no entra en memoria se pueda procesar igual, y que no se haga todo el análisis léxico antes de pasar a la etapa siguiente. De ahí sale el mecanismo central: **ninguna etapa produce una colección, todas producen un flujo**.
 
-El contrato compartido es `PrintScriptIterator<T>`, con `hasNext()` y `getNext()`. Lo implementan las cuatro etapas; lo único que cambia entre ellas es la `T`.
+El contrato compartido es `PrintScriptIterator<T>`, con `hasNext()` y `getNext()`. Lo implementan las cinco etapas; lo único que cambia entre ellas es la `T`. `semantic` no transforma el dato: recibe `Result<Statement>` y devuelve `Result<Statement>`, así que se encadena sin que el parser ni el intérprete sepan que existe.
 
 ```mermaid
 flowchart LR
@@ -171,13 +106,15 @@ flowchart LR
     lexer["Lexer"]
     buffer["TokenBuffer"]
     parser["Parser"]
+    semantic["SemanticAnalyzer"]
     interpreter["Interpreter"]
     printer["OutputPrinter"]
 
     fuente -- "línea" --> lexer
     lexer -- "Token" --> buffer
     buffer -- "Token" --> parser
-    parser -- "Result&lt;Statement&gt;" --> interpreter
+    parser -- "Result&lt;Statement&gt;" --> semantic
+    semantic -- "Result&lt;Statement&gt;" --> interpreter
     interpreter -- "línea de salida" --> printer
 ```
 
@@ -186,8 +123,8 @@ flowchart LR
 Esta es la parte que conviene tener clara: **los datos van hacia adelante, los pedidos van hacia atrás**.
 
 ```
-DATOS      archivo ──► lexer ──► parser ──► interpreter ──► salida
-CONTROL    archivo ◄── lexer ◄── parser ◄── interpreter ◄── while (hasNext)
+DATOS      archivo ──► lexer ──► parser ──► semantic ──► interpreter ──► salida
+CONTROL    archivo ◄── lexer ◄── parser ◄── semantic ◄── interpreter ◄── while (hasNext)
 ```
 
 Todo el pipeline es *pull*. Nadie empuja. Cuando el consumidor pide un resultado, ese pedido se propaga hacia atrás hasta el lexer, y si hace falta se lee una línea nueva del archivo. El dato vuelve hacia adelante transformándose en cada etapa.
@@ -213,7 +150,7 @@ Un error no detiene la iteración: la sentencia siguiente se procesa igual. Deci
 
 ---
 
-## 5. Las aristas que no están, y por qué
+## 4. Las aristas que no están, y por qué
 
 Tan importante como las dependencias que existen son las que se evitaron deliberadamente.
 
@@ -233,46 +170,66 @@ Tan importante como las dependencias que existen son las que se evitaron deliber
 
 ---
 
-## 6. Cómo entra una versión nueva del lenguaje
+## 5. Cómo entra una versión nueva del lenguaje
 
-Cada módulo con conocimiento del lenguaje expone una **factory**: `LexerFactory`, `ParserFactory` e `InterpreterFactory`. **Los motores no saben nada de PrintScript**: reciben ya armadas las piezas que definen el lenguaje.
+Cada módulo con conocimiento del lenguaje expone una **factory**, y esa factory es su provider por versión: `LexerFactory`, `ParserFactory`, `SemanticFactory` e `InterpreterFactory`. **Los motores no saben nada de PrintScript ni de que las versiones existen**: reciben ya armadas las piezas que definen el lenguaje.
 
 ```java
 // El motor no tiene ni una palabra de PrintScript escrita adentro
 public Lexer(Iterator<String> lines, List<TokenConstructor> constructors)
 
-// La factory es la única que sabe qué palabras tiene el lenguaje
-keywords.put("let", TokenType.KEYWORD);
-keywords.put("println", TokenType.KEYWORD);
+// La factory es la única que sabe qué palabras tiene cada versión
+case V11 -> Map.of(
+        "const", TokenType.KEYWORD,
+        "if", TokenType.KEYWORD,
+        "true", TokenType.BOOLEAN);
 ```
 
-Esa separación es la que importa y es la que sigue en pie: **el conocimiento del lenguaje está concentrado en tres archivos**, y los motores no cambian cuando el lenguaje cambia. Agregar `const` es una línea en `LexerFactory`.
+`Version` vive en `common` porque la nombran varios módulos y no cambia nunca. El **contenido** de cada versión no vive ahí: vive en la factory de cada módulo.
 
-**El despacho por versión se quitó, y conviene dejar escrito por qué.** Hasta el 25/08/2026 existía un nivel más: el par `VersionProvider` → `Provider`, con `providerFor("1.0")` devolviendo el provider de esa versión, y la versión viajando como `String` por las firmas públicas de las dos fachadas del `runner`. Se eliminó en el PR #9 porque hoy existe **una sola versión** del lenguaje: eran tres interfaces, tres implementaciones de despacho y un parámetro en cada firma pública para elegir siempre la misma opción. Era andamiaje para un problema que todavía no se tiene.
+| Factory | Qué cambia entre versiones |
+|---|---|
+| `LexerFactory` | las keywords y los símbolos |
+| `ParserFactory` | qué sentencias existen, qué declaradores hay, qué funciones de lectura, y qué `StatementDelimiter` se usa |
+| `SemanticFactory` | qué tipos existen |
+| `InterpreterFactory` | qué construcciones se pueden ejecutar |
 
-**Qué cuesta reintroducirlo cuando aparezca 1.1.** El cambio queda contenido en dos lugares: cada factory gana un método de despacho por versión — o vuelve la interfaz `VersionProvider` a `common` —, y el parámetro `version` vuelve a las firmas de `ExecutionRunner.run` y `ValidationRunner.validate`. **Los motores, el vocabulario y el AST no se tocan**, que es exactamente la propiedad que esta separación vino a comprar. El costo asumido es un refactor de firmas públicas el día que llegue la 1.1; el beneficio es no cargar hoy con un mecanismo especulativo.
+Un `grep` de `case V11` fuera de esas cuatro clases no devuelve nada, y esa es la propiedad que hay que conservar: **si aparece un `if (version == ...)` adentro de un motor, está en el lugar equivocado.**
 
-**Riesgo conocido:** las tres factories reparten el conocimiento del lenguaje entre varios módulos, lo que permite inconsistencias — un lexer que reconoce `if` con un parser que no sabe qué hacer con él. Se mitiga por dos vías: la compuerta de nodos del `Interpreter`, que ante un nodo que no sabe ejecutar devuelve un `Failure` explícito en vez de romper, y los tests end-to-end del `runner`, que ejercitan el pipeline completo contra los ejemplos de la consigna.
+Las fachadas del `runner` toman la versión como parámetro y mantienen además la firma sin versión, que delega en 1.0: la consigna define la versión como argumento opcional con ese valor por defecto.
+
+**Riesgo conocido:** las cuatro factories reparten el conocimiento de una versión entre varios módulos, lo que permite inconsistencias — un lexer que reconoce `if` con un parser que no sabe qué hacer con él. Se mitiga por dos vías: la compuerta de nodos del `Interpreter`, que ante un nodo que no pertenece a la versión devuelve un `Failure` explícito en vez de romper, y los tests end-to-end por versión del `runner`, que ejercitan el pipeline completo contra los ejemplos de la consigna y contra un programa que usa las cinco construcciones de 1.1.
 
 ---
 
-## 7. Trade-offs asumidos
+## 6. Trade-offs asumidos
 
 **Streaming contra atomicidad de la ejecución.** En una sola pasada, cuando aparece un error en la sentencia 40, las 39 anteriores ya se ejecutaron y su salida ya salió. Garantizar "no ejecutar nada si hay algún error" exigiría materializar el programa entero, que es lo que la consigna prohíbe. La mitigación es la operación `validate` como pre-chequeo completo: quien necesite atomicidad corre validate y después execute.
 
-**Visitor exhaustivo.** Agregar un nodo al AST rompe en compilación todos los visitors existentes. Se asume como mecanismo de seguridad, no como defecto: el error de compilación funciona como checklist de qué herramienta tiene que decidir qué hacer con la construcción nueva.
+**La cota de memoria de los bloques.** Una sentencia se corta cuando aparece un `;` en profundidad 0 o cuando una `}` devuelve la profundidad de 1 a 0, así que los tokens de un `if` entero se acumulan antes de parsearlo: **la memoria queda acotada al bloque más grande, no al programa**. No es una regresión frente a la alternativa —un descenso recursivo tiene la misma cota, porque el nodo `IfStatement` necesita su cuerpo como lista de todos modos— y sigue cumpliendo lo que pide la consigna, que es no materializar el fuente completo. Hay un test que lo fija.
 
-**El costo del contrato único.** `ASTVisitor` cubre expresiones y sentencias juntas, así que `Executor` implementa los cuatro `visit` de expresión devolviendo un error, y `ExpressionEvaluator` hace lo simétrico con los tres de sentencia. Son ramas inalcanzables, impuestas por tener un solo contrato publicado de recorrido.
+**`Block` es un nodo y no una `List<Statement>`.** Cuesta un nodo más en el AST, y por lo tanto un `visit` más en cada visitor. Se paga por dos cosas. La primera es que `else if (b) {}` y `else { if (b) {} }` colapsarían al mismo árbol sin él, y el formatter tiene que imprimir uno en la misma línea y el otro anidado. La segunda es que el scope pasa a ser exactamente un `Block`, así que `semantic` y el intérprete abren y cierran frame en un solo lugar, sin casos especiales para el `then` y para el `else`.
+
+**Visitor exhaustivo.** Agregar un nodo al AST rompe en compilación todos los visitors existentes. Se asume como mecanismo de seguridad, no como defecto: el error de compilación funciona como checklist de qué herramienta tiene que decidir qué hacer con la construcción nueva. Es lo que obligó a decidir, por ejemplo, que `println(true)` es un argumento simple y `println(readInput("x"))` no.
+
+**El costo del contrato único, y cómo se acotó.** `ASTVisitor` cubre expresiones y sentencias juntas, así que un visitor de sentencias tiene que rechazar toda expresión y viceversa. Ese rechazo se escribía repetido en cada implementación y crecía con cada nodo nuevo — CPD lo detectó como duplicación real entre `Executor` y `StatementChecker`. Ahora vive una sola vez, en `StatementOnlyVisitor` y `ExpressionOnlyVisitor`: un nodo de expresión nuevo se agrega en un solo lugar en lugar de en cuatro.
+
+**Dónde vive la conversión de lo que entra de afuera.** `readInput` y `readEnv` valen `string`, y el tipo declarado manda la conversión. Ocurre en el sitio de la declaración y de la asignación, no adentro de la lectura, y se aplica siempre: para cualquier otro inicializador es un no-op porque `semantic` ya garantizó que el tipo coincide. Así el `Executor` no tiene que preguntar de qué nodo vino el valor. La excepción semántica que lo habilita es acotada a propósito —vale solo cuando el inicializador es *exactamente* una lectura— porque propagarla adentro de las expresiones la volvería incheckeable.
 
 **Trece módulos.** El número no es el criterio; la independencia de razones de cambio sí. `configuration`, `semantic` y `runtime-api` existen porque cada uno esconde una decisión distinta con evolución propia. La única fusión que no rompería razones de cambio sería `runner` dentro de `cli`, y se descarta porque PrintScript se publica como librería.
 
 ---
 
-## 8. El módulo `runner`
+## 7. El módulo `runner`
 
 Es el único lugar del sistema donde el lexer y el parser se conocen entre sí. `ExecutionRunner` recibe el iterador de líneas y un `OutputPrinter`, le pide a las tres factories las piezas del pipeline, encadena `Lexer` → `TokenBuffer` → `Parser` → `Interpreter` y corre el bucle `while (hasNext) getNext`. El armado de la cadena lexer→buffer→parser vive en `StatementStreams`, una clase package-private con una única función estática que comparten las dos fachadas: la construcción existe en un solo lugar.
 
-`ValidationRunner` es la segunda fachada: arma la misma cadena pero se detiene en el parser, sin interpreter y sin `OutputPrinter` — la firma de `validate` ni siquiera recibe uno. Recorre el flujo de sentencias, junta los `Failure` con su mensaje y su `Range`, y no ejecuta nada: validar un programa con `println` no imprime. Queda anotado explícitamente: la consigna pide validar sintaxis **y semántica**, y el módulo `semantic` no existe todavía, así que esta fachada valida solo sintaxis. Cuando `semantic` exista, se encadena entre el parser y el consumidor sin que ninguna de las dos etapas cambie.
+`ValidationRunner` es la segunda fachada: arma la misma cadena pero se detiene antes del interpreter, sin `OutputPrinter` — la firma de `validate` ni siquiera recibe uno. Recorre el flujo de sentencias, junta los `Failure` con su mensaje y su `Range`, y no ejecuta nada: validar un programa con `println` no imprime.
+
+`StatementStreams` ofrece **dos cadenas**, y cuál usa cada fachada es una decisión de diseño y no un olvido:
+
+- `validatedStatementStream` — lexer → buffer → parser → **semantic**. La usan `validate` y `execute`. Es lo que hace que el modo Validation valide semántica, y lo que le garantiza al `Executor` su precondición de recibir sentencias ya validadas.
+- `statementStream` — sin `semantic`. La usan `format` y `lint`, porque **se tiene que poder formatear y lintear un programa con errores de tipos**, que es justo cuando más falta hace. Hay un test end-to-end dedicado a que esa decisión no se pierda.
 
 `AnalyzingRunner` es la tercera fachada: arma `Lexer` → `TokenBuffer` → `Parser` → `Linter` reusando el mismo `StatementStreams`, y devuelve un `AnalysisReport` con dos listas separadas — las violaciones de estilo y los errores de sintaxis. **No pasa por `semantic`**, y no va a pasar cuando exista: se puede lintear un programa que no tipa. Tiene un segundo `analyze` que recibe el stream de configuración y su formato, y es el único lugar donde se cablean los mappers de `configuration`.
 
@@ -286,7 +243,7 @@ El invariante del módulo: **compone, no decide**. No tiene ni una regla del len
 
 ---
 
-## 9. El módulo `cli`
+## 8. El módulo `cli`
 
 Es el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.main`) y el único módulo autorizado a tocar filesystem, `System.out`/`System.err` y códigos de salida — el resto son librerías puras. Traduce argumentos con **picocli** a un `RootCommand` con cuatro subcomandos, uno por operación de la consigna: `execution`, `validation`, `formatting` y `analyzing` (con sus alias). A partir de ahí nada depende de picocli salvo las clases de comando mismas.
 
@@ -298,7 +255,9 @@ Es el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.m
 
 **Errores con rango completo.** `FailureReporter` formatea cada `Failure` (mensaje + `Range` con fila/columna de inicio y fin) a `System.err`, tal como exige la consigna.
 
-**`--version` no viaja al `runner`.** La consigna pide un argumento de versión del lenguaje ("por ahora solo 1.0"); `cli` lo valida en el borde (`LanguageVersion`, un converter de picocli que rechaza cualquier valor que no sea `"1.0"`) pero no lo pasa a `ExecutionRunner`/`ValidationRunner`, que no tienen ese parámetro (ver sección 6). Cuando exista una 1.1 real, el punto de entrada para el despacho sigue siendo el que describe esa sección — las factories, no `cli`.
+**`--version` se traduce en el borde.** `LanguageVersion` es un converter de picocli que acepta `1.0` y `1.1` y rechaza cualquier otra cosa nombrando las válidas. Se queda en `cli` porque es la forma del **argumento**; lo que viaja hacia adentro es el `Version` del dominio, así que ningún módulo de abajo sabe cómo se escribió. Los cuatro subcomandos la toman del comando raíz y se la pasan a las fachadas del `runner`. La interfaz interactiva tiene su propio comando `version`, que fija la versión de la sesión.
+
+**Los puertos de entrada.** `SystemEnvProvider` es el único lugar del sistema que llama a `System.getenv`. `ConsoleInputProvider` **recibe** el `BufferedReader` en vez de abrir uno propio: la shell interactiva ya tiene su lector sobre `System.in` para los comandos, y dos lectores sobre el mismo stream se comen las líneas del otro de forma intermitente. Por eso el `readInput` lanzado desde el REPL lee del mismo lector que la shell.
 
 **`analyzing` corre el linter y `formatting` corre el formatter.** Ambas cargan las reglas del `--config` (JSON/YAML) vía el módulo `configuration` con el helper compartido `ConfigurationFiles`, y sin `--config` cada regla cae en su valor por defecto. `AnalyzingCommand`/`LintAnalysis` corren el `AnalyzingRunner` y reportan las violaciones (prefijo `lint:` + rango) y los errores de sintaxis; `FormattingCommand`/`Formatting` corren el `FormattingRunner` y escriben el código formateado por stdout o, con `--output`, a un archivo (nunca pisan el fuente). Las cuatro operaciones tienen backend hoy; el `UNSUPPORTED_OPERATION` (exit code `3`) queda reservado para cuando se sume una operación sin implementar.
 
@@ -306,7 +265,7 @@ Es el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.m
 
 **Códigos de salida:** `0` éxito, `1` el programa `.ps` tiene errores de validación/ejecución o el análisis encontró violaciones, `2` error de uso (argumentos inválidos, versión no soportada, archivo o configuración inexistente o mal formada), `3` operación pedida pero no implementada. Guía de uso completa con ejemplos en [`docs/cli.md`](cli.md).
 
-## 10. El módulo `linter`
+## 9. El módulo `linter`
 
 Es el *static code analyzer* que pide la consigna: analiza los programas PrintScript del usuario. **No tiene nada que ver con Checkstyle, PMD ni Spotless**, que analizan nuestro código Java y viven en `config/` y en `buildSrc/`.
 

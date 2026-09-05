@@ -9,7 +9,8 @@ class EnvironmentTest {
 
     @Test
     void aDeclaredVariableCanBeRead() {
-        Environment environment = new Environment().declare("x", "number", 12.0).orElseThrow();
+        Environment environment =
+                new Environment().declare("x", "number", 12.0, false).orElseThrow();
 
         Variable variable = environment.read("x").orElseThrow();
 
@@ -19,9 +20,10 @@ class EnvironmentTest {
 
     @Test
     void redeclaringAnExistingNameIsRejected() {
-        Environment environment = new Environment().declare("x", "number", 12.0).orElseThrow();
+        Environment environment =
+                new Environment().declare("x", "number", 12.0, false).orElseThrow();
 
-        assertTrue(environment.declare("x", "string", "Joe").isEmpty());
+        assertTrue(environment.declare("x", "string", "Joe", false).isEmpty());
     }
 
     @Test

@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.printscript.ast.BinaryExpression;
 import org.printscript.ast.Expression;
@@ -20,6 +22,26 @@ import org.printscript.common.Success;
 class ExpressionEvaluatorTest {
 
     private static final Range ANY = rangeAt(1, 1, 1, 1);
+
+    private static ExpressionEvaluator newEvaluator(Environment environment) {
+        return new ExpressionEvaluator(
+                environment,
+                Ports.of(
+                        new org.printscript.runtime.OutputPrinter() {
+
+                            @Override
+                            public void println(String line) {
+                                // los tests de expresiones no miran la salida
+                            }
+
+                            @Override
+                            public void print(String text) {
+                                // los tests de expresiones no miran la salida
+                            }
+                        },
+                        List.of(),
+                        Map.of()));
+    }
 
     private static Range rangeAt(int startLine, int startColumn, int endLine, int endColumn) {
         return new Range(new Position(startLine, startColumn), new Position(endLine, endColumn));
@@ -38,12 +60,12 @@ class ExpressionEvaluatorTest {
     }
 
     private static Object evaluate(Expression expression, Environment environment) {
-        Result<Object> result = expression.accept(new ExpressionEvaluator(environment));
+        Result<Object> result = expression.accept(newEvaluator(environment));
         return assertInstanceOf(Success.class, result, String.valueOf(result)).value();
     }
 
     private static Failure<Object> evaluateFailing(Expression expression, Environment environment) {
-        Result<Object> result = expression.accept(new ExpressionEvaluator(environment));
+        Result<Object> result = expression.accept(newEvaluator(environment));
         @SuppressWarnings("unchecked")
         Failure<Object> failure = assertInstanceOf(Failure.class, result, String.valueOf(result));
         return failure;
@@ -51,14 +73,10 @@ class ExpressionEvaluatorTest {
 
     @Test
     void theArithmeticFollowsThePrecedenceAlreadyResolvedByTheTree() {
-        Expression multiplyLast = binary(
-            binary(number(2), Operator.PLUS, number(3)),
-            Operator.MULTIPLY,
-            number(4));
-        Expression multiplyFirst = binary(
-            number(2),
-            Operator.PLUS,
-            binary(number(3), Operator.MULTIPLY, number(4)));
+        Expression multiplyLast =
+                binary(binary(number(2), Operator.PLUS, number(3)), Operator.MULTIPLY, number(4));
+        Expression multiplyFirst =
+                binary(number(2), Operator.PLUS, binary(number(3), Operator.MULTIPLY, number(4)));
 
         assertEquals(20.0, evaluate(multiplyLast, new Environment()));
         assertEquals(14.0, evaluate(multiplyFirst, new Environment()));
@@ -76,14 +94,13 @@ class ExpressionEvaluatorTest {
         Environment environment = new Environment();
 
         assertEquals(
-            "Joe Doe",
-            evaluate(binary(text("Joe"), Operator.PLUS, text(" Doe")), environment));
+                "Joe Doe", evaluate(binary(text("Joe"), Operator.PLUS, text(" Doe")), environment));
         assertEquals(
-            "Result: 3",
-            evaluate(binary(text("Result: "), Operator.PLUS, number(3)), environment));
+                "Result: 3",
+                evaluate(binary(text("Result: "), Operator.PLUS, number(3)), environment));
         assertEquals(
-            "3 is the result",
-            evaluate(binary(number(3), Operator.PLUS, text(" is the result")), environment));
+                "3 is the result",
+                evaluate(binary(number(3), Operator.PLUS, text(" is the result")), environment));
     }
 
     @Test
@@ -97,7 +114,8 @@ class ExpressionEvaluatorTest {
     void anUndeclaredIdentifierFailsWithItsRange() {
         Range range = rangeAt(2, 5, 2, 9);
 
-        Failure<Object> failure = evaluateFailing(new Identifier("total", range), new Environment());
+        Failure<Object> failure =
+                evaluateFailing(new Identifier("total", range), new Environment());
 
         assertEquals(range, failure.range());
         assertTrue(failure.message().contains("total"), failure.message());

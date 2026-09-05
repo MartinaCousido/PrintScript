@@ -33,6 +33,8 @@ final class InteractiveShell {
     private final Map<String, Consumer<String>> commands = new HashMap<>();
     private Path workingDir;
     private boolean running = true;
+    // la versión de la sesión: la fijan con el comando 'version'
+    private LanguageVersion version = LanguageVersion.V1_0;
 
     InteractiveShell(InputStream in, PrintStream out, PrintStream err, Path startDir) {
         this.input = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
@@ -52,6 +54,7 @@ final class InteractiveShell {
         register(this::runValidation, "validation", "validate");
         register(this::runFormatting, "formatting", "format", "fmt");
         register(this::runAnalyzing, "analyzing", "analyze", "lint");
+        register(this::runVersion, "version", "v");
         register(argument -> running = false, "exit", "quit", "salir");
     }
 
@@ -108,8 +111,31 @@ final class InteractiveShell {
 
     // --- operaciones sobre archivos ---
 
+    // version           muestra la versión de la sesión
+    // version 1.1       la cambia; las cinco operaciones la respetan desde ahí
+    private void runVersion(String argument) {
+        if (argument.isEmpty()) {
+            out.println("Versión del lenguaje: " + version.label());
+            return;
+        }
+        LanguageVersion elegida = LanguageVersion.of(argument);
+        if (elegida == null) {
+            err.println(
+                    "'"
+                            + argument
+                            + "' no es una versión soportada (valores válidos: "
+                            + LanguageVersion.supported()
+                            + ")");
+            return;
+        }
+        version = elegida;
+        out.println("Versión del lenguaje: " + version.label());
+    }
+
     private void runExecution(String argument) {
-        withSourceFile(argument, source -> ExecutionOutput.run(source, null, out, err));
+        withSourceFile(
+                argument,
+                source -> ExecutionOutput.run(source, null, out, err, version.domain(), input));
     }
 
     // save <archivo>: ejecuta y guarda la salida en un .txt junto al fuente
@@ -118,7 +144,12 @@ final class InteractiveShell {
                 argument,
                 source ->
                         ExecutionOutput.run(
-                                source, ExecutionOutput.defaultOutputFor(source), out, err));
+                                source,
+                                ExecutionOutput.defaultOutputFor(source),
+                                out,
+                                err,
+                                version.domain(),
+                                input));
     }
 
     private void runValidation(String argument) {
@@ -126,21 +157,24 @@ final class InteractiveShell {
                 argument,
                 path ->
                         SourceFileProcessor.process(
-                                path, lines -> new ValidationRunner().validate(lines), err));
+                                path,
+                                lines -> new ValidationRunner().validate(lines, version.domain()),
+                                err));
     }
 
     private void runAnalyzing(String argument) {
         withSourceAndConfig(
                 argument,
                 "analyze <archivo.ps> [config.json|yaml]",
-                (source, config) -> LintAnalysis.run(source, config, err));
+                (source, config) -> LintAnalysis.run(source, config, err, version.domain()));
     }
 
     private void runFormatting(String argument) {
         withSourceAndConfig(
                 argument,
                 "format <archivo.ps> [config.json|yaml]",
-                (source, config) -> Formatting.run(source, config, null, out, err));
+                (source, config) ->
+                        Formatting.run(source, config, null, out, err, version.domain()));
     }
 
     @FunctionalInterface

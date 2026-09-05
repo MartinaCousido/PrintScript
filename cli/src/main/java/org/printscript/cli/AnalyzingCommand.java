@@ -5,6 +5,7 @@ import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine.ParentCommand;
 
 // analiza estáticamente el .ps con el módulo linter, aplicando las reglas del
 // archivo de configuración (--config); sin config, ninguna regla está prendida
@@ -13,6 +14,8 @@ import picocli.CommandLine.Parameters;
         aliases = {"analyze", "lint"},
         description = "Analiza estáticamente un archivo PrintScript con el linter")
 final class AnalyzingCommand implements Callable<Integer> {
+
+    @ParentCommand private RootCommand root;
 
     @Parameters(index = "0", paramLabel = "ARCHIVO", description = "Archivo .ps a analizar")
     private Path sourceFile;
@@ -24,6 +27,6 @@ final class AnalyzingCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        return LintAnalysis.run(sourceFile, configFile, System.err).code();
+        return LintAnalysis.run(sourceFile, configFile, System.err, root.language()).code();
     }
 }

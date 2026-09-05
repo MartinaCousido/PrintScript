@@ -1,4 +1,4 @@
 package org.printscript.interpreter;
-//guarda el tipo que se escribió y el valor de la variable
-public record Variable(String declaredType, Object value) {
-}
+
+// guarda el tipo que se escribió, el valor de la variable y si se puede reasignar
+public record Variable(String declaredType, Object value, boolean immutable) {}

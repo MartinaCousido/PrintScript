@@ -5,6 +5,7 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
+import org.printscript.common.Version;
 import org.printscript.linter.Violation;
 import org.printscript.linter.config.LinterConfiguration;
 import org.printscript.runner.AnalysisReport;
@@ -18,7 +19,7 @@ final class LintAnalysis {
 
     private LintAnalysis() {}
 
-    static ExitCode run(Path sourceFile, Path configFile, PrintStream err) {
+    static ExitCode run(Path sourceFile, Path configFile, PrintStream err, Version version) {
         LinterConfiguration configuration;
         try {
             configuration = loadConfiguration(configFile);
@@ -28,7 +29,7 @@ final class LintAnalysis {
         }
         return SourceFileProcessor.read(
                 sourceFile,
-                lines -> report(new AnalyzingRunner().analyze(lines, configuration), err),
+                lines -> report(new AnalyzingRunner().analyze(lines, configuration, version), err),
                 err);
     }
 

@@ -4,12 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
 
 class StatementTest {
+
+    private static final String NUMBER = "number";
 
     private static Range rangeAt(int startColumn, int endColumn) {
         return new Range(new Position(1, startColumn), new Position(1, endColumn));
@@ -18,8 +21,12 @@ class StatementTest {
     private static String describe(Statement statement) {
         return switch (statement) {
             case VariableDeclaration declaration -> "declaration:" + declaration.name().name();
+            case ConstDeclaration declaration -> "const:" + declaration.name().name();
             case AssignmentStatement assignment -> "assignment:" + assignment.name().name();
             case PrintlnStatement _ -> "println";
+            case Block block -> "block:" + block.statements().size();
+            case IfStatement conditional ->
+                    "if:" + (conditional.elseBranch().isPresent() ? "con-else" : "solo");
         };
     }
 
@@ -29,16 +36,95 @@ class StatementTest {
         VariableDeclaration declaration =
                 new VariableDeclaration(
                         new Identifier("x", rangeAt(5, 5)),
-                        new TypeName("number", rangeAt(8, 13)),
+                        new TypeName(NUMBER, rangeAt(8, 13)),
                         Optional.of(initializer),
                         rangeAt(1, 14));
 
         assertTrue(declaration.initializer().isPresent());
         assertEquals(initializer, declaration.initializer().get());
         assertEquals("x", declaration.name().name());
-        assertEquals("number", declaration.type().name());
+        assertEquals(NUMBER, declaration.type().name());
         assertEquals(rangeAt(8, 13), declaration.type().range());
         assertEquals("declaration:x", describe(declaration));
+    }
+
+    @Test
+    void anIfWithoutElseIsDistinguishableFromOneWithIt() {
+        Block empty = new Block(List.of(), rangeAt(1, 2));
+        IfStatement solo =
+                new IfStatement(
+                        new BooleanLiteral(true, rangeAt(4, 7)),
+                        empty,
+                        Optional.empty(),
+                        rangeAt(1, 20));
+        IfStatement conElse =
+                new IfStatement(
+                        new BooleanLiteral(true, rangeAt(4, 7)),
+                        empty,
+                        Optional.of(empty),
+                        rangeAt(1, 30));
+
+        assertEquals("if:solo", describe(solo));
+        assertEquals("if:con-else", describe(conElse));
+    }
+
+    @Test
+    void anElseIfIsAnIfInTheElseBranchAndNotABlockAroundIt() {
+        // es la razón por la que Block es un nodo: sin él los dos árboles serían
+        // iguales y el formatter no podría imprimirlos distinto
+        Block empty = new Block(List.of(), rangeAt(1, 2));
+        IfStatement anidado =
+                new IfStatement(
+                        new BooleanLiteral(false, rangeAt(9, 13)),
+                        empty,
+                        Optional.empty(),
+                        rangeAt(8, 20));
+
+        IfStatement elseIf =
+                new IfStatement(
+                        new BooleanLiteral(true, rangeAt(4, 7)),
+                        empty,
+                        Optional.of(anidado),
+                        rangeAt(1, 20));
+        IfStatement elseConBloque =
+                new IfStatement(
+                        new BooleanLiteral(true, rangeAt(4, 7)),
+                        empty,
+                        Optional.of(new Block(List.of(anidado), rangeAt(8, 22))),
+                        rangeAt(1, 24));
+
+        assertEquals("if:con-else", describe(elseIf));
+        assertEquals("if:con-else", describe(elseConBloque));
+        assertEquals("if:solo", describe(elseIf.elseBranch().orElseThrow()));
+        assertEquals("block:1", describe(elseConBloque.elseBranch().orElseThrow()));
+    }
+
+    @Test
+    void aBlockCopiesTheListItWasGiven() {
+        List<Statement> mutable =
+                new java.util.ArrayList<>(
+                        List.of(
+                                new PrintlnStatement(
+                                        new NumberLiteral(1, rangeAt(1, 1)), rangeAt(1, 1))));
+
+        Block block = new Block(mutable, rangeAt(1, 10));
+        mutable.clear();
+
+        assertEquals(1, block.statements().size());
+    }
+
+    @Test
+    void aConstantIsItsOwnKindOfStatement() {
+        // es un nodo propio y no un flag: por eso el switch lo distingue sin mirar nada
+        ConstDeclaration constant =
+                new ConstDeclaration(
+                        new Identifier("x", rangeAt(7, 7)),
+                        new TypeName(NUMBER, rangeAt(10, 15)),
+                        Optional.of(new NumberLiteral(8.0, rangeAt(19, 19))),
+                        rangeAt(1, 20));
+
+        assertEquals("const:x", describe(constant));
+        assertEquals(rangeAt(1, 20), constant.range());
     }
 
     @Test
@@ -86,7 +172,7 @@ class StatementTest {
         VariableDeclaration declaration =
                 new VariableDeclaration(
                         name,
-                        new TypeName("number", rangeAt(8, 13)),
+                        new TypeName(NUMBER, rangeAt(8, 13)),
                         Optional.empty(),
                         rangeAt(1, 13));
 

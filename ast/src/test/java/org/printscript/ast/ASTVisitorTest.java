@@ -30,6 +30,11 @@ class ASTVisitorTest {
         }
 
         @Override
+        public String visitBooleanLiteral(BooleanLiteral booleanLiteral) {
+            return Boolean.toString(booleanLiteral.value());
+        }
+
+        @Override
         public String visitIdentifier(Identifier identifier) {
             return identifier.name();
         }
@@ -46,6 +51,16 @@ class ASTVisitorTest {
         }
 
         @Override
+        public String visitReadInput(ReadInput readInput) {
+            return "readInput(" + readInput.prompt().accept(this) + ")";
+        }
+
+        @Override
+        public String visitReadEnv(ReadEnv readEnv) {
+            return "readEnv(" + readEnv.name().accept(this) + ")";
+        }
+
+        @Override
         public String visitVariableDeclaration(VariableDeclaration variableDeclaration) {
             String head =
                     "let "
@@ -56,6 +71,41 @@ class ASTVisitorTest {
                     .initializer()
                     .map(expression -> head + " = " + expression.accept(this) + ";")
                     .orElse(head + ";");
+        }
+
+        @Override
+        public String visitConstDeclaration(ConstDeclaration constDeclaration) {
+            String head =
+                    "const "
+                            + constDeclaration.name().name()
+                            + ": "
+                            + constDeclaration.type().name();
+            return constDeclaration
+                    .initializer()
+                    .map(expression -> head + " = " + expression.accept(this) + ";")
+                    .orElse(head + ";");
+        }
+
+        @Override
+        public String visitBlock(Block block) {
+            return block.statements().stream()
+                    .map(statement -> statement.accept(this))
+                    .collect(java.util.stream.Collectors.joining(" "));
+        }
+
+        @Override
+        public String visitIfStatement(IfStatement ifStatement) {
+            String head =
+                    "if ("
+                            + ifStatement.condition().accept(this)
+                            + ") { "
+                            + ifStatement.thenBlock().accept(this)
+                            + " }";
+            return head
+                    + ifStatement
+                            .elseBranch()
+                            .map(branch -> " else " + branch.accept(this))
+                            .orElse("");
         }
 
         @Override

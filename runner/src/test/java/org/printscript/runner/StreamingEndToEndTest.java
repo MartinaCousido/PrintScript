@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
 import org.printscript.common.Result;
+import org.printscript.common.Version;
 import org.printscript.interpreter.Interpreter;
 import org.printscript.interpreter.InterpreterFactory;
 import org.printscript.lexer.Lexer;
@@ -18,6 +19,7 @@ import org.printscript.parser.Parser;
 import org.printscript.parser.ParserFactory;
 import org.printscript.parser.TokenBuffer;
 import org.printscript.runtime.OutputPrinter;
+import org.printscript.runtime.RuntimePorts;
 
 class StreamingEndToEndTest {
 
@@ -58,16 +60,25 @@ class StreamingEndToEndTest {
         }
 
         @Override
-        public void print(String line) {
+        public void println(String line) {
+            consumedAtEachPrint.add(source.consumed);
+        }
+
+        @Override
+        public void print(String text) {
             consumedAtEachPrint.add(source.consumed);
         }
     }
 
     private static Interpreter buildChain(CountingIterator lines, RecordingPrinter printer) {
-        Lexer lexer = LexerFactory.create(lines);
+        Lexer lexer = LexerFactory.create(lines, Version.V10);
         TokenBuffer buffer = new TokenBuffer(lexer);
-        Parser parser = ParserFactory.create(buffer);
-        return InterpreterFactory.create(parser, printer);
+        Parser parser = ParserFactory.create(buffer, Version.V10);
+        return InterpreterFactory.create(
+                parser,
+                new RuntimePorts(
+                        printer, java.util.Optional::empty, name -> java.util.Optional.empty()),
+                Version.V10);
     }
 
     @Test

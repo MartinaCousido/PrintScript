@@ -10,6 +10,7 @@ include(
     "ast",
     "lexer",
     "parser",
+    "semantic",
     "runtime-api",
     "interpreter",
     "runner",

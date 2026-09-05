@@ -33,8 +33,13 @@ class ExecutorTest {
         private final List<String> lines = new ArrayList<>();
 
         @Override
-        public void print(String line) {
+        public void println(String line) {
             lines.add(line);
+        }
+
+        @Override
+        public void print(String text) {
+            lines.add(text);
         }
     }
 
@@ -65,7 +70,7 @@ class ExecutorTest {
 
     private static List<String> printedBy(Statement... statements) {
         InMemoryPrinter printer = new InMemoryPrinter();
-        Executor executor = new Executor(new Environment(), printer);
+        Executor executor = new Executor(new Environment(), Ports.of(printer));
         for (Statement statement : statements) {
             run(executor, statement);
         }
@@ -100,7 +105,7 @@ class ExecutorTest {
     @Test
     void redeclaringAVariableFailsWithTheRangeOfTheStatement() {
         Range second = rangeAt(2, 1, 2, 18);
-        Executor executor = new Executor(new Environment(), new InMemoryPrinter());
+        Executor executor = new Executor(new Environment(), Ports.of(new InMemoryPrinter()));
         run(executor, declaration("x", number(1), ANY));
 
         Failure<Void> failure = runFailing(executor, declaration("x", number(2), second));
@@ -112,7 +117,7 @@ class ExecutorTest {
     @Test
     void assigningToAnUndeclaredVariableFailsWithTheRangeOfTheStatement() {
         Range range = rangeAt(3, 1, 3, 7);
-        Executor executor = new Executor(new Environment(), new InMemoryPrinter());
+        Executor executor = new Executor(new Environment(), Ports.of(new InMemoryPrinter()));
 
         Failure<Void> failure =
                 runFailing(

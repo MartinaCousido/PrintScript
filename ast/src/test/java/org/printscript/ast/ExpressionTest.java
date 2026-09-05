@@ -16,8 +16,11 @@ class ExpressionTest {
         return switch (expression) {
             case NumberLiteral number -> "number:" + number.value();
             case StringLiteral string -> "string:" + string.value();
+            case BooleanLiteral bool -> "boolean:" + bool.value();
             case Identifier identifier -> "identifier:" + identifier.name();
             case BinaryExpression binary -> "binary:" + binary.operator();
+            case ReadInput _ -> "readInput";
+            case ReadEnv _ -> "readEnv";
         };
     }
 
@@ -25,15 +28,23 @@ class ExpressionTest {
     void switchOverExpressionIsExhaustiveWithoutDefault() {
         assertEquals("number:4.0", describe(new NumberLiteral(4.0, rangeAt(1, 1))));
         assertEquals("string:hi", describe(new StringLiteral("hi", rangeAt(1, 4))));
+        assertEquals("boolean:true", describe(new BooleanLiteral(true, rangeAt(1, 1))));
         assertEquals("identifier:x", describe(new Identifier("x", rangeAt(1, 1))));
 
-        BinaryExpression sum = new BinaryExpression(
-            new NumberLiteral(1.0, rangeAt(1, 1)),
-            Operator.PLUS,
-            new NumberLiteral(2.0, rangeAt(5, 5)),
-            rangeAt(1, 5));
+        BinaryExpression sum =
+                new BinaryExpression(
+                        new NumberLiteral(1.0, rangeAt(1, 1)),
+                        Operator.PLUS,
+                        new NumberLiteral(2.0, rangeAt(5, 5)),
+                        rangeAt(1, 5));
 
         assertEquals("binary:PLUS", describe(sum));
+        assertEquals(
+                "readInput",
+                describe(new ReadInput(new StringLiteral("p", rangeAt(1, 1)), rangeAt(1, 1))));
+        assertEquals(
+                "readEnv",
+                describe(new ReadEnv(new StringLiteral("P", rangeAt(1, 1)), rangeAt(1, 1))));
     }
 
     @Test
@@ -46,7 +57,8 @@ class ExpressionTest {
         NumberLiteral number = new NumberLiteral(42.0, numberRange);
         StringLiteral string = new StringLiteral("hello", stringRange);
         Identifier identifier = new Identifier("y", identifierRange);
-        BinaryExpression binary = new BinaryExpression(number, Operator.MINUS, identifier, binaryRange);
+        BinaryExpression binary =
+                new BinaryExpression(number, Operator.MINUS, identifier, binaryRange);
 
         assertEquals(numberRange, number.range());
         assertEquals(stringRange, string.range());
