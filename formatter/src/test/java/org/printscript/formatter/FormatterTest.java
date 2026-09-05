@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,6 @@ import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -27,7 +27,7 @@ class FormatterTest {
 
     private static final Range ANY = new Range(new Position(1, 1), new Position(1, 1));
 
-    private static final class ListStatements implements PrintScriptIterator<Result<Statement>> {
+    private static final class ListStatements implements Iterator<Result<Statement>> {
 
         private final List<Result<Statement>> items;
         private int index;
@@ -42,7 +42,7 @@ class FormatterTest {
         }
 
         @Override
-        public Result<Statement> getNext() {
+        public Result<Statement> next() {
             Result<Statement> item = items.get(index);
             index += 1;
             return item;
@@ -71,7 +71,7 @@ class FormatterTest {
         Formatter formatter = formatterOf(configuration, statements);
         StringBuilder output = new StringBuilder();
         while (formatter.hasNext()) {
-            output.append(((Success<String>) formatter.getNext()).value());
+            output.append(((Success<String>) formatter.next()).value());
         }
         return output.toString();
     }
@@ -129,7 +129,7 @@ class FormatterTest {
     void aFailureIsPassedThroughInsteadOfFormatted() {
         Formatter formatter = formatterOf(SPACED, List.of(new Failure<>("roto", ANY)));
 
-        Result<String> result = formatter.getNext();
+        Result<String> result = formatter.next();
 
         Failure<String> failure = assertInstanceOf(Failure.class, result);
         assertEquals("roto", failure.message());
@@ -150,7 +150,7 @@ class FormatterTest {
                                 new Success<>(declaration("a", 12)),
                                 new Success<>(declaration("b", 4))));
 
-        assertEquals("let a: number = 12;\n", ((Success<String>) formatter.getNext()).value());
+        assertEquals("let a: number = 12;\n", ((Success<String>) formatter.next()).value());
         assertTrue(formatter.hasNext());
     }
 }

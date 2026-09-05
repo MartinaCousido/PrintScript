@@ -25,7 +25,7 @@ public final class FormattingRunner {
         Formatter formatter = new Formatter(parser, configuration);
         List<Failure<?>> failures = new ArrayList<>();
         while (formatter.hasNext()) {
-            write(formatter.getNext(), destination, failures);
+            write(formatter.next(), destination, failures);
         }
         flush(destination);
         return failures;

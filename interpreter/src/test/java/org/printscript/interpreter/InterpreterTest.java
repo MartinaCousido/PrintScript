@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -18,7 +19,6 @@ import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -38,7 +38,7 @@ class InterpreterTest {
         }
     }
 
-    private static final class ResultStream implements PrintScriptIterator<Result<Statement>> {
+    private static final class ResultStream implements Iterator<Result<Statement>> {
 
         private final List<Result<Statement>> results;
         private int index;
@@ -54,7 +54,7 @@ class InterpreterTest {
         }
 
         @Override
-        public Result<Statement> getNext() {
+        public Result<Statement> next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
@@ -113,7 +113,7 @@ class InterpreterTest {
         Interpreter interpreter =
                 interpreterOf(printer, List.of(new Failure<>("falta un punto y coma", range)));
 
-        Result<?> result = interpreter.getNext();
+        Result<?> result = interpreter.next();
 
         Failure<?> failure = assertInstanceOf(Failure.class, result, String.valueOf(result));
         assertEquals("falta un punto y coma", failure.message());
@@ -145,7 +145,7 @@ class InterpreterTest {
     private static List<Result<?>> drain(Interpreter interpreter) {
         List<Result<?>> results = new ArrayList<>();
         while (interpreter.hasNext()) {
-            results.add(interpreter.getNext());
+            results.add(interpreter.next());
         }
         assertFalse(interpreter.hasNext());
         return results;

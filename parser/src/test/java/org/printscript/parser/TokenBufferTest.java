@@ -4,20 +4,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.printscript.common.Position;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 
 class TokenBufferTest {
 
-    private static final class ListTokenSource implements PrintScriptIterator<Token> {
+    private static final class ListTokenSource implements Iterator<Token> {
 
         private final List<Token> tokens;
         private int index;
@@ -33,7 +33,7 @@ class TokenBufferTest {
         }
 
         @Override
-        public Token getNext() {
+        public Token next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
@@ -43,12 +43,12 @@ class TokenBufferTest {
         }
     }
 
-    private static final class CountingTokenSource implements PrintScriptIterator<Token> {
+    private static final class CountingTokenSource implements Iterator<Token> {
 
-        private final PrintScriptIterator<Token> delegate;
+        private final Iterator<Token> delegate;
         private int provided;
 
-        private CountingTokenSource(PrintScriptIterator<Token> delegate) {
+        private CountingTokenSource(Iterator<Token> delegate) {
             this.delegate = delegate;
             this.provided = 0;
         }
@@ -59,8 +59,8 @@ class TokenBufferTest {
         }
 
         @Override
-        public Token getNext() {
-            Token token = delegate.getNext();
+        public Token next() {
+            Token token = delegate.next();
             provided = provided + 1;
             return token;
         }
@@ -126,8 +126,14 @@ class TokenBufferTest {
 
     @Test
     void sourceProvidesOnlyWhatWasLookedAhead() {
-        CountingTokenSource source = new CountingTokenSource(
-            new ListTokenSource(List.of(token("a", 1), token("b", 2), token("c", 3), token("d", 4))));
+        CountingTokenSource source =
+                new CountingTokenSource(
+                        new ListTokenSource(
+                                List.of(
+                                        token("a", 1),
+                                        token("b", 2),
+                                        token("c", 3),
+                                        token("d", 4))));
         TokenBuffer buffer = new TokenBuffer(source);
 
         buffer.lookahead(0);
@@ -145,8 +151,9 @@ class TokenBufferTest {
 
     @Test
     void commitWithoutLookaheadPullsExactlyTheCommittedTokens() {
-        CountingTokenSource source = new CountingTokenSource(
-            new ListTokenSource(List.of(token("a", 1), token("b", 2), token("c", 3))));
+        CountingTokenSource source =
+                new CountingTokenSource(
+                        new ListTokenSource(List.of(token("a", 1), token("b", 2), token("c", 3))));
         TokenBuffer buffer = new TokenBuffer(source);
 
         buffer.commit(2);

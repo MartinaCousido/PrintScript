@@ -53,7 +53,7 @@ class LexerAcceptanceTest {
         Lexer lexer = lexerOf(List.of(lines).iterator());
         List<String> described = new ArrayList<>();
         while (lexer.hasNext()) {
-            described.add(describe(lexer.getNext()));
+            described.add(describe(lexer.next()));
         }
         return described;
     }
@@ -182,7 +182,7 @@ class LexerAcceptanceTest {
         assertEquals(0, lines.requestedCount());
 
         for (int consumed = 0; consumed < 7; consumed = consumed + 1) {
-            lexer.getNext();
+            lexer.next();
         }
         assertEquals(1, lines.requestedCount());
 

@@ -17,7 +17,7 @@ public final class ExecutionRunner {
         Interpreter interpreter = InterpreterFactory.create(parser, printer);
         List<Failure<?>> failures = new ArrayList<>();
         while (interpreter.hasNext()) {
-            Result<?> result = interpreter.getNext();
+            Result<?> result = interpreter.next();
             if (result instanceof Failure<?> failure) {
                 failures.add(failure);
             }

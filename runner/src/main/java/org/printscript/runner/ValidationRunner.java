@@ -13,7 +13,7 @@ public final class ValidationRunner {
         Parser parser = StatementStreams.statementStream(lines);
         List<Failure<?>> failures = new ArrayList<>();
         while (parser.hasNext()) {
-            Result<?> result = parser.getNext();
+            Result<?> result = parser.next();
             if (result instanceof Failure<?> failure) {
                 failures.add(failure);
             }

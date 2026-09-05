@@ -92,7 +92,7 @@ class StreamingEndToEndTest {
         RecordingPrinter printer = new RecordingPrinter(lines);
         Interpreter interpreter = buildChain(lines, printer);
 
-        Result<?> first = interpreter.getNext();
+        Result<?> first = interpreter.next();
 
         assertTrue(lines.consumed < program.size(), "consumed=" + lines.consumed);
         assertEquals(1, lines.consumed);
@@ -112,7 +112,7 @@ class StreamingEndToEndTest {
         Interpreter interpreter = buildChain(lines, printer);
 
         while (interpreter.hasNext()) {
-            interpreter.getNext();
+            interpreter.next();
         }
 
         assertEquals(program.size(), printer.consumedAtEachPrint.size());

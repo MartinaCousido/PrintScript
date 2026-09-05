@@ -24,7 +24,7 @@ public final class AnalyzingRunner {
         List<Violation> violations = new ArrayList<>();
         List<Failure<?>> failures = new ArrayList<>();
         while (linter.hasNext()) {
-            collect(linter.getNext(), violations, failures);
+            collect(linter.next(), violations, failures);
         }
         return new AnalysisReport(violations, failures);
     }

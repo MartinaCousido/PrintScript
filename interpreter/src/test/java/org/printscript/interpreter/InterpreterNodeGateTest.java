@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -19,7 +20,6 @@ import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -39,7 +39,7 @@ class InterpreterNodeGateTest {
         }
     }
 
-    private static final class ResultStream implements PrintScriptIterator<Result<Statement>> {
+    private static final class ResultStream implements Iterator<Result<Statement>> {
 
         private final List<Result<Statement>> results;
         private int index;
@@ -55,7 +55,7 @@ class InterpreterNodeGateTest {
         }
 
         @Override
-        public Result<Statement> getNext() {
+        public Result<Statement> next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
@@ -91,8 +91,8 @@ class InterpreterNodeGateTest {
                                 new Success<>(
                                         new PrintlnStatement(new Identifier("x", ANY), ANY))));
 
-        Result<?> first = interpreter.getNext();
-        Result<?> second = interpreter.getNext();
+        Result<?> first = interpreter.next();
+        Result<?> second = interpreter.next();
 
         Failure<?> failure = assertInstanceOf(Failure.class, first, String.valueOf(first));
         assertEquals(range, failure.range());
@@ -113,7 +113,7 @@ class InterpreterNodeGateTest {
                                         new PrintlnStatement(
                                                 new StringLiteral("hola", ANY), ANY))));
 
-        Result<?> result = interpreter.getNext();
+        Result<?> result = interpreter.next();
 
         assertInstanceOf(Success.class, result, String.valueOf(result));
         assertEquals(List.of("hola"), printer.lines);

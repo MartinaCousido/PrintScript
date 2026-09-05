@@ -1,9 +1,9 @@
 package org.printscript.interpreter;
 
+import java.util.Iterator;
 import java.util.Set;
 import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 
@@ -11,18 +11,18 @@ import org.printscript.common.Success;
 // recie el flujo de sentencias del parser y por cada una llama al Executor
 // un error no corta la iteración, se sigue con la siguiente.
 // Decidir si frenar o no es una tarea de un módulo de más arriba que no existe
-public final class Interpreter implements PrintScriptIterator<Result<?>> {
+public final class Interpreter implements Iterator<Result<?>> {
 
-    private final PrintScriptIterator<Result<Statement>> statements;
+    private final Iterator<Result<Statement>> statements;
     private final Executor executor;
     private final Set<Class<? extends Statement>> supportedNodes;
 
-    public Interpreter(PrintScriptIterator<Result<Statement>> statements, Executor executor) {
+    public Interpreter(Iterator<Result<Statement>> statements, Executor executor) {
         this(statements, executor, null);
     }
 
     public Interpreter(
-            PrintScriptIterator<Result<Statement>> statements,
+            Iterator<Result<Statement>> statements,
             Executor executor,
             Set<Class<? extends Statement>> supportedNodes) {
         this.statements = statements;
@@ -36,8 +36,8 @@ public final class Interpreter implements PrintScriptIterator<Result<?>> {
     }
 
     @Override
-    public Result<?> getNext() {
-        Result<Statement> next = statements.getNext();
+    public Result<?> next() {
+        Result<Statement> next = statements.next();
         if (next instanceof Failure<Statement>) {
             return next;
         }
