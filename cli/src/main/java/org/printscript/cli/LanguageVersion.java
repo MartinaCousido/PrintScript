@@ -1,31 +1,66 @@
 package org.printscript.cli;
 
+import org.printscript.common.Version;
 import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.TypeConversionException;
 
-// la versión del lenguaje que la consigna pide como argumento; hoy es un choice de
-// una sola opción a propósito, ver docs/arquitectura.md seccion 6 (el runner no
-// tiene parámetro de versión, se removió por no hacer falta todavía)
+// la versión del lenguaje tal como se escribe en la línea de comandos
+// se queda en el cli porque es la forma del argumento; lo que viaja hacia adentro es el
+// Version del dominio, así que ningún módulo de abajo sabe cómo se escribió
 public enum LanguageVersion {
-    V1_0("1.0");
+    V1_0("1.0", Version.V10),
+    V1_1("1.1", Version.V11);
 
-    private final String label;
+    private final String written;
+    private final Version language;
 
-    LanguageVersion(String label) {
-        this.label = label;
+    LanguageVersion(String written, Version language) {
+        this.written = written;
+        this.language = language;
+    }
+
+    String label() {
+        return written;
+    }
+
+    Version domain() {
+        return language;
+    }
+
+    static String supported() {
+        StringBuilder labels = new StringBuilder();
+        for (LanguageVersion version : values()) {
+            if (!labels.isEmpty()) {
+                labels.append(", ");
+            }
+            labels.append(version.written);
+        }
+        return labels.toString();
+    }
+
+    static LanguageVersion of(String value) {
+        for (LanguageVersion version : values()) {
+            if (version.written.equals(value)) {
+                return version;
+            }
+        }
+        return null;
     }
 
     static final class Converter implements ITypeConverter<LanguageVersion> {
 
         @Override
         public LanguageVersion convert(String value) {
-            for (LanguageVersion version : values()) {
-                if (version.label.equals(value)) {
-                    return version;
-                }
+            LanguageVersion version = of(value);
+            if (version == null) {
+                throw new TypeConversionException(
+                        "'"
+                                + value
+                                + "' no es una versión soportada (valores válidos: "
+                                + supported()
+                                + ")");
             }
-            throw new TypeConversionException(
-                    "'" + value + "' no es una versión soportada (valores válidos: 1.0)");
+            return version;
         }
     }
 }

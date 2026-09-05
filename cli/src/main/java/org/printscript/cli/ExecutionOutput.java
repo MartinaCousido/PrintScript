@@ -1,13 +1,17 @@
 package org.printscript.cli;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.printscript.common.Version;
 import org.printscript.runner.ExecutionRunner;
 import org.printscript.runtime.OutputPrinter;
+import org.printscript.runtime.RuntimePorts;
 
 // Ejecuta un archivo PrintScript, opcionalmente guardando la salida de sus println en
 // un archivo además de mostrarla por consola (run-and-save). Lo usan ExecutionCommand
@@ -16,9 +20,18 @@ final class ExecutionOutput {
 
     private ExecutionOutput() {}
 
-    static ExitCode run(Path sourceFile, Path outputFile, PrintStream console, PrintStream err) {
+    // reader es el lector de comandos de la interfaz interactiva cuando la ejecución
+    // sale de ahí, y null cuando sale de un subcomando: en el REPL readInput tiene que
+    // leer del MISMO lector que la shell, o los dos se comen las líneas del otro
+    static ExitCode run(
+            Path sourceFile,
+            Path outputFile,
+            PrintStream console,
+            PrintStream err,
+            Version version,
+            BufferedReader reader) {
         if (outputFile == null) {
-            return execute(sourceFile, new ConsoleOutputPrinter(console), err);
+            return execute(sourceFile, new ConsoleOutputPrinter(console), err, version, reader);
         }
         // se valida el fuente antes de crear el archivo de salida para no dejar un .txt
         // vacío cuando el .ps no existe
@@ -29,7 +42,7 @@ final class ExecutionOutput {
             OutputPrinter printer =
                     new TeeOutputPrinter(
                             new ConsoleOutputPrinter(console), new WriterOutputPrinter(writer));
-            ExitCode code = execute(sourceFile, printer, err);
+            ExitCode code = execute(sourceFile, printer, err, version, reader);
             console.println("Salida guardada en " + outputFile);
             return code;
         } catch (IOException e) {
@@ -38,9 +51,25 @@ final class ExecutionOutput {
         }
     }
 
-    private static ExitCode execute(Path sourceFile, OutputPrinter printer, PrintStream err) {
+    private static ExitCode execute(
+            Path sourceFile,
+            OutputPrinter printer,
+            PrintStream err,
+            Version version,
+            BufferedReader reader) {
+        RuntimePorts ports =
+                new RuntimePorts(
+                        printer,
+                        new ConsoleInputProvider(standardInput(reader)),
+                        new SystemEnvProvider());
         return SourceFileProcessor.process(
-                sourceFile, lines -> new ExecutionRunner().run(lines, printer), err);
+                sourceFile, lines -> new ExecutionRunner().run(lines, ports, version), err);
+    }
+
+    private static BufferedReader standardInput(BufferedReader reader) {
+        return reader != null
+                ? reader
+                : new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
     }
 
     // deriva el archivo de salida junto al fuente: ejemplo.ps -> ejemplo.out.txt

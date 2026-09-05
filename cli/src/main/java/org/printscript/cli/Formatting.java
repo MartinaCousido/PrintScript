@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 import org.printscript.common.Failure;
+import org.printscript.common.Version;
 import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.runner.FormattingRunner;
 
@@ -27,7 +28,8 @@ final class Formatting {
             Path configFile,
             Path outputFile,
             PrintStream console,
-            PrintStream err) {
+            PrintStream err,
+            Version version) {
         FormatterConfiguration configuration;
         try {
             configuration = FormatterConfiguration.from(ConfigurationFiles.read(configFile));
@@ -36,7 +38,9 @@ final class Formatting {
             return ExitCode.USAGE_ERROR;
         }
         return SourceFileProcessor.read(
-                sourceFile, lines -> format(lines, configuration, outputFile, console, err), err);
+                sourceFile,
+                lines -> format(lines, configuration, outputFile, console, err, version),
+                err);
     }
 
     private static ExitCode format(
@@ -44,19 +48,20 @@ final class Formatting {
             FormatterConfiguration configuration,
             Path outputFile,
             PrintStream console,
-            PrintStream err) {
+            PrintStream err,
+            Version version) {
         if (outputFile == null) {
             // no se cierra la consola (rompería el stdout del resto del proceso), solo
             // se vuelca; el FormattingRunner además hace flush del Writer
             Writer destination = new OutputStreamWriter(console, StandardCharsets.UTF_8);
             List<Failure<?>> failures =
-                    new FormattingRunner().format(lines, configuration, destination);
+                    new FormattingRunner().format(lines, configuration, destination, version);
             flush(destination);
             return finish(failures, err);
         }
         try (Writer destination = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8)) {
             List<Failure<?>> failures =
-                    new FormattingRunner().format(lines, configuration, destination);
+                    new FormattingRunner().format(lines, configuration, destination, version);
             ExitCode code = finish(failures, err);
             console.println("Código formateado guardado en " + outputFile);
             return code;
