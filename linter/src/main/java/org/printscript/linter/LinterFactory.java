@@ -1,9 +1,9 @@
 package org.printscript.linter;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import org.printscript.ast.Statement;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.linter.config.IdentifierFormat;
 import org.printscript.linter.config.LinterConfiguration;
@@ -18,7 +18,7 @@ public final class LinterFactory {
     private LinterFactory() {}
 
     public static Linter create(
-            PrintScriptIterator<Result<Statement>> statements, LinterConfiguration configuration) {
+            Iterator<Result<Statement>> statements, LinterConfiguration configuration) {
         return new Linter(statements, rulesFor(configuration));
     }
 

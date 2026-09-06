@@ -98,7 +98,7 @@ Cinco cosas para leer en ese grafo:
 
 La consigna exige que un fuente que no entra en memoria se pueda procesar igual, y que no se haga todo el análisis léxico antes de pasar a la etapa siguiente. De ahí sale el mecanismo central: **ninguna etapa produce una colección, todas producen un flujo**.
 
-El contrato compartido es `PrintScriptIterator<T>`, con `hasNext()` y `getNext()`. Lo implementan las cinco etapas; lo único que cambia entre ellas es la `T`. `semantic` no transforma el dato: recibe `Result<Statement>` y devuelve `Result<Statement>`, así que se encadena sin que el parser ni el intérprete sepan que existe.
+El contrato compartido es el `Iterator<T>` estándar de Java, con `hasNext()` y `next()`. Lo implementan las cinco etapas; lo único que cambia entre ellas es la `T`. No hay una interfaz propia: el contrato de iteración es el de la plataforma. `semantic` no transforma el dato: recibe `Result<Statement>` y devuelve `Result<Statement>`, así que se encadena sin que el parser ni el intérprete sepan que existe.
 
 ```mermaid
 flowchart LR
@@ -154,9 +154,9 @@ Un error no detiene la iteración: la sentencia siguiente se procesa igual. Deci
 
 Tan importante como las dependencias que existen son las que se evitaron deliberadamente.
 
-**`parser` no depende de `lexer`.** Es la ausencia más importante del diseño. El `TokenBuffer` recibe un `PrintScriptIterator<Token>` cualquiera, así que el parser se escribe, compila y testea sin que exista el lexer — de hecho todos sus tests lo alimentan con listas de tokens armadas a mano. El parser depende de una abstracción estable (el vocabulario `token` más el contrato de iteración), no de una implementación volátil.
+**`parser` no depende de `lexer`.** Es la ausencia más importante del diseño. El `TokenBuffer` recibe un `Iterator<Token>` cualquiera, así que el parser se escribe, compila y testea sin que exista el lexer — de hecho todos sus tests lo alimentan con listas de tokens armadas a mano. El parser depende de una abstracción estable (el vocabulario `token` más el contrato de iteración), no de una implementación volátil.
 
-**`interpreter` no depende de `parser` ni de `lexer`.** Consume `PrintScriptIterator<Result<Statement>>`. De dónde salgan esas sentencias no es asunto suyo.
+**`interpreter` no depende de `parser` ni de `lexer`.** Consume `Iterator<Result<Statement>>`. De dónde salgan esas sentencias no es asunto suyo.
 
 **`interpreter` no depende de `token`.** Una vez armado el árbol, los tokens dejaron de existir. Si los conociera, un cambio léxico lo recompilaría sin razón.
 
@@ -222,7 +222,7 @@ Las fachadas del `runner` toman la versión como parámetro y mantienen además 
 
 ## 7. El módulo `runner`
 
-Es el único lugar del sistema donde el lexer y el parser se conocen entre sí. `ExecutionRunner` recibe el iterador de líneas y un `OutputPrinter`, le pide a las tres factories las piezas del pipeline, encadena `Lexer` → `TokenBuffer` → `Parser` → `Interpreter` y corre el bucle `while (hasNext) getNext`. El armado de la cadena lexer→buffer→parser vive en `StatementStreams`, una clase package-private con una única función estática que comparten las dos fachadas: la construcción existe en un solo lugar.
+Es el único lugar del sistema donde el lexer y el parser se conocen entre sí. `ExecutionRunner` recibe el iterador de líneas y un `OutputPrinter`, le pide a las tres factories las piezas del pipeline, encadena `Lexer` → `TokenBuffer` → `Parser` → `Interpreter` y corre el bucle `while (hasNext) next`. El armado de la cadena lexer→buffer→parser vive en `StatementStreams`, una clase package-private con una única función estática que comparten las dos fachadas: la construcción existe en un solo lugar.
 
 `ValidationRunner` es la segunda fachada: arma la misma cadena pero se detiene antes del interpreter, sin `OutputPrinter` — la firma de `validate` ni siquiera recibe uno. Recorre el flujo de sentencias, junta los `Failure` con su mensaje y su `Range`, y no ejecuta nada: validar un programa con `println` no imprime.
 
@@ -269,7 +269,7 @@ Es el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.m
 
 Es el *static code analyzer* que pide la consigna: analiza los programas PrintScript del usuario. **No tiene nada que ver con Checkstyle, PMD ni Spotless**, que analizan nuestro código Java y viven en `config/` y en `buildSrc/`.
 
-Es una etapa más del pipeline: implementa `PrintScriptIterator<Result<List<Violation>>>` y decora al parser, así que consume una sentencia por vez y un fuente que no entra en memoria se lintea igual que se ejecuta.
+Es una etapa más del pipeline: implementa `Iterator<Result<List<Violation>>>` y decora al parser, así que consume una sentencia por vez y un fuente que no entra en memoria se lintea igual que se ejecuta.
 
 **Las violaciones viajan como dato.** Por cada sentencia, o un `Failure` reenviado del parser, o un `Success` con la lista de lo que incumple — vacía cuando está limpia. Ninguna regla corta a las que siguen y ninguna violación corta a la sentencia siguiente, que es lo que pide la consigna cuando dice que hay que reportar todos los incumplimientos.
 

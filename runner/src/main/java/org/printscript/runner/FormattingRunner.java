@@ -9,7 +9,6 @@ import java.util.Iterator;
 import java.util.List;
 import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.common.Version;
@@ -34,12 +33,11 @@ public final class FormattingRunner {
             Version version) {
         // sin semantic a propósito: se tiene que poder trabajar sobre código con
         // errores de tipos (ver StatementStreams)
-        PrintScriptIterator<Result<Statement>> statements =
-                StatementStreams.statementStream(lines, version);
+        Iterator<Result<Statement>> statements = StatementStreams.statementStream(lines, version);
         Formatter formatter = new Formatter(statements, configuration);
         List<Failure<?>> failures = new ArrayList<>();
         while (formatter.hasNext()) {
-            write(formatter.getNext(), destination, failures);
+            write(formatter.next(), destination, failures);
         }
         flush(destination);
         return failures;

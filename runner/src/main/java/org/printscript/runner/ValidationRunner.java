@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.List;
 import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Version;
 
@@ -18,11 +17,11 @@ public final class ValidationRunner {
 
     // valida sintaxis y semántica sin ejecutar nada, como pide la consigna
     public List<Failure<?>> validate(Iterator<String> lines, Version version) {
-        PrintScriptIterator<Result<Statement>> statements =
+        Iterator<Result<Statement>> statements =
                 StatementStreams.validatedStatementStream(lines, version);
         List<Failure<?>> failures = new ArrayList<>();
         while (statements.hasNext()) {
-            Result<?> result = statements.getNext();
+            Result<?> result = statements.next();
             if (result instanceof Failure<?> failure) {
                 failures.add(failure);
             }

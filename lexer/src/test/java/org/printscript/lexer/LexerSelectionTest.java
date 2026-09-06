@@ -32,13 +32,14 @@ class LexerSelectionTest {
 
     @Test
     void theLongestMatchWins() {
-        Lexer lexer = lexerOf(
-            "abc",
-            List.of(
-                new FixedLexeme("ab", TokenType.OPERATOR),
-                new FixedLexeme("abc", TokenType.IDENTIFIER)));
+        Lexer lexer =
+                lexerOf(
+                        "abc",
+                        List.of(
+                                new FixedLexeme("ab", TokenType.OPERATOR),
+                                new FixedLexeme("abc", TokenType.IDENTIFIER)));
 
-        Token token = lexer.getNext();
+        Token token = lexer.next();
 
         assertEquals(TokenType.IDENTIFIER, token.type());
         assertEquals("abc", token.value());
@@ -47,24 +48,25 @@ class LexerSelectionTest {
 
     @Test
     void aTieOfLengthIsResolvedByTheOrderOfTheList() {
-        Lexer lexer = lexerOf(
-            "ab",
-            List.of(
-                new FixedLexeme("ab", TokenType.OPERATOR),
-                new FixedLexeme("ab", TokenType.PUNCTUATION)));
+        Lexer lexer =
+                lexerOf(
+                        "ab",
+                        List.of(
+                                new FixedLexeme("ab", TokenType.OPERATOR),
+                                new FixedLexeme("ab", TokenType.PUNCTUATION)));
 
-        assertEquals(TokenType.OPERATOR, lexer.getNext().type());
+        assertEquals(TokenType.OPERATOR, lexer.next().type());
     }
 
     @Test
     void withoutMatchAnUnknownIsEmittedAndTheIterationContinues() {
         Lexer lexer = lexerOf("#b", List.of(new FixedLexeme("b", TokenType.IDENTIFIER)));
 
-        Token unknown = lexer.getNext();
+        Token unknown = lexer.next();
         assertEquals(TokenType.UNKNOWN, unknown.type());
         assertEquals("#", unknown.value());
 
-        Token recognized = lexer.getNext();
+        Token recognized = lexer.next();
         assertEquals(TokenType.IDENTIFIER, recognized.type());
         assertEquals("b", recognized.value());
     }

@@ -1,21 +1,20 @@
 package org.printscript.semantic;
 
+import java.util.Iterator;
 import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 
 // la etapa que valida que un programa sintácticamente correcto además tenga sentido
 // envuelve al parser: consume Result<Statement> y produce Result<Statement>, así se
 // encadena sin que el parser ni el intérprete sepan que existe
-public final class SemanticAnalyzer implements PrintScriptIterator<Result<Statement>> {
+public final class SemanticAnalyzer implements Iterator<Result<Statement>> {
 
-    private final PrintScriptIterator<Result<Statement>> statements;
+    private final Iterator<Result<Statement>> statements;
     private final StatementChecker checker;
 
-    public SemanticAnalyzer(
-            PrintScriptIterator<Result<Statement>> statements, StatementChecker checker) {
+    public SemanticAnalyzer(Iterator<Result<Statement>> statements, StatementChecker checker) {
         this.statements = statements;
         this.checker = checker;
     }
@@ -26,8 +25,8 @@ public final class SemanticAnalyzer implements PrintScriptIterator<Result<Statem
     }
 
     @Override
-    public Result<Statement> getNext() {
-        Result<Statement> result = statements.getNext();
+    public Result<Statement> next() {
+        Result<Statement> result = statements.next();
         // los errores de sintaxis viajan tal cual: no se re-empaquetan ni pierden su rango
         if (!(result instanceof Success<Statement> success)) {
             return result;

@@ -1,24 +1,25 @@
 package org.printscript.parser;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.token.Token;
-//una ventanita sobre los tokens que van llegando
-//guarda los tokens que hacen falta ahora; hace posible no tener tod en memoria
+
+// una ventanita sobre los tokens que van llegando
+// guarda los tokens que hacen falta ahora; hace posible no tener tod en memoria
 public final class TokenBuffer {
 
-    private final PrintScriptIterator<Token> source;
+    private final Iterator<Token> source;
     private final List<Token> retained;
 
-    public TokenBuffer(PrintScriptIterator<Token> source) {
+    public TokenBuffer(Iterator<Token> source) {
         this.source = source;
         this.retained = new ArrayList<>();
     }
 
-    //permite espiar sin consumir
+    // permite espiar sin consumir
     public Optional<Token> lookahead(int position) {
         if (position < 0) {
             throw new IllegalArgumentException("position must be non-negative");
@@ -43,7 +44,7 @@ public final class TokenBuffer {
 
     private void fill(int size) {
         while (retained.size() < size && source.hasNext()) {
-            retained.add(source.getNext());
+            retained.add(source.next());
         }
     }
 }

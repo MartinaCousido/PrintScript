@@ -36,7 +36,7 @@ class ParserFactoryTest {
         Parser parser =
                 ParserFactory.create(
                         new TokenBuffer(new ListTokenIterator(List.of(tokens))), version);
-        return parser.getNext();
+        return parser.next();
     }
 
     // const x: number = 1;

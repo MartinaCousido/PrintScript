@@ -1,11 +1,12 @@
 package org.printscript.parser;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.token.Token;
-//convierte una lista de tokens común en el mismo PrintScriptIterator
-final class ListTokenIterator implements PrintScriptIterator<Token> {
+
+// convierte una lista de tokens común en el mismo Iterator
+final class ListTokenIterator implements Iterator<Token> {
 
     private final List<Token> tokens;
     private int index;
@@ -21,7 +22,7 @@ final class ListTokenIterator implements PrintScriptIterator<Token> {
     }
 
     @Override
-    public Token getNext() {
+    public Token next() {
         if (!hasNext()) {
             throw new NoSuchElementException();
         }

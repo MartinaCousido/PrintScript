@@ -104,7 +104,7 @@ class ParserTest {
                         identifier("x", 2),
                         semicolon(3));
 
-        Result<Statement> result = parser.getNext();
+        Result<Statement> result = parser.next();
 
         assertInstanceOf(Success.class, result);
         assertEquals(1, farewell.receivedStatements.size());
@@ -125,8 +125,8 @@ class ParserTest {
                         identifier("b", 5),
                         semicolon(6));
 
-        assertInstanceOf(Success.class, parser.getNext());
-        assertInstanceOf(Success.class, parser.getNext());
+        assertInstanceOf(Success.class, parser.next());
+        assertInstanceOf(Success.class, parser.next());
         assertFalse(parser.hasNext());
 
         assertEquals(
@@ -145,7 +145,7 @@ class ParserTest {
                         identifier("x", 2),
                         semicolon(3));
 
-        Result<Statement> result = parser.getNext();
+        Result<Statement> result = parser.next();
 
         Failure<Statement> failure = assertInstanceOf(Failure.class, result);
         assertEquals(rangeAt(1), failure.range());
@@ -164,9 +164,9 @@ class ParserTest {
                         keyword(GREET, 4),
                         semicolon(5));
 
-        assertInstanceOf(Failure.class, parser.getNext());
+        assertInstanceOf(Failure.class, parser.next());
         assertTrue(parser.hasNext());
-        assertInstanceOf(Success.class, parser.getNext());
+        assertInstanceOf(Success.class, parser.next());
         assertEquals(List.of(List.of(keyword(GREET, 4), semicolon(5))), greet.receivedStatements);
         assertFalse(parser.hasNext());
     }
@@ -179,7 +179,7 @@ class ParserTest {
                         keyword(GREET, 1),
                         identifier("x", 2));
 
-        Result<Statement> result = parser.getNext();
+        Result<Statement> result = parser.next();
 
         Failure<Statement> failure = assertInstanceOf(Failure.class, result);
         assertEquals(rangeAt(2), failure.range());
@@ -214,7 +214,7 @@ class ParserTest {
                         identifier("a", 2),
                         semicolon(3));
 
-        assertInstanceOf(Success.class, parser.getNext());
+        assertInstanceOf(Success.class, parser.next());
 
         assertEquals(
                 List.of(List.of(keyword(GREET, 1), identifier("a", 2))), greet.receivedStatements);
@@ -246,7 +246,7 @@ class ParserTest {
                         keyword(GREET, 1),
                         semicolon(2));
 
-        Failure<Statement> failure = assertInstanceOf(Failure.class, parser.getNext());
+        Failure<Statement> failure = assertInstanceOf(Failure.class, parser.next());
 
         assertEquals("Expected the moon before the end of the stream", failure.message());
         assertEquals(rangeAt(2), failure.range());
@@ -267,10 +267,10 @@ class ParserTest {
     }
 
     @Test
-    void getNextWithoutPendingStatementsThrows() {
+    void nextWithoutPendingStatementsThrows() {
         Parser parser = parserOf(List.of(new FakeStatementParser(GREET)));
 
         assertFalse(parser.hasNext());
-        assertThrows(NoSuchElementException.class, parser::getNext);
+        assertThrows(NoSuchElementException.class, parser::next);
     }
 }

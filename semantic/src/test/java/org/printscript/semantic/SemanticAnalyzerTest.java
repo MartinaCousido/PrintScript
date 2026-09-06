@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,6 @@ import org.printscript.ast.Statement;
 import org.printscript.ast.StringLiteral;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -26,7 +26,7 @@ class SemanticAnalyzerTest {
     private static final String MISSING_SEMICOLON = "Expected ';'";
 
     // fuente de statements en memoria, para probar la etapa sin lexer ni parser
-    private static final class Statements implements PrintScriptIterator<Result<Statement>> {
+    private static final class Statements implements Iterator<Result<Statement>> {
 
         private final List<Result<Statement>> results;
         private int index;
@@ -41,7 +41,7 @@ class SemanticAnalyzerTest {
         }
 
         @Override
-        public Result<Statement> getNext() {
+        public Result<Statement> next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
@@ -52,7 +52,7 @@ class SemanticAnalyzerTest {
     }
 
     // pasa por la factory a propósito: así el cableado por versión también queda probado
-    private static SemanticAnalyzer analyzerOver(PrintScriptIterator<Result<Statement>> source) {
+    private static SemanticAnalyzer analyzerOver(Iterator<Result<Statement>> source) {
         return SemanticFactory.create(source, Version.V10);
     }
 
@@ -71,7 +71,7 @@ class SemanticAnalyzerTest {
         Failure<Statement> syntaxError = new Failure<>(MISSING_SEMICOLON, rangeAt(3, 7));
         SemanticAnalyzer analyzer = analyzerOver(new Statements(List.of(syntaxError)));
 
-        Result<Statement> result = analyzer.getNext();
+        Result<Statement> result = analyzer.next();
 
         assertSame(syntaxError, result);
     }
@@ -82,7 +82,7 @@ class SemanticAnalyzerTest {
                 analyzerOver(
                         new Statements(List.of(new Failure<>(MISSING_SEMICOLON, rangeAt(3, 7)))));
 
-        Failure<Statement> failure = assertInstanceOf(Failure.class, analyzer.getNext());
+        Failure<Statement> failure = assertInstanceOf(Failure.class, analyzer.next());
 
         assertEquals(MISSING_SEMICOLON, failure.message());
         assertEquals(rangeAt(3, 7), failure.range());
@@ -95,8 +95,8 @@ class SemanticAnalyzerTest {
         SemanticAnalyzer analyzer =
                 analyzerOver(new Statements(List.of(new Success<>(first), new Success<>(second))));
 
-        assertEquals(first, assertInstanceOf(Success.class, analyzer.getNext()).value());
-        assertEquals(second, assertInstanceOf(Success.class, analyzer.getNext()).value());
+        assertEquals(first, assertInstanceOf(Success.class, analyzer.next()).value());
+        assertEquals(second, assertInstanceOf(Success.class, analyzer.next()).value());
         assertFalse(analyzer.hasNext());
     }
 
@@ -110,8 +110,8 @@ class SemanticAnalyzerTest {
                                         new Failure<>(MISSING_SEMICOLON, rangeAt(1, 5)),
                                         new Success<>(valid))));
 
-        assertInstanceOf(Failure.class, analyzer.getNext());
-        assertInstanceOf(Success.class, analyzer.getNext());
+        assertInstanceOf(Failure.class, analyzer.next());
+        assertInstanceOf(Success.class, analyzer.next());
     }
 
     @Test
@@ -121,7 +121,7 @@ class SemanticAnalyzerTest {
         SemanticAnalyzer analyzer =
                 analyzerOver(new Statements(List.of(new Success<>(printUndeclared))));
 
-        Failure<Statement> failure = assertInstanceOf(Failure.class, analyzer.getNext());
+        Failure<Statement> failure = assertInstanceOf(Failure.class, analyzer.next());
 
         assertEquals("Variable no declarada: x", failure.message());
         assertEquals(use, failure.range());
@@ -137,8 +137,8 @@ class SemanticAnalyzerTest {
                         new Statements(
                                 List.of(new Success<>(printUndeclared), new Success<>(valid))));
 
-        assertInstanceOf(Failure.class, analyzer.getNext());
-        assertInstanceOf(Success.class, analyzer.getNext());
+        assertInstanceOf(Failure.class, analyzer.next());
+        assertInstanceOf(Success.class, analyzer.next());
     }
 
     @Test

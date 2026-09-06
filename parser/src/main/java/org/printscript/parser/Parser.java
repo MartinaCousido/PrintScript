@@ -1,18 +1,18 @@
 package org.printscript.parser;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.token.Token;
 
 // pieza principal del módulo
 // entrega una sentencia por vez, como el lexer entrega un token por vez
-public final class Parser implements PrintScriptIterator<Result<Statement>> {
+public final class Parser implements Iterator<Result<Statement>> {
 
     private final TokenBuffer buffer;
     private final List<StatementParser> statementParsers;
@@ -34,7 +34,7 @@ public final class Parser implements PrintScriptIterator<Result<Statement>> {
 
     // junta los tokens de una sentencia; dónde termina lo decide el delimitador
     @Override
-    public Result<Statement> getNext() {
+    public Result<Statement> next() {
         if (!hasNext()) {
             throw new NoSuchElementException();
         }

@@ -1,8 +1,8 @@
 package org.printscript.semantic;
 
+import java.util.Iterator;
 import java.util.Set;
 import org.printscript.ast.Statement;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Version;
 
@@ -12,8 +12,7 @@ public final class SemanticFactory {
 
     private SemanticFactory() {}
 
-    public static SemanticAnalyzer create(
-            PrintScriptIterator<Result<Statement>> statements, Version version) {
+    public static SemanticAnalyzer create(Iterator<Result<Statement>> statements, Version version) {
         return new SemanticAnalyzer(statements, new StatementChecker(supportedTypes(version)));
     }
 

@@ -3,6 +3,7 @@ package org.printscript.linter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,6 @@ import org.printscript.ast.Operator;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
 import org.printscript.common.Position;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -25,7 +25,7 @@ class LinterFactoryTest {
     private static final Range ANY = new Range(new Position(1, 1), new Position(1, 1));
     private static final String MAL = "mal_escrito";
 
-    private static final class OneStatement implements PrintScriptIterator<Result<Statement>> {
+    private static final class OneStatement implements Iterator<Result<Statement>> {
 
         private final Statement statement;
         private boolean served;
@@ -40,7 +40,7 @@ class LinterFactoryTest {
         }
 
         @Override
-        public Result<Statement> getNext() {
+        public Result<Statement> next() {
             served = true;
             return new Success<>(statement);
         }
@@ -55,7 +55,7 @@ class LinterFactoryTest {
 
     private static List<Violation> violationsOf(Statement statement, LinterConfiguration config) {
         Linter linter = LinterFactory.create(new OneStatement(statement), config);
-        if (linter.getNext() instanceof Success<List<Violation>> success) {
+        if (linter.next() instanceof Success<List<Violation>> success) {
             return success.value();
         }
         throw new AssertionError("se esperaba un Success");

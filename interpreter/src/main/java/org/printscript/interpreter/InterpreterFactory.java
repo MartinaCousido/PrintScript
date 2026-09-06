@@ -1,6 +1,7 @@
 package org.printscript.interpreter;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.ConstDeclaration;
@@ -8,7 +9,6 @@ import org.printscript.ast.IfStatement;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
 import org.printscript.ast.VariableDeclaration;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Version;
 import org.printscript.runtime.RuntimePorts;
@@ -21,9 +21,7 @@ public final class InterpreterFactory {
     private InterpreterFactory() {}
 
     public static Interpreter create(
-            PrintScriptIterator<Result<Statement>> statements,
-            RuntimePorts ports,
-            Version version) {
+            Iterator<Result<Statement>> statements, RuntimePorts ports, Version version) {
         Executor executor = new Executor(new Environment(), ports);
         return new Interpreter(statements, executor, supportedNodes(version));
     }

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Iterator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +13,7 @@ class MappedResultsTest {
 
     private static final Range ANY = new Range(new Position(1, 1), new Position(1, 1));
 
-    private static final class ListResults implements PrintScriptIterator<Result<String>> {
+    private static final class ListResults implements Iterator<Result<String>> {
 
         private final List<Result<String>> items;
         private int index;
@@ -27,7 +28,7 @@ class MappedResultsTest {
         }
 
         @Override
-        public Result<String> getNext() {
+        public Result<String> next() {
             Result<String> item = items.get(index);
             index += 1;
             return item;
@@ -46,14 +47,14 @@ class MappedResultsTest {
     void aSuccessIsMapped() {
         MappedResults<String, Integer> lengths = lengthsOf(List.of(new Success<>("hola")));
 
-        assertEquals(4, ((Success<Integer>) lengths.getNext()).value());
+        assertEquals(4, ((Success<Integer>) lengths.next()).value());
     }
 
     @Test
     void aFailurePassesThroughWithItsMessageAndRange() {
         MappedResults<String, Integer> lengths = lengthsOf(List.of(new Failure<>("roto", ANY)));
 
-        Failure<Integer> failure = assertInstanceOf(Failure.class, lengths.getNext());
+        Failure<Integer> failure = assertInstanceOf(Failure.class, lengths.next());
         assertEquals("roto", failure.message());
         assertEquals(ANY, failure.range());
     }
@@ -68,7 +69,7 @@ class MappedResultsTest {
         ListResults source = new ListResults(List.of(new Success<>("hola"), new Success<>("chau")));
         MappedResults<String, Integer> lengths = new MappedResults<>(source, String::length);
 
-        lengths.getNext();
+        lengths.next();
 
         assertEquals(1, source.consumed());
         assertTrue(lengths.hasNext());

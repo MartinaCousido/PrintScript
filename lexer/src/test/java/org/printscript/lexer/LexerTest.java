@@ -61,8 +61,8 @@ class LexerTest {
     void positionAdvancesToTheNextLine() {
         Lexer lexer = lexerOf("a", "  b");
 
-        lexer.getNext();
-        Token second = lexer.getNext();
+        lexer.next();
+        Token second = lexer.next();
 
         assertEquals(new Range(new Position(2, 3), new Position(2, 3)), second.range());
     }
@@ -74,10 +74,10 @@ class LexerTest {
 
         assertEquals(0, lines.requestedCount());
 
-        lexer.getNext();
+        lexer.next();
         assertEquals(1, lines.requestedCount());
 
-        lexer.getNext();
+        lexer.next();
         assertEquals(1, lines.requestedCount());
 
         assertTrue(lexer.hasNext());

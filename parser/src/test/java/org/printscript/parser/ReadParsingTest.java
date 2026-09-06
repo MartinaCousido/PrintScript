@@ -20,7 +20,7 @@ import org.printscript.common.Version;
 class ReadParsingTest {
 
     private static Result<Statement> parse(Version version, String source) {
-        return ParserFactory.create(Lexemes.bufferOf(source), version).getNext();
+        return ParserFactory.create(Lexemes.bufferOf(source), version).next();
     }
 
     private static Object initializerOf(String source) {

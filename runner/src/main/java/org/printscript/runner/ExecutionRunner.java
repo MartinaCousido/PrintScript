@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Optional;
 import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Result;
 import org.printscript.common.Version;
 import org.printscript.interpreter.Interpreter;
@@ -33,12 +32,12 @@ public final class ExecutionRunner {
     public List<Failure<?>> run(Iterator<String> lines, RuntimePorts ports, Version version) {
         // arma lexer + buffer + parser + semantic: el Executor tiene como precondición
         // recibir sentencias ya validadas, y esta cadena es la que se lo garantiza
-        PrintScriptIterator<Result<Statement>> statements =
+        Iterator<Result<Statement>> statements =
                 StatementStreams.validatedStatementStream(lines, version);
         Interpreter interpreter = InterpreterFactory.create(statements, ports, version);
         List<Failure<?>> failures = new ArrayList<>();
         while (interpreter.hasNext()) {
-            Result<?> result = interpreter.getNext();
+            Result<?> result = interpreter.next();
             if (result instanceof Failure<?> failure) {
                 failures.add(failure);
             }

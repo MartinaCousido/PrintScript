@@ -1,13 +1,14 @@
 package org.printscript.common;
 
+import java.util.Iterator;
 import java.util.function.Function;
 
-public final class MappedResults<S, T> implements PrintScriptIterator<Result<T>> {
+public final class MappedResults<S, T> implements Iterator<Result<T>> {
 
-    private final PrintScriptIterator<Result<S>> source;
+    private final Iterator<Result<S>> source;
     private final Function<S, T> mapping;
 
-    public MappedResults(PrintScriptIterator<Result<S>> source, Function<S, T> mapping) {
+    public MappedResults(Iterator<Result<S>> source, Function<S, T> mapping) {
         this.source = source;
         this.mapping = mapping;
     }
@@ -18,8 +19,8 @@ public final class MappedResults<S, T> implements PrintScriptIterator<Result<T>>
     }
 
     @Override
-    public Result<T> getNext() {
-        Result<S> next = source.getNext();
+    public Result<T> next() {
+        Result<S> next = source.next();
         if (next instanceof Failure<S> failure) {
             return new Failure<>(failure.message(), failure.range());
         }

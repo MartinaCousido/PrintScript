@@ -19,7 +19,7 @@ import org.printscript.common.Version;
 class IfParserTest {
 
     private static Result<Statement> parse(String source) {
-        return ParserFactory.create(Lexemes.bufferOf(source), Version.V11).getNext();
+        return ParserFactory.create(Lexemes.bufferOf(source), Version.V11).next();
     }
 
     private static IfStatement conditional(String source) {
@@ -135,7 +135,7 @@ class IfParserTest {
     void version10DoesNotKnowTheIfStatement() {
         Result<Statement> result =
                 ParserFactory.create(Lexemes.bufferOf("if ( a ) { println ( 1 ) ; }"), Version.V10)
-                        .getNext();
+                        .next();
 
         assertFalse(result instanceof Success<Statement>);
     }

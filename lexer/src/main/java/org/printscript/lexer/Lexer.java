@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.printscript.common.Position;
-import org.printscript.common.PrintScriptIterator;
 import org.printscript.common.Range;
 import org.printscript.lexer.constructors.TokenConstructor;
 import org.printscript.token.Token;
@@ -16,7 +15,7 @@ import org.printscript.token.TokenType;
 // campos mutables de un hot path; envolverlos en Optional agregaría boxing en
 // cada token sin cambiar la lógica.
 @SuppressWarnings("PMD.NullAssignment")
-public final class Lexer implements PrintScriptIterator<Token> {
+public final class Lexer implements Iterator<Token> {
 
     private final Iterator<String> lines;
     private final List<TokenConstructor> constructors;
@@ -43,7 +42,7 @@ public final class Lexer implements PrintScriptIterator<Token> {
     }
 
     @Override
-    public Token getNext() {
+    public Token next() {
         if (!hasNext()) {
             throw new NoSuchElementException();
         }

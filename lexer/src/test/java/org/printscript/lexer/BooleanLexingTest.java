@@ -15,7 +15,7 @@ class BooleanLexingTest {
         Lexer lexer = LexerFactory.create(List.of(line).iterator(), version);
         List<String> described = new ArrayList<>();
         while (lexer.hasNext()) {
-            Token token = lexer.getNext();
+            Token token = lexer.next();
             described.add(token.type() + "|" + token.value());
         }
         return described;
