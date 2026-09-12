@@ -41,19 +41,19 @@ public final class IfParser implements StatementParser {
     public Result<Statement> parse(TokenBuffer tokens) {
         Token keyword = tokens.lookahead(0).orElseThrow();
         tokens.commit(1);
+        return condition(tokens, keyword)
+                .andThen(
+                        condition ->
+                                block(tokens, condition.range())
+                                        .andThen(
+                                                then ->
+                                                        ifStatement(
+                                                                tokens, keyword, condition, then)));
+    }
 
-        Result<Expression> conditionResult = condition(tokens, keyword);
-        if (conditionResult instanceof Failure<Expression> failure) {
-            return Tokens.forward(failure);
-        }
-        Expression condition = ((Success<Expression>) conditionResult).value();
-
-        Result<Block> thenResult = block(tokens, condition.range());
-        if (thenResult instanceof Failure<Block> failure) {
-            return Tokens.forward(failure);
-        }
-        Block thenBlock = ((Success<Block>) thenResult).value();
-
+    // el else es opcional, y de eso depende dónde termina el if entero
+    private Result<Statement> ifStatement(
+            TokenBuffer tokens, Token keyword, Expression condition, Block thenBlock) {
         if (!startsElse(tokens)) {
             return new Success<>(
                     new IfStatement(
@@ -64,18 +64,17 @@ public final class IfParser implements StatementParser {
         }
         Token elseKeyword = tokens.lookahead(0).orElseThrow();
         tokens.commit(1);
+        return elseBranch(tokens, elseKeyword)
+                .map(branch -> withElse(keyword, condition, thenBlock, branch));
+    }
 
-        Result<Statement> elseResult = elseBranch(tokens, elseKeyword);
-        if (elseResult instanceof Failure<Statement> failure) {
-            return failure;
-        }
-        Statement elseBranch = ((Success<Statement>) elseResult).value();
-        return new Success<>(
-                new IfStatement(
-                        condition,
-                        thenBlock,
-                        Optional.of(elseBranch),
-                        new Range(keyword.range().start(), elseBranch.range().end())));
+    private static IfStatement withElse(
+            Token keyword, Expression condition, Block thenBlock, Statement branch) {
+        return new IfStatement(
+                condition,
+                thenBlock,
+                Optional.of(branch),
+                new Range(keyword.range().start(), branch.range().end()));
     }
 
     // else seguido de otro if es "else if": la rama es ese if, sin ningún Block que lo
@@ -84,55 +83,46 @@ public final class IfParser implements StatementParser {
         if (matches(tokens)) {
             return parse(tokens);
         }
-        Result<Block> blockResult = block(tokens, elseKeyword.range());
-        if (blockResult instanceof Failure<Block> failure) {
-            return Tokens.forward(failure);
-        }
-        return new Success<>(((Success<Block>) blockResult).value());
+        return block(tokens, elseKeyword.range()).map(block -> (Statement) block);
     }
 
     private Result<Expression> condition(TokenBuffer tokens, Token keyword) {
-        Result<Token> openResult =
-                Tokens.expect(
-                        tokens,
-                        token -> Tokens.isPunctuation(token, "("),
-                        "Expected '(' after 'if'",
-                        keyword.range());
-        if (openResult instanceof Failure<Token> failure) {
-            return Tokens.forward(failure);
-        }
-        Token open = ((Success<Token>) openResult).value();
+        return openParenthesis(tokens, keyword)
+                .andThen(open -> expressionBuilder.build(tokens, open.range()))
+                .andThen(condition -> closeParenthesis(tokens, condition).map(end -> condition));
+    }
 
-        Result<Expression> conditionResult = expressionBuilder.build(tokens, open.range());
-        if (conditionResult instanceof Failure<Expression> failure) {
-            return failure;
-        }
-        Expression condition = ((Success<Expression>) conditionResult).value();
+    private Result<Token> openParenthesis(TokenBuffer tokens, Token keyword) {
+        return Tokens.expect(
+                tokens,
+                token -> Tokens.isPunctuation(token, "("),
+                "Expected '(' after 'if'",
+                keyword.range());
+    }
 
-        Result<Token> closeResult =
-                Tokens.expect(
-                        tokens,
-                        token -> Tokens.isPunctuation(token, ")"),
-                        "Expected ')' after the if condition",
-                        condition.range());
-        if (closeResult instanceof Failure<Token> failure) {
-            return Tokens.forward(failure);
-        }
-        return new Success<>(condition);
+    private Result<Token> closeParenthesis(TokenBuffer tokens, Expression condition) {
+        return Tokens.expect(
+                tokens,
+                token -> Tokens.isPunctuation(token, ")"),
+                "Expected ')' after the if condition",
+                condition.range());
     }
 
     private Result<Block> block(TokenBuffer tokens, Range previous) {
-        Result<Token> openResult =
-                Tokens.expect(
-                        tokens,
-                        token -> Tokens.isPunctuation(token, "{"),
-                        "Expected '{' to open the block",
-                        previous);
-        if (openResult instanceof Failure<Token> failure) {
-            return Tokens.forward(failure);
-        }
-        Token open = ((Success<Token>) openResult).value();
+        return openBrace(tokens, previous).andThen(open -> statements(tokens, open));
+    }
 
+    private Result<Token> openBrace(TokenBuffer tokens, Range previous) {
+        return Tokens.expect(
+                tokens,
+                token -> Tokens.isPunctuation(token, "{"),
+                "Expected '{' to open the block",
+                previous);
+    }
+
+    // el único lugar que sigue desarmando el Result a mano: es un bucle que acumula, y
+    // ahí no hay cadena que encadenar
+    private Result<Block> statements(TokenBuffer tokens, Token open) {
         List<Statement> statements = new ArrayList<>();
         while (!startsClosingBrace(tokens)) {
             Result<Statement> statement = nextStatement(tokens, open.range());
