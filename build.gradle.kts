@@ -10,6 +10,7 @@ jacoco {
     toolVersion = "0.8.14"
 }
 
+// el task hace un reporte de cobertura unificado de los 13 módulos
 tasks.register<JacocoReport>("jacocoRootReport") {
     dependsOn(subprojects.map { it.tasks.named("test") })
     executionData(subprojects.map { it.fileTree(it.layout.buildDirectory).include("jacoco/test.exec") })
@@ -28,7 +29,7 @@ repositories {
 }
 
 val cpd: Configuration by configurations.creating
-
+// detección de código duplicado - CPD
 dependencies {
     cpd("net.sourceforge.pmd:pmd-cli:7.26.0")
     cpd("net.sourceforge.pmd:pmd-java:7.26.0")
@@ -37,6 +38,12 @@ dependencies {
 tasks.register<JavaExec>("cpdCheck") {
     val reporte = layout.buildDirectory.file("reports/cpd/cpd.txt")
     outputs.file(reporte)
+    // Las fuentes entran como strings en args, así que Gradle no las ve como inputs.
+    // Sin declararlas, el task queda UP-TO-DATE apenas existe el reporte y CPD deja de
+    // correr aunque cambie el código: la duplicación solo se detectaría en un build limpio.
+    subprojects.forEach {
+        inputs.dir(it.file("src/main/java")).withPathSensitivity(PathSensitivity.RELATIVE)
+    }
     classpath = cpd
     mainClass.set("net.sourceforge.pmd.cli.PmdCli")
     args("cpd", "--minimum-tokens", "50", "--language", "java")
@@ -52,20 +59,12 @@ tasks.named("check") {
     dependsOn("cpdCheck")
 }
 
+// le dice a git que busque los hooks en config/githooks en vez de en .git/hooks (que no se clona)
 tasks.register<Exec>("installGitHooks") {
     commandLine("git", "config", "core.hooksPath", "config/githooks")
 }
 
-// Los archivos de build no los formateaba nadie: el convention plugin
-// printscript.format lo aplican los ocho módulos y solo alcanza a los .java.
-// Esta configuración vive en el raíz porque desde acá se llega a todos los
-// .gradle.kts del repo, incluidos los de buildSrc, que es un build separado
-// y no lo alcanza ninguna otra configuración.
-//
-// Sin ratchetFrom, a diferencia del convention plugin de los .java. Ahí el
-// ratchet evita un reformateo de 83 archivos; acá los 16 archivos de build y
-// texto YA cumplen, así que no hay nada que absorber de a poco y conviene la
-// cobertura completa desde el día uno.
+// formatea kotlinGradle y format("textos")
 spotless {
     kotlinGradle {
         target(
@@ -74,12 +73,6 @@ spotless {
             "buildSrc/*.gradle.kts",
             "buildSrc/src/main/kotlin/*.gradle.kts",
         )
-        // Versión fijada, igual que checkstyle, jacoco y google-java-format.
-        //
-        // El indent va explícito porque el paso de ktlint de Spotless NO toma el
-        // valor del .editorconfig: sin esto reindenta los .kts de 4 a 2 espacios.
-        // Tiene que seguir coincidiendo con lo que declara el .editorconfig, que
-        // es lo que lee el IDE.
         ktlint("1.5.0").editorConfigOverride(mapOf("indent_size" to "4"))
     }
 

@@ -1,3 +1,5 @@
+// compila los 3 conventions plugins + sus dependencias propias
+
 plugins {
     `kotlin-dsl`
 }

@@ -1,14 +1,5 @@
 # Formato del proyecto PrintScript.
-#
-# La fuente de verdad del formato de Java es Spotless con google-java-format
-# en variante AOSP. Este archivo NO compite con el formateador: existe para
-# que el IDE escriba desde el principio lo mismo que spotlessApply va a
-# imponer. Si los dos no coinciden, el IDE escribe una cosa, el formateador
-# la reescribe a otra, y el equipo termina peleando contra su herramienta.
-#
 # Si mañana cambia el estilo del formateador, este archivo cambia con él.
-#
-# Lo leen IntelliJ, VS Code y Vim sin instalar nada.
 
 root = true
 
@@ -24,23 +15,22 @@ indent_style = space
 indent_size = 4
 max_line_length = 100
 
-# Kotlin, incluido el DSL de Gradle, usa 4 espacios: es la convención oficial
-# del lenguaje y es lo que ya tienen los archivos de build del repo. ktlint lee
-# este valor de acá, así que es el que decide cómo quedan los .gradle.kts.
+#convención oficial de Kotlin
 [*.kts]
 indent_style = space
 indent_size = 4
 
-# Los formatos de configuración sí usan 2 espacios.
+#convención de los formatos de config
 [*.{yml,yaml,json}]
 indent_style = space
 indent_size = 2
 
-# Los .xml de configuración (checkstyle, pmd) siguen la indentación que ya
-# tiene checkstyle.xml.
+# para que checkstyle.xml y pmd no se desalineen
 [*.xml]
 indent_style = space
 indent_size = 4
+
+# --las últimas dos son excepciones deliberadas a la regla de [*]--
 
 # El script del wrapper para Windows tiene que quedar en CRLF o deja de
 # funcionar. Es la única excepción a la regla de saltos de línea de arriba.

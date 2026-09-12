@@ -1,3 +1,6 @@
+// qué es un módulo
+// Java 25 + JUnit 5 + repos
+
 plugins {
     id("java-library")
 }

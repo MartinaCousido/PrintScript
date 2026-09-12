@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# encuentra java y arma los argumentos
+# gradle-wrapper.properties baja/cachea gradle 9.5.0 en gradle/wrapper/dists
+
 #
 # Copyright © 2015 the original authors.
 #
