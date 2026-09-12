@@ -3,10 +3,14 @@
 
 plugins {
     id("java-library")
+    id("printscript.publish")
 }
 
 group = "org.printscript"
-version = "0.1.0"
+
+// La versión la manda el tag que dispara el CD (-PprintscriptVersion=1.2.3). El default
+// es para el trabajo diario: en local nadie publica, así que el número no importa.
+version = providers.gradleProperty("printscriptVersion").getOrElse("0.1.0-SNAPSHOT")
 
 repositories {
     mavenCentral()

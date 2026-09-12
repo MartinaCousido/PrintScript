@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "org.printscript"
-version = "0.1.0"
+version = providers.gradleProperty("printscriptVersion").getOrElse("0.1.0-SNAPSHOT")
 
 jacoco {
     toolVersion = "0.8.14"

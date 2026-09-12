@@ -1,0 +1,96 @@
+name: CD
+
+# El CI verifica cada push y cada PR; el CD entrega, y entregar es una decisión
+# explícita: corre solo cuando alguien tagea una versión.
+#
+#   git tag v0.2.0 && git push origin v0.2.0
+#
+# El tag es la única fuente del número de versión: se le saca la "v" y se pasa como
+# -PprintscriptVersion, que es lo que leen el convention plugin y el build raíz. Así
+# el .jar publicado, el zip de la CLI y el tag dicen siempre lo mismo.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # crear el GitHub Release
+  packages: write # publicar en GitHub Packages
+
+jobs:
+  publicar:
+    name: Publicar la versión del tag
+    runs-on: ubuntu-latest
+
+    steps:
+      # fetch-depth 0 por la misma razón que en el CI: el ratchet de Spotless compara
+      # contra origin/master y necesita la historia completa.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Instalar el JDK del toolchain declarado
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Derivar la versión del tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      # No se publica nada que no pase los mismos chequeos que el CI. Un tag sobre un
+      # commit roto tiene que fallar acá y no quedar publicado a medias.
+      - name: Verificar antes de publicar
+        run: ./gradlew build -PprintscriptVersion=$VERSION --no-daemon --warning-mode all
+
+      - name: Armar la distribución de la CLI
+        run: ./gradlew :cli:distZip :cli:distTar -PprintscriptVersion=$VERSION --no-daemon
+
+      # Los trece módulos, cada uno con su jar, su jar de fuentes y su POM con las
+      # dependencias entre módulos ya resueltas.
+      - name: Publicar los módulos en GitHub Packages
+        run: ./gradlew publish -PprintscriptVersion=$VERSION --no-daemon
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar el Release con el ejecutable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat > notas.tpl <<'NOTAS'
+          ## Requisitos
+
+          Java 25 o superior. Los módulos se compilan con el toolchain declarado en
+          `printscript.java-library`, así que un JRE anterior falla con
+          `UnsupportedClassVersionError`.
+
+          ## Usar la CLI
+
+          ```sh
+          unzip printscript-__VERSION__.zip
+          ./printscript-__VERSION__/bin/printscript execution programa.ps
+          ./printscript-__VERSION__/bin/printscript validate  programa.ps
+          ```
+
+          Sin argumentos entra en modo interactivo y lee de stdin.
+
+          ## Usar los módulos como librería
+
+          ```kotlin
+          repositories {
+              maven("https://maven.pkg.github.com/ingsis-ua/ingsis-interpreter")
+          }
+          dependencies {
+              implementation("org.printscript:runner:__VERSION__")
+          }
+          ```
+          NOTAS
+          sed "s/__VERSION__/$VERSION/g" notas.tpl > notas.md
+          gh release create "$GITHUB_REF_NAME" \
+            "cli/build/distributions/printscript-$VERSION.zip" \
+            "cli/build/distributions/printscript-$VERSION.tar" \
+            --title "PrintScript $VERSION" \
+            --notes-file notas.md

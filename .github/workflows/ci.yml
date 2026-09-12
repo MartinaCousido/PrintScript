@@ -31,7 +31,7 @@ jobs:
       - name: Preparar Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Build de los ocho módulos
+      - name: Build de los trece módulos
         run: ./gradlew build jacocoRootReport --no-daemon --warning-mode all
 
       - name: Publicar los reportes de test

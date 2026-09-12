@@ -250,6 +250,40 @@ Checkstyle, PMD, CPD y cobertura (por módulo y agregada), también cuando el bu
 falla, que es cuando más sirven. El JDK del toolchain se instala en el runner para no
 descargarlo en cada corrida.
 
+## Entrega continua
+
+El CI verifica; el CD entrega, y entregar es una decisión explícita. El workflow de
+[`.github/workflows/cd.yml`](.github/workflows/cd.yml) corre **solo cuando se tagea una
+versión**:
+
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+El tag es la única fuente del número de versión: se le saca la `v` y se pasa como
+`-PprintscriptVersion`, así el jar publicado, el zip de la CLI y el tag dicen siempre lo
+mismo. Antes de publicar corre `./gradlew build` completo: un tag sobre un commit roto
+falla ahí y no queda publicado a medias.
+
+Publica dos cosas:
+
+- **El ejecutable de la CLI** como [GitHub Release](../../releases): `printscript-<version>.zip`
+  y `.tar`. Se descarga, se descomprime y se corre sin compilar nada. Requiere **Java 25**.
+- **Los trece módulos** en GitHub Packages, cada uno con su jar, su jar de fuentes y su POM:
+
+  ```kotlin
+  repositories {
+      maven("https://maven.pkg.github.com/ingsis-ua/ingsis-interpreter")
+  }
+  dependencies {
+      implementation("org.printscript:runner:0.2.0")
+  }
+  ```
+
+Para probar la publicación sin tocar el remoto: `./gradlew publishToMavenLocal
+-PprintscriptVersion=0.1.0` deja todo en `~/.m2/repository/org/printscript/`.
+
 ## Estructura del repositorio
 
 ```
