@@ -32,7 +32,8 @@ class IfToolsEndToEndTest {
         return new AnalyzingRunner()
                 .analyze(
                         List.of(lines).iterator(),
-                        new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), true),
+                        new LinterConfiguration(
+                                Optional.of(IdentifierFormat.CAMEL_CASE), true, false),
                         Version.V11)
                 .violations();
     }

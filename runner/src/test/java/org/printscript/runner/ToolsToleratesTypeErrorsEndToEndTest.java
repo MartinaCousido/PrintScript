@@ -51,7 +51,7 @@ class ToolsToleratesTypeErrorsEndToEndTest {
                         .analyze(
                                 List.of(TYPE_ERROR).iterator(),
                                 new LinterConfiguration(
-                                        Optional.of(IdentifierFormat.CAMEL_CASE), true));
+                                        Optional.of(IdentifierFormat.CAMEL_CASE), true, false));
 
         assertEquals(List.of(), report.failures());
         // el nombre en snake case sí se reporta: el linter hace su trabajo igual

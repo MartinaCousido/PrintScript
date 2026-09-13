@@ -12,7 +12,9 @@ import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
 import org.printscript.ast.Operator;
 import org.printscript.ast.PrintlnStatement;
+import org.printscript.ast.ReadInput;
 import org.printscript.ast.Statement;
+import org.printscript.ast.StringLiteral;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
@@ -63,7 +65,7 @@ class LinterFactoryTest {
 
     @Test
     void withEverythingOffNothingIsReported() {
-        LinterConfiguration config = new LinterConfiguration(Optional.empty(), false);
+        LinterConfiguration config = new LinterConfiguration(Optional.empty(), false, false);
 
         assertTrue(violationsOf(printlnOfASum(MAL), config).isEmpty());
     }
@@ -71,7 +73,7 @@ class LinterFactoryTest {
     @Test
     void withOnlyTheFormatRuleOnOnlyTheIdentifierIsReported() {
         LinterConfiguration config =
-                new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), false);
+                new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), false, false);
 
         List<Violation> violations = violationsOf(printlnOfASum(MAL), config);
 
@@ -81,7 +83,7 @@ class LinterFactoryTest {
 
     @Test
     void withOnlyThePrintlnRuleOnOnlyTheArgumentIsReported() {
-        LinterConfiguration config = new LinterConfiguration(Optional.empty(), true);
+        LinterConfiguration config = new LinterConfiguration(Optional.empty(), true, false);
 
         List<Violation> violations = violationsOf(printlnOfASum(MAL), config);
 
@@ -92,7 +94,7 @@ class LinterFactoryTest {
     @Test
     void withBothRulesOnBothAreReported() {
         LinterConfiguration config =
-                new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), true);
+                new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), true, false);
 
         assertEquals(2, violationsOf(printlnOfASum(MAL), config).size());
     }
@@ -100,9 +102,42 @@ class LinterFactoryTest {
     @Test
     void aCleanStatementIsReportedCleanWithEveryRuleOn() {
         LinterConfiguration config =
-                new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), true);
+                new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), true, false);
         Statement println = new PrintlnStatement(new Identifier("bienEscrito", ANY), ANY);
 
         assertTrue(violationsOf(println, config).isEmpty());
+    }
+
+    // el identificador "mal_escrito" viola camel case pero cumple snake case: sirve para
+    // comprobar que la factory elige el checker que corresponde y no siempre el mismo
+    @Test
+    void snakeCaseProducesItsOwnChecker() {
+        LinterConfiguration snake =
+                new LinterConfiguration(Optional.of(IdentifierFormat.SNAKE_CASE), false, false);
+        LinterConfiguration camel =
+                new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), false, false);
+
+        assertEquals(List.of(), violationsOf(printlnOfASum(MAL), snake));
+        assertEquals(1, violationsOf(printlnOfASum(MAL), camel).size());
+    }
+
+    @Test
+    void theReadInputRuleIsWiredOnlyWhenItIsOn() {
+        Statement statement =
+                new PrintlnStatement(
+                        new ReadInput(
+                                new BinaryExpression(
+                                        new StringLiteral("a", ANY),
+                                        Operator.PLUS,
+                                        new StringLiteral("b", ANY),
+                                        ANY),
+                                ANY),
+                        ANY);
+
+        LinterConfiguration encendida = new LinterConfiguration(Optional.empty(), false, true);
+        LinterConfiguration apagada = new LinterConfiguration(Optional.empty(), false, false);
+
+        assertEquals(1, violationsOf(statement, encendida).size());
+        assertEquals(List.of(), violationsOf(statement, apagada));
     }
 }

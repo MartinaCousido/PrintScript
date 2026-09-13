@@ -6,7 +6,8 @@ import java.util.Locale;
 import java.util.Optional;
 
 public enum IdentifierFormat {
-    CAMEL_CASE(List.of("camel case", "camelcase", "camel_case"));
+    CAMEL_CASE(List.of("camel case", "camelcase", "camel_case")),
+    SNAKE_CASE(List.of("snake case", "snakecase", "snake_case"));
 
     private final List<String> spellings;
 

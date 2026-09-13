@@ -82,7 +82,7 @@ class VersionDispatchEndToEndTest {
     @Test
     void analyzingGivesTheSameReportInBothVersions() {
         LinterConfiguration configuration =
-                new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), true);
+                new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), true, false);
 
         AnalysisReport v10 =
                 new AnalyzingRunner()
