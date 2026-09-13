@@ -1,7 +1,6 @@
 package org.printscript.runner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.StringWriter;
 import java.util.List;
@@ -17,15 +16,19 @@ import org.printscript.linter.config.LinterConfiguration;
 class IfToolsEndToEndTest {
 
     private static final FormatterConfiguration LLAVE_AL_LADO =
-            new FormatterConfiguration(false, true, true, 0, 4, true);
+            FormatterStyles.consignaConBloques(4, true);
     private static final FormatterConfiguration LLAVE_ABAJO =
-            new FormatterConfiguration(false, true, true, 0, 2, false);
+            FormatterStyles.consignaConBloques(2, false);
 
     private static String format(FormatterConfiguration configuration, String... lines) {
         StringWriter output = new StringWriter();
         new FormattingRunner()
                 .format(List.of(lines).iterator(), configuration, output, Version.V11);
         return output.toString();
+    }
+
+    private static String[] linesOf(String program) {
+        return program.split("\n", -1);
     }
 
     private static List<Violation> lint(String... lines) {
@@ -39,49 +42,51 @@ class IfToolsEndToEndTest {
     }
 
     // --- formatter ---
+    //
+    // El formatter reescribe el fuente: toca el espacio que alguna regla nombra y deja el
+    // resto como estaba. Por eso los programas de entrada acá vienen con los saltos de
+    // línea que va a tener la salida: poner un if entero en una línea y esperar que quede
+    // desplegado sería pedirle que imprima el árbol, que es lo que dejó de hacer.
 
     @Test
     void aBlockIsIndentedWithTheConfiguredSize() {
-        assertEquals(
-                "if (true) {\n    println(1);\n}\n",
-                format(LLAVE_AL_LADO, "if(true){println(1);}"));
-        assertEquals(
-                "if (true)\n{\n  println(1);\n}\n", format(LLAVE_ABAJO, "if(true){println(1);}"));
+        String programa = "if (true) {\n  println(1);\n}";
+
+        assertEquals("if (true) {\n    println(1);\n}", format(LLAVE_AL_LADO, linesOf(programa)));
     }
 
     @Test
     void nestingAccumulatesTheIndentation() {
+        String programa = "if (true) {\n if (false) {\n  println(1);\n }\n}";
+
         assertEquals(
-                "if (true) {\n    if (false) {\n        println(1);\n    }\n}\n",
-                format(LLAVE_AL_LADO, "if(true){if(false){println(1);}}"));
+                "if (true) {\n    if (false) {\n        println(1);\n    }\n}",
+                format(LLAVE_AL_LADO, linesOf(programa)));
     }
 
     @Test
-    void anEmptyBlockKeepsItsBraces() {
-        assertEquals("if (true) {\n}\n", format(LLAVE_AL_LADO, "if(true){}"));
-    }
-
-    @Test
-    void anElseIfIsPrintedOnOneLineAndAnElseWithABlockIsNested() {
-        // los dos programas hacen lo mismo pero son árboles distintos, y por eso se
-        // pueden imprimir distinto: es la razón por la que Block es un nodo
-        String elseIf = format(LLAVE_AL_LADO, "if(true){println(1);}else if(false){println(2);}");
-        String elseConBloque =
-                format(LLAVE_AL_LADO, "if(true){println(1);}else{if(false){println(2);}}");
+    void theBraceGoesWhereTheRuleSaysWithoutTouchingTheBody() {
+        String conLlaveAlLado = "if (true) {\n  println(1);\n}";
 
         assertEquals(
-                "if (true) {\n    println(1);\n} else if (false) {\n    println(2);\n}\n", elseIf);
-        assertEquals(
-                "if (true) {\n    println(1);\n} else {\n    if (false) {\n        println(2);\n    }\n}\n",
-                elseConBloque);
-        assertNotEquals(elseIf, elseConBloque);
+                "if (true)\n{\n  println(1);\n}", format(LLAVE_ABAJO, linesOf(conLlaveAlLado)));
     }
 
     @Test
     void theStatementsInsideABlockKeepTheirOwnFormattingRules() {
+        String programa = "if (true) {\n  let x:number=1;\n}";
+
         assertEquals(
-                "if (true) {\n    let x: number = 1;\n}\n",
-                format(LLAVE_AL_LADO, "if(true){let x:number=1;}"));
+                "if (true) {\n    let x: number = 1;\n}", format(LLAVE_AL_LADO, linesOf(programa)));
+    }
+
+    // sin ninguna regla de bloques activa, un if entero en una línea sale igual que entró:
+    // ninguna regla habla de dónde van los saltos adentro de las llaves
+    @Test
+    void aOneLineIfIsLeftAloneWhenNoBlockRuleIsOn() {
+        String programa = "if(true){println(1);}";
+
+        assertEquals(programa, format(FormatterStyles.soloElEspacioDelIgual(), linesOf(programa)));
     }
 
     // --- linter ---

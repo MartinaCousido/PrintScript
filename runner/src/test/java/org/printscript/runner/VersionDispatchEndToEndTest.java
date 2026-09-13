@@ -9,7 +9,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.printscript.common.Failure;
 import org.printscript.common.Version;
-import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.linter.config.IdentifierFormat;
 import org.printscript.linter.config.LinterConfiguration;
 import org.printscript.runtime.OutputPrinter;
@@ -49,11 +48,7 @@ class VersionDispatchEndToEndTest {
     private static String format(Version version) {
         StringWriter output = new StringWriter();
         new FormattingRunner()
-                .format(
-                        List.of(PROGRAMA).iterator(),
-                        new FormatterConfiguration(false, true, true, 0),
-                        output,
-                        version);
+                .format(List.of(PROGRAMA).iterator(), FormatterStyles.consigna(), output, version);
         return output.toString();
     }
 

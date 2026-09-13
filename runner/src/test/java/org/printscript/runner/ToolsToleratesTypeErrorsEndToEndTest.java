@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.printscript.common.Failure;
-import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.linter.config.IdentifierFormat;
 import org.printscript.linter.config.LinterConfiguration;
 import org.printscript.runtime.OutputPrinter;
@@ -35,10 +34,7 @@ class ToolsToleratesTypeErrorsEndToEndTest {
 
         List<Failure<?>> failures =
                 new FormattingRunner()
-                        .format(
-                                List.of(TYPE_ERROR).iterator(),
-                                new FormatterConfiguration(false, true, true, 0),
-                                output);
+                        .format(List.of(TYPE_ERROR).iterator(), FormatterStyles.consigna(), output);
 
         assertEquals(List.of(), failures);
         assertFalse(output.toString().isEmpty());

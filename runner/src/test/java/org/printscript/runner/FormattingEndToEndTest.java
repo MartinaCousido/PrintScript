@@ -36,10 +36,10 @@ class FormattingEndToEndTest {
         }
     }
 
-    private static final FormatterConfiguration ESTILO_DE_LA_CONSIGNA =
-            new FormatterConfiguration(false, true, true, 0);
+    private static final FormatterConfiguration ESTILO_DE_LA_CONSIGNA = FormatterStyles.consigna();
 
     private static final String DECLARACION_APRETADA = "let a:number=12;";
+    private static final String PRINT_A = "println(a);";
 
     private static String format(FormatterConfiguration configuration, String... lines) {
         StringWriter output = new StringWriter();
@@ -65,16 +65,18 @@ class FormattingEndToEndTest {
                 format(
                         ESTILO_DE_LA_CONSIGNA,
                         DECLARACION_APRETADA,
-                        "let b   :   number    =4;",
+                        "let b:   number    =4;",
                         "a=a/b;",
                         "println(\"Result: \"+a);");
 
+        // sin salto final: el formatter reescribe lo que hay, no agrega una línea que el
+        // fuente no tenía
         assertEquals(
                 """
                 let a: number = 12;
                 let b: number = 4;
                 a = a / b;
-                println("Result: " + a);
+                println("Result: " + a);\
                 """,
                 output);
     }
@@ -83,26 +85,22 @@ class FormattingEndToEndTest {
     void severalStatementsCrammedIntoOneLineComeOutOnePerLine() {
         String output = format(ESTILO_DE_LA_CONSIGNA, "let a: number = 1; let b: number = 2;");
 
-        assertEquals("let a: number = 1;\nlet b: number = 2;\n", output);
+        assertEquals("let a: number = 1;\nlet b: number = 2;", output);
     }
 
     @Test
     void formattingAnAlreadyFormattedProgramChangesNothing() {
-        String once = format(ESTILO_DE_LA_CONSIGNA, DECLARACION_APRETADA, "println(a);");
+        String once = format(ESTILO_DE_LA_CONSIGNA, DECLARACION_APRETADA, PRINT_A);
         String twice = format(ESTILO_DE_LA_CONSIGNA, linesOf(once));
 
         assertEquals(once, twice);
     }
 
     @Test
-    void theBlankLinesBeforePrintlnRuleIsApplied() {
-        String output =
-                format(
-                        new FormatterConfiguration(false, true, true, 1),
-                        "let a: number = 1;",
-                        "println(a);");
+    void theLineBreaksAfterPrintlnRuleIsApplied() {
+        String output = format(FormatterStyles.conSaltosDespuesDelPrintln(1), PRINT_A, PRINT_A);
 
-        assertEquals("let a: number = 1;\n\nprintln(a);\n", output);
+        assertEquals("println(a);\n\nprintln(a);", output);
     }
 
     @Test
@@ -126,11 +124,14 @@ class FormattingEndToEndTest {
                             output);
         }
 
-        assertEquals("let a: number = 12;\n", output.toString());
+        assertEquals("let a: number = 12;", output.toString());
     }
 
+    // El formatter trabaja sobre los tokens y no sobre el árbol, así que un programa que
+    // no parsea igual se acomoda: acomodar código roto es justo cuando más sirve. Lo que sí
+    // reporta es lo que el lexer no puede leer, porque ahí no hay token que reescribir.
     @Test
-    void aSyntaxErrorIsReportedAndNotFormattedAway() {
+    void aProgramThatDoesNotParseIsStillFormatted() {
         StringWriter output = new StringWriter();
 
         List<Failure<?>> failures =
@@ -140,7 +141,22 @@ class FormattingEndToEndTest {
                                 ESTILO_DE_LA_CONSIGNA,
                                 output);
 
-        assertFalse(failures.isEmpty(), "se esperaba al menos un error de sintaxis");
+        assertEquals(List.of(), failures);
+        assertEquals("let a: number = ;", output.toString());
+    }
+
+    @Test
+    void aSymbolTheLexerCannotReadIsReported() {
+        StringWriter output = new StringWriter();
+
+        List<Failure<?>> failures =
+                new FormattingRunner()
+                        .format(
+                                List.of("let a: number = #;").iterator(),
+                                ESTILO_DE_LA_CONSIGNA,
+                                output);
+
+        assertFalse(failures.isEmpty(), "el símbolo desconocido tiene que reportarse");
     }
 
     @Test
@@ -156,7 +172,7 @@ class FormattingEndToEndTest {
 
     @Test
     void formattingDoesNotChangeTheResultOfAnExpressionThatNeedsParentheses() {
-        String formatted = format(ESTILO_DE_LA_CONSIGNA, "let a:number=(1+2)*3;", "println(a);");
+        String formatted = format(ESTILO_DE_LA_CONSIGNA, "let a:number=(1+2)*3;", PRINT_A);
 
         assertEquals(List.of("9"), execute(linesOf(formatted)));
     }
