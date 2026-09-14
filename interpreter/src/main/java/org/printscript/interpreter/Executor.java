@@ -49,10 +49,11 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
 
     @Override
     public Result<Void> visitAssignmentStatement(AssignmentStatement assignmentStatement) {
-        Result<Object> evaluated = evaluate(assignmentStatement.expression());
-        if (evaluated instanceof Failure<Object> failure) {
-            return propagate(failure);
-        }
+        return evaluate(assignmentStatement.expression())
+                .andThen(value -> assign(value, assignmentStatement));
+    }
+
+    private Result<Void> assign(Object value, AssignmentStatement assignmentStatement) {
         String name = assignmentStatement.name().name();
         Optional<Variable> existing = environment.read(name);
         if (existing.isEmpty()) {
@@ -60,16 +61,14 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
         }
         // la conversión se aplica siempre; para cualquier inicializador que no sea una
         // lectura externa es un no-op, porque semantic ya garantizó que el tipo coincide
-        Result<Object> converted =
-                Conversions.toDeclaredType(
-                        existing.get().declaredType(),
-                        valueOf(evaluated),
-                        assignmentStatement.range());
-        if (converted instanceof Failure<Object> failure) {
-            return propagate(failure);
-        }
+        return Conversions.toDeclaredType(
+                        existing.get().declaredType(), value, assignmentStatement.range())
+                .andThen(converted -> store(name, converted, assignmentStatement));
+    }
+
+    private Result<Void> store(String name, Object value, AssignmentStatement assignmentStatement) {
         return environment
-                .assign(name, valueOf(converted))
+                .assign(name, value)
                 .<Result<Void>>map(this::commit)
                 .orElseGet(() -> rejectedAssignment(assignmentStatement));
     }

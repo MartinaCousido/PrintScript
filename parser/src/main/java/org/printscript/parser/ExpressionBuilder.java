@@ -43,25 +43,36 @@ public final class ExpressionBuilder {
         }
         while (true) {
             Optional<Token> operatorToken = tokens.lookahead(0);
-            Optional<Operator> operator = operatorToken.flatMap(OperatorPrecedence::operatorFor);
-            if (operator.isEmpty()
-                    || OperatorPrecedence.precedenceOf(operator.get()) < minPrecedence) {
+            Optional<Operator> operator = bindingOperator(operatorToken, minPrecedence);
+            if (operator.isEmpty()) {
                 return new Success<>(left);
             }
             tokens.commit(1);
-            int rightMinPrecedence = OperatorPrecedence.precedenceOf(operator.get()) + 1;
             Result<Expression> rightResult =
-                    parseBinary(tokens, rightMinPrecedence, operatorToken.get().range());
+                    parseBinary(
+                            tokens, rightPrecedence(operator.get()), operatorToken.get().range());
             if (!(rightResult instanceof Success<Expression>(Expression right))) {
                 return rightResult;
             }
-            left =
-                    new BinaryExpression(
-                            left,
-                            operator.get(),
-                            right,
-                            new Range(left.range().start(), right.range().end()));
+            left = combine(left, operator.get(), right);
         }
+    }
+
+    // el operador que sigue, solo si liga con al menos esta precedencia; si no, la
+    // expresión de este nivel ya terminó
+    private static Optional<Operator> bindingOperator(Optional<Token> token, int minPrecedence) {
+        return token.flatMap(OperatorPrecedence::operatorFor)
+                .filter(operator -> OperatorPrecedence.precedenceOf(operator) >= minPrecedence);
+    }
+
+    // el lado derecho liga más fuerte, y así los operadores quedan asociando a izquierda
+    private static int rightPrecedence(Operator operator) {
+        return OperatorPrecedence.precedenceOf(operator) + 1;
+    }
+
+    private static Expression combine(Expression left, Operator operator, Expression right) {
+        return new BinaryExpression(
+                left, operator, right, new Range(left.range().start(), right.range().end()));
     }
 
     private Result<Expression> parsePrimary(TokenBuffer tokens, Range anchor) {
@@ -71,27 +82,34 @@ public final class ExpressionBuilder {
         }
         Token token = next.get();
         return switch (token.type()) {
-            case NUMBER -> {
-                tokens.commit(1);
-                yield numberLiteral(token);
-            }
-            case STRING -> {
-                tokens.commit(1);
-                yield new Success<>(new StringLiteral(token.value(), token.range()));
-            }
-            case BOOLEAN -> {
-                tokens.commit(1);
-                yield new Success<>(
-                        new BooleanLiteral(Boolean.parseBoolean(token.value()), token.range()));
-            }
-            case IDENTIFIER -> {
-                tokens.commit(1);
-                yield new Success<>(new Identifier(token.value(), token.range()));
-            }
+            case NUMBER -> consume(tokens, numberLiteral(token));
+            case STRING -> consume(tokens, stringLiteral(token));
+            case BOOLEAN -> consume(tokens, booleanLiteral(token));
+            case IDENTIFIER -> consume(tokens, identifier(token));
             case PUNCTUATION -> parsePunctuation(tokens, token);
             case KEYWORD -> parseKeyword(tokens, token);
             default -> unexpectedToken(token);
         };
+    }
+
+    // los cuatro operandos simples se arman con el token que se está mirando y después lo
+    // consumen: armarlo antes o después da igual porque ninguno toca el buffer
+    private static Result<Expression> consume(TokenBuffer tokens, Result<Expression> operand) {
+        tokens.commit(1);
+        return operand;
+    }
+
+    private static Result<Expression> stringLiteral(Token token) {
+        return new Success<>(new StringLiteral(token.value(), token.range()));
+    }
+
+    private static Result<Expression> booleanLiteral(Token token) {
+        return new Success<>(
+                new BooleanLiteral(Boolean.parseBoolean(token.value()), token.range()));
+    }
+
+    private static Result<Expression> identifier(Token token) {
+        return new Success<>(new Identifier(token.value(), token.range()));
     }
 
     private Result<Expression> parsePunctuation(TokenBuffer tokens, Token token) {
@@ -107,35 +125,34 @@ public final class ExpressionBuilder {
     // readInput("x") y readEnv("X") se parsean igual: keyword, paréntesis, un argumento
     private Result<Expression> parseRead(TokenBuffer tokens, Token keyword) {
         tokens.commit(1);
-        Result<Token> openResult =
-                Tokens.expect(
-                        tokens,
-                        token -> Tokens.isPunctuation(token, "("),
-                        "Expected '(' after '" + keyword.value() + "'",
-                        keyword.range());
-        if (openResult instanceof Failure<Token> failure) {
-            return Tokens.forward(failure);
-        }
-        Token open = ((Success<Token>) openResult).value();
+        return openParenthesis(tokens, keyword)
+                .andThen(open -> parseBinary(tokens, 0, open.range()))
+                .andThen(
+                        argument ->
+                                closeParenthesis(tokens, keyword, argument)
+                                        .map(close -> read(keyword, argument, close)));
+    }
 
-        Result<Expression> argumentResult = parseBinary(tokens, 0, open.range());
-        if (argumentResult instanceof Failure<Expression> failure) {
-            return failure;
-        }
-        Expression argument = ((Success<Expression>) argumentResult).value();
+    private static Result<Token> openParenthesis(TokenBuffer tokens, Token keyword) {
+        return Tokens.expect(
+                tokens,
+                token -> Tokens.isPunctuation(token, "("),
+                "Expected '(' after '" + keyword.value() + "'",
+                keyword.range());
+    }
 
-        Result<Token> closeResult =
-                Tokens.expect(
-                        tokens,
-                        token -> Tokens.isPunctuation(token, ")"),
-                        "Expected ')' after the argument of '" + keyword.value() + "'",
-                        argument.range());
-        if (closeResult instanceof Failure<Token> failure) {
-            return Tokens.forward(failure);
-        }
-        Token close = ((Success<Token>) closeResult).value();
-        Range range = new Range(keyword.range().start(), close.range().end());
-        return new Success<>(reads.get(keyword.value()).build(argument, range));
+    private static Result<Token> closeParenthesis(
+            TokenBuffer tokens, Token keyword, Expression argument) {
+        return Tokens.expect(
+                tokens,
+                token -> Tokens.isPunctuation(token, ")"),
+                "Expected ')' after the argument of '" + keyword.value() + "'",
+                argument.range());
+    }
+
+    private Expression read(Token keyword, Expression argument, Token close) {
+        return reads.get(keyword.value())
+                .build(argument, new Range(keyword.range().start(), close.range().end()));
     }
 
     private Result<Expression> parseGrouped(TokenBuffer tokens, Token openParenthesis) {

@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import org.printscript.runner.ValidationRunner;
 
@@ -215,29 +216,48 @@ final class InteractiveShell {
             err.println("No es un directorio: " + target);
             return;
         }
+        entries(target).ifPresent(this::printEntries);
+    }
+
+    // vacío cuando no se pudo leer el directorio: el error ya se reportó
+    private Optional<List<String>> entries(Path target) {
         List<String> dirs = new ArrayList<>();
         List<String> files = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(target)) {
             for (Path entry : stream) {
-                String name = entry.getFileName().toString();
-                if (Files.isDirectory(entry)) {
-                    dirs.add(name + "/");
-                } else {
-                    files.add(name);
-                }
+                classify(entry, dirs, files);
             }
         } catch (IOException e) {
             err.println("No se pudo listar '" + target + "': " + e.getMessage());
-            return;
+            return Optional.empty();
         }
+        return Optional.of(sorted(dirs, files));
+    }
+
+    private static void classify(Path entry, List<String> dirs, List<String> files) {
+        String name = entry.getFileName().toString();
+        if (Files.isDirectory(entry)) {
+            dirs.add(name + "/");
+        } else {
+            files.add(name);
+        }
+    }
+
+    // primero los directorios y después los archivos, cada grupo en orden alfabético
+    private static List<String> sorted(List<String> dirs, List<String> files) {
         dirs.sort(String::compareToIgnoreCase);
         files.sort(String::compareToIgnoreCase);
-        if (dirs.isEmpty() && files.isEmpty()) {
+        List<String> all = new ArrayList<>(dirs);
+        all.addAll(files);
+        return all;
+    }
+
+    private void printEntries(List<String> entries) {
+        if (entries.isEmpty()) {
             out.println("(directorio vacío)");
             return;
         }
-        dirs.forEach(out::println);
-        files.forEach(out::println);
+        entries.forEach(out::println);
     }
 
     private void changeDirectory(String argument) {
@@ -271,6 +291,13 @@ final class InteractiveShell {
     private void printHelp() {
         out.println("Comandos disponibles  (<x> es obligatorio, [x] es opcional):");
         out.println();
+        printFileCommands();
+        printConfigNote();
+        printNavigationCommands();
+        printSessionCommands();
+    }
+
+    private void printFileCommands() {
         out.println("  Sobre un archivo .ps");
         helpLine("run|exec <archivo>", "Ejecuta el archivo e imprime la salida por pantalla");
         helpLine(
@@ -280,16 +307,25 @@ final class InteractiveShell {
         helpLine("format <archivo> [config]", "Formatea el archivo e imprime el resultado");
         helpLine("analyze <archivo> [config]", "Lintea el archivo y reporta las violaciones");
         out.println();
+    }
+
+    private void printConfigNote() {
         out.println("    [config] es un archivo de reglas .json/.yaml/.yml (opcional):");
         out.println("      · format sin [config]  → reglas por defecto (sin espaciado extra)");
         out.println("      · analyze sin [config] → ninguna regla activa (no reporta nada)");
         out.println("      · alias: exec=execution, format=fmt=formatting, analyze=lint=analyzing");
         out.println();
+    }
+
+    private void printNavigationCommands() {
         out.println("  Navegación del filesystem (rutas relativas al directorio actual, pwd)");
         helpLine("pwd", "Muestra el directorio actual");
         helpLine("ls|dir [directorio]", "Lista el contenido (por defecto, el actual)");
         helpLine("cd <directorio>", "Cambia de directorio (acepta .. y rutas absolutas)");
         out.println();
+    }
+
+    private void printSessionCommands() {
         out.println("  Sesión");
         helpLine("help|?", "Muestra esta ayuda");
         helpLine("exit|quit", "Sale de la interfaz (también con Ctrl-D)");

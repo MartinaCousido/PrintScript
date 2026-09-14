@@ -6,7 +6,6 @@ import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.Statement;
 import org.printscript.ast.TypeName;
-import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -41,76 +40,89 @@ public final class DeclarationParser implements StatementParser {
     public Result<Statement> parse(TokenBuffer tokens) {
         Token declarator = tokens.lookahead(0).orElseThrow();
         tokens.commit(1);
+        return header(tokens, declarator)
+                .andThen(parts -> initializer(tokens, parts))
+                .andThen(
+                        parts ->
+                                semicolon(tokens, parts)
+                                        .map(end -> declaration(declarator, parts, end)));
+    }
 
-        Result<Token> nameResult =
-                Tokens.expect(
-                        tokens,
-                        token -> token.type() == TokenType.IDENTIFIER,
-                        "Expected an identifier after '" + declarator.value() + "'",
-                        declarator.range());
-        if (nameResult instanceof Failure<Token> failure) {
-            return Tokens.forward(failure);
-        }
-        Token name = ((Success<Token>) nameResult).value();
+    // lo que toda declaración tiene sí o sí: nombre, ':' y tipo
+    private Result<Parts> header(TokenBuffer tokens, Token declarator) {
+        return name(tokens, declarator)
+                .andThen(
+                        name ->
+                                colon(tokens, name)
+                                        .andThen(colon -> type(tokens, colon))
+                                        .map(type -> new Parts(name, type, Optional.empty())));
+    }
 
-        Result<Token> colonResult =
-                Tokens.expect(
-                        tokens,
-                        token -> Tokens.isPunctuation(token, ":"),
-                        "Expected ':' after the variable name",
-                        name.range());
-        if (colonResult instanceof Failure<Token> failure) {
-            return Tokens.forward(failure);
-        }
-        Token colon = ((Success<Token>) colonResult).value();
+    private Result<Token> name(TokenBuffer tokens, Token declarator) {
+        return Tokens.expect(
+                tokens,
+                token -> token.type() == TokenType.IDENTIFIER,
+                "Expected an identifier after '" + declarator.value() + "'",
+                declarator.range());
+    }
 
-        Result<Token> typeResult =
-                Tokens.expect(
-                        tokens,
-                        token ->
-                                token.type() == TokenType.KEYWORD
-                                        || token.type() == TokenType.IDENTIFIER,
-                        "Expected a type annotation after ':'",
-                        colon.range());
-        if (typeResult instanceof Failure<Token> failure) {
-            return Tokens.forward(failure);
-        }
-        Token type = ((Success<Token>) typeResult).value();
+    private Result<Token> colon(TokenBuffer tokens, Token name) {
+        return Tokens.expect(
+                tokens,
+                token -> Tokens.isPunctuation(token, ":"),
+                "Expected ':' after the variable name",
+                name.range());
+    }
 
+    private Result<Token> type(TokenBuffer tokens, Token colon) {
+        return Tokens.expect(
+                tokens,
+                token -> token.type() == TokenType.KEYWORD || token.type() == TokenType.IDENTIFIER,
+                "Expected a type annotation after ':'",
+                colon.range());
+    }
+
+    // el '= expresión' es opcional: sin él la declaración queda igual, sin inicializador
+    private Result<Parts> initializer(TokenBuffer tokens, Parts parts) {
         Optional<Token> assignment =
                 tokens.lookahead(0).filter(token -> Tokens.isOperator(token, "="));
-        Optional<Expression> initializer = Optional.empty();
-        Range beforeSemicolon = type.range();
-        if (assignment.isPresent()) {
-            tokens.commit(1);
-            Result<Expression> initializerResult =
-                    expressionBuilder.build(tokens, assignment.get().range());
-            if (initializerResult instanceof Failure<Expression> failure) {
-                return Tokens.forward(failure);
-            }
-            Expression expression = ((Success<Expression>) initializerResult).value();
-            initializer = Optional.of(expression);
-            beforeSemicolon = expression.range();
+        if (assignment.isEmpty()) {
+            return new Success<>(parts);
+        }
+        tokens.commit(1);
+        return expressionBuilder
+                .build(tokens, assignment.get().range())
+                .map(parts::withInitializer);
+    }
+
+    private Result<Token> semicolon(TokenBuffer tokens, Parts parts) {
+        return Tokens.expect(
+                tokens,
+                token -> Tokens.isPunctuation(token, ";"),
+                "Expected ';' at the end of the declaration",
+                parts.beforeSemicolon());
+    }
+
+    private Statement declaration(Token declarator, Parts parts, Token semicolon) {
+        return declarators
+                .get(declarator.value())
+                .build(
+                        new Identifier(parts.name().value(), parts.name().range()),
+                        new TypeName(parts.type().value(), parts.type().range()),
+                        parts.initializer(),
+                        new Range(declarator.range().start(), semicolon.range().end()));
+    }
+
+    // las piezas que se van juntando mientras se recorre la declaración
+    private record Parts(Token name, Token type, Optional<Expression> initializer) {
+
+        Parts withInitializer(Expression expression) {
+            return new Parts(name, type, Optional.of(expression));
         }
 
-        Result<Token> semicolonResult =
-                Tokens.expect(
-                        tokens,
-                        token -> Tokens.isPunctuation(token, ";"),
-                        "Expected ';' at the end of the declaration",
-                        beforeSemicolon);
-        if (semicolonResult instanceof Failure<Token> failure) {
-            return Tokens.forward(failure);
+        // dónde termina lo parseado hasta ahora, para que el error del ';' apunte ahí
+        Range beforeSemicolon() {
+            return initializer.map(Expression::range).orElseGet(type::range);
         }
-        Token semicolon = ((Success<Token>) semicolonResult).value();
-
-        return new Success<>(
-                declarators
-                        .get(declarator.value())
-                        .build(
-                                new Identifier(name.value(), name.range()),
-                                new TypeName(type.value(), type.range()),
-                                initializer,
-                                new Range(declarator.range().start(), semicolon.range().end())));
     }
 }

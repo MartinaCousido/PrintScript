@@ -8,6 +8,7 @@ import java.util.Optional;
 import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
 import org.printscript.common.Result;
+import org.printscript.common.Success;
 import org.printscript.token.Token;
 
 // pieza principal del módulo
@@ -32,30 +33,43 @@ public final class Parser implements Iterator<Result<Statement>> {
         return buffer.lookahead(0).isPresent();
     }
 
-    // junta los tokens de una sentencia; dónde termina lo decide el delimitador
     @Override
     public Result<Statement> next() {
         if (!hasNext()) {
             throw new NoSuchElementException();
         }
+        return statementTokens().andThen(this::parseStatement);
+    }
+
+    // junta los tokens de una sentencia; dónde termina lo decide el delimitador
+    private Result<List<Token>> statementTokens() {
         List<Token> statement = new ArrayList<>();
         while (true) {
             Optional<Token> current = buffer.lookahead(statement.size());
             if (current.isEmpty()) {
-                Token last = statement.getLast();
-                buffer.commit(statement.size());
-                return new Failure<>(delimiter.unterminatedMessage(statement), last.range());
+                return unterminated(statement);
             }
-            Token token = current.get();
             int position = statement.size();
             boolean ends =
-                    delimiter.endsStatement(statement, token, () -> buffer.lookahead(position + 1));
-            statement.add(token);
+                    delimiter.endsStatement(
+                            statement, current.get(), () -> buffer.lookahead(position + 1));
+            statement.add(current.get());
             if (ends) {
-                break;
+                buffer.commit(statement.size());
+                return new Success<>(statement);
             }
         }
+    }
+
+    // el fuente se terminó antes de que la sentencia cerrara
+    private Result<List<Token>> unterminated(List<Token> statement) {
+        Token last = statement.getLast();
         buffer.commit(statement.size());
+        return new Failure<>(delimiter.unterminatedMessage(statement), last.range());
+    }
+
+    // la sentencia ya está acotada: la arma el primer parser que la reconozca
+    private Result<Statement> parseStatement(List<Token> statement) {
         TokenBuffer statementTokens = new TokenBuffer(new ListTokenIterator(statement));
         for (StatementParser parser : statementParsers) {
             if (parser.matches(statementTokens)) {
