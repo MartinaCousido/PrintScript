@@ -227,4 +227,14 @@ class FormatterTest {
 
         assertTrue(sawFailure, "el símbolo desconocido tiene que llegar como Failure");
     }
+
+    // el lexer descarta la comilla que delimitaba el string, así que el formatter tiene que
+    // reponerla sin romper el contenido: una cadena con comillas simples que adentro tiene
+    // una doble no puede salir reescrita con dobles, o queda como código inválido
+    @Test
+    void aSingleQuotedStringHoldingADoubleQuoteIsRewrittenWithSingleQuotes() {
+        String source = "let s:string = 'a \"b\" c';";
+
+        assertEquals(source, format(source, FormatterConfiguration.none()));
+    }
 }

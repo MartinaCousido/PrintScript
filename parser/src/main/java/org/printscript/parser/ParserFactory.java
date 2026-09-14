@@ -3,6 +3,7 @@ package org.printscript.parser;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.ReadEnv;
 import org.printscript.ast.ReadInput;
@@ -30,11 +31,17 @@ public final class ParserFactory {
         return switch (version) {
             case V10 -> common;
             // el if se pasa la lista como Supplier porque se contiene a sí mismo: es uno
-            // de los parsers que puede aparecer adentro de su propio cuerpo
-            case V11 ->
-                    concat(
-                            common,
-                            new IfParser(expressionBuilder, () -> statementParsers(Version.V11)));
+            // de los parsers que puede aparecer adentro de su propio cuerpo. La lista se
+            // arma una sola vez y el Supplier devuelve siempre esa misma instancia; si en
+            // cambio recomputara statementParsers(V11), cada sentencia de cada bloque
+            // reconstruiría todo el grafo de parsers.
+            case V11 -> {
+                AtomicReference<List<StatementParser>> self = new AtomicReference<>();
+                List<StatementParser> all =
+                        concat(common, new IfParser(expressionBuilder, self::get));
+                self.set(all);
+                yield all;
+            }
         };
     }
 
