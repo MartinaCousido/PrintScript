@@ -79,7 +79,7 @@ tests.** Antes de agregar una regla, esa división dice dónde va.
 | ktlint (vía Spotless) | formatea los archivos de build y de texto | `*.gradle.kts`, `*.md`, `*.yml` | `.editorconfig` | `./gradlew spotlessApply` |
 | Checkstyle | nombres y errores probables | `src/main` y `src/test` | `config/checkstyle/checkstyle.xml` | leer el reporte en `<modulo>/build/reports/checkstyle` y arreglar a mano |
 | PMD | malas prácticas y complejidad | `src/main` y `src/test` | `config/pmd/ruleset.xml` | leer el reporte en `<modulo>/build/reports/pmd`, arreglar o justificar la supresión |
-| CPD | código duplicado | `src/main` de los ocho módulos | tarea `cpdCheck` del `build.gradle.kts` raíz, umbral de 50 tokens | leer `build/reports/cpd/cpd.txt` y extraer lo repetido |
+| CPD | código duplicado | `src/main` de los trece módulos | tarea `cpdCheck` del `build.gradle.kts` raíz, umbral de 50 tokens | leer `build/reports/cpd/cpd.txt` y extraer lo repetido |
 | JaCoCo | cobertura de los tests, con piso | cada módulo por separado | convention plugin `printscript.quality` | escribir el test que falta |
 
 La cobertura es un **piso, nunca un objetivo**: mide qué líneas se ejecutaron, no si se
@@ -157,13 +157,15 @@ duplicada en cada módulo.
 | `runtime-api` | Cómo habla un programa en ejecución con el mundo exterior |
 | `lexer` | Cómo se reconoce un token dentro del texto |
 | `parser` | La gramática y cómo se construye el árbol |
+| `semantic` | Qué programas bien formados además tienen sentido |
 | `configuration` | En qué formato vive la configuración de las herramientas (JSON, YAML) |
 | `linter` | Qué convenciones se le exigen a un programa PrintScript |
 | `formatter` | Cómo se ve el código PrintScript ya formateado |
+| `interpreter` | Qué efecto produce cada nodo al ejecutarse |
 | `runner` | Cómo se arma el pipeline de cada operación |
 | `cli` | La experiencia de línea de comandos: argumentos, progreso, exit codes |
 
-Falta `semantic`. El grafo completo está en
+Son trece, uno por decisión. El grafo completo está en
 [`docs/arquitectura.md`](docs/arquitectura.md).
 
 ## Cómo usar la CLI
@@ -223,13 +225,15 @@ Se configura con un JSON o un YAML, y cada regla se prende poniendo su clave.
 
 | Clave | Qué exige | Valores |
 |---|---|---|
-| `identifier_format` | Que los identificadores tengan un formato | `camel case`, `camelCase` o `camel_case` |
+| `identifier_format` | Que los identificadores tengan un formato | `camel case` o `snake case`, cada uno con sus tres escrituras (`camelCase`, `camel_case`, …) |
 | `mandatory-variable-or-literal-in-println` | Que `println` reciba solo un identificador o un literal, nunca una expresión | `true` / `false` |
+| `mandatory-variable-or-literal-in-readInput` | Lo mismo para el argumento de `readInput` | `true` / `false` |
 
 ```json
 {
-  "identifier_format": "camel case",
-  "mandatory-variable-or-literal-in-println": true
+  "identifier_format": "snake case",
+  "mandatory-variable-or-literal-in-println": true,
+  "mandatory-variable-or-literal-in-readInput": true
 }
 ```
 
@@ -237,9 +241,11 @@ Una clave que no está deja su regla apagada. Un valor **desconocido** en
 `identifier_format` no apaga la regla en silencio: rompe con un mensaje que nombra el
 valor recibido y los soportados.
 
-**`snake case` no está soportado.** La consigna admite camel case o snake case y el
-equipo eligió uno solo. Agregarlo es implementar `IdentifierFormatChecker` y sumar un
-valor al enum `IdentifierFormat`: no cambia nada de lo que ya está escrito.
+Las dos reglas de argumento simple comparten el criterio de qué cuenta como
+"identificador o literal" (`SimpleArgument`), así que un nodo de expresión nuevo se decide
+en un solo lugar. Los colectores sí difieren: el de `readInput` baja también por las
+expresiones, porque el caso que importa es un `readInput` dentro del inicializador de una
+declaración.
 
 ## Integración continua
 

@@ -79,8 +79,9 @@ prompt con su propia salida de progreso; el binario de `installDist` no lo neces
 | `formatting` | `format`, `fmt` | Formatea el archivo con el módulo `formatter`, aplicando las reglas del `--config`; escribe por stdout o, con `--output`, a un archivo |
 | `analyzing` | `analyze`, `lint` | Analiza estáticamente con el módulo `linter`, aplicando las reglas del `--config` (sin config, ninguna regla está prendida) |
 
-Las cuatro operaciones tienen backend hoy. El único que falta es el análisis semántico
-(`validation` valida solo sintaxis hasta que exista el módulo `semantic`).
+Las cuatro operaciones tienen backend hoy. `validation` valida sintaxis **y semántica**:
+la cadena pasa por el módulo `semantic`, así que un `let x: number = "hola";` se reporta sin
+ejecutar nada.
 
 ### `execution`: guardar la salida (`--output` / `save`)
 
@@ -92,23 +93,51 @@ imprime, nunca el progreso ni los errores. Si el fuente no existe, no se crea el
 
 ### `formatting`: reglas del formatter
 
-El formatter reimprime el código aplicando las reglas del `--config` (JSON o YAML). Una
-clave ausente cae en su valor por defecto. Por defecto el resultado va por stdout;
-`--output archivo` lo escribe a un archivo (nunca pisa el fuente). Reglas disponibles:
+El formatter **reescribe el fuente**: ajusta el espacio que alguna regla activa nombra y
+deja el resto tal como estaba. Una clave ausente no cae en un valor por defecto, significa
+**no tocar ese espacio**. Por eso un archivo formateado sin `--config` sale idéntico al
+original. Por defecto el resultado va por stdout; `--output archivo` lo escribe a un
+archivo (nunca pisa el fuente). Reglas disponibles:
 
 | Clave | Qué controla | Valores |
 |---|---|---|
-| `enforce-spacing-before-colon-in-declaration` | Espacio antes del `:` en declaraciones | `true` / `false` |
-| `enforce-spacing-after-colon-in-declaration` | Espacio después del `:` en declaraciones | `true` / `false` |
-| `enforce-spacing-around-equals` | Espacio alrededor del `=` | `true` / `false` |
-| `line-breaks-before-println` | Saltos de línea antes de cada `println` | `0` a `2` |
+| `enforce-spacing-before-colon-in-declaration` | Espacio antes del `:` en declaraciones | `true` |
+| `enforce-spacing-after-colon-in-declaration` | Espacio después del `:` en declaraciones | `true` |
+| `enforce-spacing-around-equals` | Un espacio de cada lado del `=` | `true` |
+| `enforce-no-spacing-around-equals` | Ningún espacio alrededor del `=` | `true` |
+| `mandatory-space-surrounding-operations` | Un espacio alrededor de `+ - * /` | `true` |
+| `mandatory-single-space-separation` | Exactamente un espacio entre todos los tokens de una línea, salvo antes del `;` | `true` |
+| `mandatory-line-break-after-statement` | Una sentencia por línea | `true` |
+| `line-breaks-after-println` | Líneas en blanco **después** de cada `println` | entero ≥ 0 |
+| `if-brace-same-line` | La `{` del `if` en la misma línea | `true` |
+| `if-brace-below-line` | La `{` del `if` en la línea de abajo | `true` |
+| `indent-inside-if` | Sangría de cada nivel dentro de un bloque | entero ≥ 0 |
+
+Las claves son las que nombra la consigna. Cada una vale `true` (o un entero) para
+prenderse; ponerla en `false` es lo mismo que no ponerla. `enforce-spacing-around-equals` y
+`enforce-no-spacing-around-equals` configuran el mismo espacio en sentidos opuestos, igual
+que el par de `if-brace-*`.
+
+Ninguna regla cubre el espacio entre una keyword y lo que sigue (`let   x`): para eso está
+`mandatory-single-space-separation`, que normaliza todos los espacios de la línea.
 
 ```bash
+$ cat feo.ps
+let x:number=(2+3)*4;
+println(x);
+$ cat reglas.json
+{ "enforce-spacing-after-colon-in-declaration": true, "enforce-spacing-around-equals": true }
 $ printscript formatting feo.ps -c reglas.json
-let x: number = (2 + 3) * 4;
+let x: number = (2+3)*4;
 println(x);
 $ echo $?
 0
+```
+
+Los paréntesis y el `*` quedan pegados porque ninguna regla activa habla de ellos:
+agregando `mandatory-space-surrounding-operations` saldría `(2 + 3) * 4`.
+
+```bash
 ```
 
 ### `analyzing`: reglas del linter
@@ -119,12 +148,13 @@ no reporta nada. Reglas disponibles:
 
 | Clave | Qué exige | Valores |
 |---|---|---|
-| `identifier_format` | El formato de los identificadores | `camel case` (o `camelCase`, `camel_case`) |
+| `identifier_format` | El formato de los identificadores | `camel case` o `snake case` (cada uno acepta también `camelCase`/`camel_case` y `snakeCase`/`snake_case`) |
 | `mandatory-variable-or-literal-in-println` | Que `println` reciba solo un identificador o un literal | `true` / `false` |
+| `mandatory-variable-or-literal-in-readInput` | Lo mismo para el argumento de `readInput` | `true` / `false` |
 
 ```bash
 $ printscript analyzing programa.ps -c reglas.json
-lint: El identificador 'last_name' no está en camel case (línea 1, columna 5 a línea 1, columna 13)
+lint: El identificador 'last_name' debe estar escrito en camel case (línea 1, columna 5 a línea 1, columna 13)
 $ echo $?
 1
 ```

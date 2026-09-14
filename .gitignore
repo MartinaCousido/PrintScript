@@ -17,3 +17,6 @@ bin/
 
 *.log
 .DS_Store
+
+# archivos sueltos para probar la CLI a mano
+zpruebas/
