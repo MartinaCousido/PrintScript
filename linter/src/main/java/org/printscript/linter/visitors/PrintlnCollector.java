@@ -17,9 +17,7 @@ import org.printscript.ast.ReadInput;
 import org.printscript.ast.StringLiteral;
 import org.printscript.ast.VariableDeclaration;
 
-// junta todos los println de una sentencia, incluidos los que están adentro de un
-// bloque. Sin esto, una regla que mire solo la sentencia de nivel superior se saltea
-// todos los println de adentro de un if, que es el agujero que tiene el repo relevado.
+// junta todos los println de una sentencia, incluidos los que están adentro de un bloque.
 public final class PrintlnCollector implements ASTVisitor<List<PrintlnStatement>> {
 
     @Override

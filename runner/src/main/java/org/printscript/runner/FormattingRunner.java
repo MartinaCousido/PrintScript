@@ -7,7 +7,6 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -17,10 +16,11 @@ import org.printscript.config.JsonConfigurationMapper;
 import org.printscript.config.YamlConfigurationMapper;
 import org.printscript.formatter.Formatter;
 import org.printscript.formatter.config.FormatterConfiguration;
+import org.printscript.lexer.LexerFactory;
 
+// formatea
 public final class FormattingRunner {
 
-    // la consigna define la versión como argumento opcional, con 1.0 por defecto
     public List<Failure<?>> format(
             Iterator<String> lines, FormatterConfiguration configuration, Writer destination) {
         return format(lines, configuration, destination, Version.V10);
@@ -31,10 +31,7 @@ public final class FormattingRunner {
             FormatterConfiguration configuration,
             Writer destination,
             Version version) {
-        // sin semantic a propósito: se tiene que poder trabajar sobre código con
-        // errores de tipos (ver StatementStreams)
-        Iterator<Result<Statement>> statements = StatementStreams.statementStream(lines, version);
-        Formatter formatter = new Formatter(statements, configuration);
+        Formatter formatter = new Formatter(LexerFactory.create(lines, version), configuration);
         List<Failure<?>> failures = new ArrayList<>();
         while (formatter.hasNext()) {
             write(formatter.next(), destination, failures);

@@ -5,8 +5,6 @@ import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.TypeConversionException;
 
 // la versión del lenguaje tal como se escribe en la línea de comandos
-// se queda en el cli porque es la forma del argumento; lo que viaja hacia adentro es el
-// Version del dominio, así que ningún módulo de abajo sabe cómo se escribió
 public enum LanguageVersion {
     V1_0("1.0", Version.V10),
     V1_1("1.1", Version.V11);

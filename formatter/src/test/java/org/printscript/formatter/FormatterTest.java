@@ -1,156 +1,240 @@
 package org.printscript.formatter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.printscript.ast.Identifier;
-import org.printscript.ast.NumberLiteral;
-import org.printscript.ast.PrintlnStatement;
-import org.printscript.ast.Statement;
-import org.printscript.ast.StringLiteral;
-import org.printscript.ast.TypeName;
-import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Failure;
-import org.printscript.common.Position;
-import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
+import org.printscript.common.Version;
 import org.printscript.formatter.config.FormatterConfiguration;
+import org.printscript.lexer.LexerFactory;
 
+// El formatter reescribe el fuente: lo que no pide ninguna regla activa tiene que salir
+// exactamente como entró. Cada test prende una sola regla, que es como las usa la consigna.
 class FormatterTest {
 
-    private static final Range ANY = new Range(new Position(1, 1), new Position(1, 1));
+    // una regla por vez, sobre la configuración vacía
+    private static final class Rules {
 
-    private static final class ListStatements implements Iterator<Result<Statement>> {
+        private Optional<Boolean> theEqualsSpacing = Optional.empty();
+        private boolean theBeforeColon;
+        private boolean theAfterColon;
+        private boolean theOperations;
+        private boolean theSingleSpace;
+        private boolean theBreakAfterStatement;
+        private Optional<Integer> thePrintlnBreaks = Optional.empty();
+        private Optional<Boolean> theBraceSameLine = Optional.empty();
+        private Optional<Integer> theIndent = Optional.empty();
 
-        private final List<Result<Statement>> items;
-        private int index;
-
-        private ListStatements(List<Result<Statement>> items) {
-            this.items = items;
+        private Rules equalsSpacing(boolean value) {
+            theEqualsSpacing = Optional.of(value);
+            return this;
         }
 
-        @Override
-        public boolean hasNext() {
-            return index < items.size();
+        private Rules afterColon() {
+            theAfterColon = true;
+            return this;
         }
 
-        @Override
-        public Result<Statement> next() {
-            Result<Statement> item = items.get(index);
-            index += 1;
-            return item;
+        private Rules beforeColon() {
+            theBeforeColon = true;
+            return this;
+        }
+
+        private Rules operations() {
+            theOperations = true;
+            return this;
+        }
+
+        private Rules singleSpace() {
+            theSingleSpace = true;
+            return this;
+        }
+
+        private Rules breakAfterStatement() {
+            theBreakAfterStatement = true;
+            return this;
+        }
+
+        private Rules printlnBreaks(int value) {
+            thePrintlnBreaks = Optional.of(value);
+            return this;
+        }
+
+        private Rules braceSameLine(boolean value) {
+            theBraceSameLine = Optional.of(value);
+            return this;
+        }
+
+        private Rules indent(int value) {
+            theIndent = Optional.of(value);
+            return this;
+        }
+
+        private FormatterConfiguration build() {
+            return new FormatterConfiguration(
+                    theEqualsSpacing,
+                    theBeforeColon,
+                    theAfterColon,
+                    theOperations,
+                    theSingleSpace,
+                    theBreakAfterStatement,
+                    thePrintlnBreaks,
+                    theBraceSameLine,
+                    theIndent);
         }
     }
 
-    private static Statement declaration(String name, double value) {
-        return new VariableDeclaration(
-                new Identifier(name, ANY),
-                new TypeName("number", ANY),
-                Optional.of(new NumberLiteral(value, ANY)),
-                ANY);
+    private static String format(String source, Rules rules) {
+        return format(source, rules.build());
     }
 
-    private static Statement println(String text) {
-        return new PrintlnStatement(new StringLiteral(text, ANY), ANY);
-    }
-
-    private static Formatter formatterOf(
-            FormatterConfiguration configuration, List<Result<Statement>> statements) {
-        return new Formatter(new ListStatements(statements), configuration);
-    }
-
-    private static String formatAll(
-            FormatterConfiguration configuration, List<Result<Statement>> statements) {
-        Formatter formatter = formatterOf(configuration, statements);
-        StringBuilder output = new StringBuilder();
+    private static String format(String source, FormatterConfiguration configuration) {
+        Formatter formatter = formatterOver(source, configuration);
+        StringBuilder out = new StringBuilder();
         while (formatter.hasNext()) {
-            output.append(((Success<String>) formatter.next()).value());
+            out.append(((Success<String>) formatter.next()).value());
         }
-        return output.toString();
+        return out.toString();
     }
 
-    private static final FormatterConfiguration SPACED =
-            new FormatterConfiguration(false, true, true, 0);
-
-    @Test
-    void everyStatementEndsInALineBreakAfterTheSemicolon() {
-        String output =
-                formatAll(
-                        SPACED,
-                        List.of(
-                                new Success<>(declaration("a", 12)),
-                                new Success<>(declaration("b", 4))));
-
-        assertEquals("let a: number = 12;\nlet b: number = 4;\n", output);
+    private static Formatter formatterOver(String source, FormatterConfiguration configuration) {
+        return new Formatter(
+                LexerFactory.create(List.of(source.split("\n", -1)).iterator(), Version.V11),
+                configuration);
     }
 
     @Test
-    void withoutTheRuleAPrintlnGetsNoBlankLineBeforeIt() {
-        String output =
-                formatAll(
-                        SPACED,
-                        List.of(
-                                new Success<>(declaration("a", 12)),
-                                new Success<>(println("hola"))));
+    void withoutAnyRuleTheSourceComesOutUntouched() {
+        String source =
+                "let something:string = \"cosa\";\nlet other  :  number=  2;\nprintln(other);";
 
-        assertEquals("let a: number = 12;\nprintln(\"hola\");\n", output);
+        assertEquals(source, format(source, FormatterConfiguration.none()));
     }
 
     @Test
-    void aPrintlnGetsTheConfiguredBlankLinesBeforeIt() {
-        String output =
-                formatAll(
-                        new FormatterConfiguration(false, true, true, 2),
-                        List.of(
-                                new Success<>(declaration("a", 12)),
-                                new Success<>(println("hola"))));
+    void spacingAroundEqualsOnlyTouchesTheEquals() {
+        String source = "let a: string= \"x\";\nlet b: string =\"y\";";
 
-        assertEquals("let a: number = 12;\n\n\nprintln(\"hola\");\n", output);
+        assertEquals(
+                "let a: string = \"x\";\nlet b: string = \"y\";",
+                format(source, new Rules().equalsSpacing(true)));
     }
 
     @Test
-    void aPrintlnThatOpensTheFileGetsNoBlankLinesBeforeIt() {
-        String output =
-                formatAll(
-                        new FormatterConfiguration(false, true, true, 2),
-                        List.of(new Success<>(println("hola"))));
+    void noSpacingAroundEqualsIsTheOppositeRule() {
+        String source = "let a: string = \"x\";\nlet b: string =\"y\";";
 
-        assertEquals("println(\"hola\");\n", output);
+        assertEquals(
+                "let a: string=\"x\";\nlet b: string=\"y\";",
+                format(source, new Rules().equalsSpacing(false)));
+    }
+
+    // el caso que separa a este formatter de un pretty-printer: la regla mira el espacio de
+    // después del ':' y el de antes queda como estaba, aunque quede inconsistente
+    @Test
+    void spacingAfterColonLeavesTheSpaceBeforeTheColonAlone() {
+        String source = "let a:string = \"x\";\nlet b : string = \"y\";";
+
+        assertEquals(
+                "let a: string = \"x\";\nlet b : string = \"y\";",
+                format(source, new Rules().afterColon()));
     }
 
     @Test
-    void aFailureIsPassedThroughInsteadOfFormatted() {
-        Formatter formatter = formatterOf(SPACED, List.of(new Failure<>("roto", ANY)));
+    void spacingBeforeColonLeavesTheSpaceAfterItAlone() {
+        String source = "let a:string = \"x\";";
 
-        Result<String> result = formatter.next();
-
-        Failure<String> failure = assertInstanceOf(Failure.class, result);
-        assertEquals("roto", failure.message());
-        assertEquals(ANY, failure.range());
+        assertEquals("let a :string = \"x\";", format(source, new Rules().beforeColon()));
     }
 
     @Test
-    void thereIsNothingToFormatWhenThereAreNoStatements() {
-        assertFalse(formatterOf(SPACED, List.of()).hasNext());
+    void spaceSurroundingOperationsDoesNotTouchTheEquals() {
+        String source = "let a: number=1+2*3;";
+
+        assertEquals("let a: number=1 + 2 * 3;", format(source, new Rules().operations()));
     }
 
     @Test
-    void statementsAreFormattedOneAtATimeAndNotAllUpFront() {
-        Formatter formatter =
-                formatterOf(
-                        SPACED,
-                        List.of(
-                                new Success<>(declaration("a", 12)),
-                                new Success<>(declaration("b", 4))));
+    void singleSpaceSeparationCollapsesEverythingButKeepsTheSemicolonAttached() {
+        String source = "let a:      string=\"x\";\nprintln(a);";
 
-        assertEquals("let a: number = 12;\n", ((Success<String>) formatter.next()).value());
-        assertTrue(formatter.hasNext());
+        assertEquals(
+                "let a : string = \"x\";\nprintln ( a );",
+                format(source, new Rules().singleSpace()));
+    }
+
+    @Test
+    void lineBreakAfterStatementOnlySplitsWhatSharesALine() {
+        String source = "let a: number=1;let b: number=2;\nlet c: number=3;";
+
+        assertEquals(
+                "let a: number=1;\nlet b: number=2;\nlet c: number=3;",
+                format(source, new Rules().breakAfterStatement()));
+    }
+
+    @Test
+    void lineBreaksAfterPrintlnAppliesOnlyAfterAPrintln() {
+        String source = "let a: number=1;\nprintln(a);\nprintln(a);";
+
+        assertEquals(
+                "let a: number=1;\nprintln(a);\n\n\nprintln(a);",
+                format(source, new Rules().printlnBreaks(2)));
+    }
+
+    @Test
+    void zeroLineBreaksAfterPrintlnCollapsesTheBlankLinesThatWereThere() {
+        String source = "println(1);\n\n\n\nprintln(2);";
+
+        assertEquals("println(1);\nprintln(2);", format(source, new Rules().printlnBreaks(0)));
+    }
+
+    @Test
+    void theBraceOfAnIfGoesWhereTheRuleSaysAndTheBodyIsNotTouched() {
+        String sameLine = "let a: boolean = true;\nif (a)\n{\n  println(a);\n}";
+        String below = "let a: boolean = true;\nif (a) {\n  println(a);\n}";
+
+        assertEquals(
+                "let a: boolean = true;\nif (a) {\n  println(a);\n}",
+                format(sameLine, new Rules().braceSameLine(true)));
+        assertEquals(
+                "let a: boolean = true;\nif (a)\n{\n  println(a);\n}",
+                format(below, new Rules().braceSameLine(false)));
+    }
+
+    @Test
+    void indentInsideIfReindentsEveryLevelAndAlignsTheClosingBrace() {
+        String source = "if (a) {\n  if (a) {\n    println(a);\n  }\n}";
+
+        assertEquals(
+                "if (a) {\n    if (a) {\n        println(a);\n    }\n}",
+                format(source, new Rules().indent(4)));
+    }
+
+    @Test
+    void unknownSymbolsAreReportedAsFailuresInsteadOfBeingWritten() {
+        Formatter formatter = formatterOver("let a: number = #;", FormatterConfiguration.none());
+
+        boolean sawFailure = false;
+        while (formatter.hasNext()) {
+            Result<String> piece = formatter.next();
+            sawFailure = sawFailure || piece instanceof Failure<String>;
+        }
+
+        assertTrue(sawFailure, "el símbolo desconocido tiene que llegar como Failure");
+    }
+
+    // el lexer descarta la comilla que delimitaba el string, así que el formatter tiene que
+    // reponerla sin romper el contenido: una cadena con comillas simples que adentro tiene
+    // una doble no puede salir reescrita con dobles, o queda como código inválido
+    @Test
+    void aSingleQuotedStringHoldingADoubleQuoteIsRewrittenWithSingleQuotes() {
+        String source = "let s:string = 'a \"b\" c';";
+
+        assertEquals(source, format(source, FormatterConfiguration.none()));
     }
 }

@@ -7,6 +7,7 @@ import org.printscript.linter.Violation;
 import org.printscript.linter.rules.format.IdentifierFormatChecker;
 import org.printscript.linter.visitors.IdentifierCollector;
 
+// que los nombres cumplan un formato
 public final class IdentifierFormatRule implements LintRule {
 
     private final IdentifierFormatChecker checker;

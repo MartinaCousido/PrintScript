@@ -10,7 +10,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.printscript.common.Failure;
 import org.printscript.common.Version;
-import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.runtime.OutputPrinter;
 
 class BooleanEndToEndTest {
@@ -97,7 +96,7 @@ class BooleanEndToEndTest {
         new FormattingRunner()
                 .format(
                         List.of("let ok:boolean=true;").iterator(),
-                        new FormatterConfiguration(false, true, true, 0),
+                        FormatterStyles.consigna(),
                         output,
                         Version.V11);
 

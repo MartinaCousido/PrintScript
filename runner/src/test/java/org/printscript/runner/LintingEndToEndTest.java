@@ -18,7 +18,7 @@ import org.printscript.linter.config.LinterConfiguration;
 class LintingEndToEndTest {
 
     private static final LinterConfiguration TODO_PRENDIDO =
-            new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), true);
+            new LinterConfiguration(Optional.of(IdentifierFormat.CAMEL_CASE), true, false);
 
     private static AnalysisReport analyze(LinterConfiguration configuration, String... lines) {
         return new AnalyzingRunner().analyze(List.of(lines).iterator(), configuration);
@@ -91,7 +91,7 @@ class LintingEndToEndTest {
 
     @Test
     void withTheRulesOffTheSameProgramIsClean() {
-        LinterConfiguration apagado = new LinterConfiguration(Optional.empty(), false);
+        LinterConfiguration apagado = new LinterConfiguration(Optional.empty(), false, false);
 
         AnalysisReport report =
                 analyze(apagado, "let user_name: string = \"Joe\";", "println(1 + 2);");

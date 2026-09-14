@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
+// implementa JSON con Jackson
 public final class JsonConfigurationMapper implements ConfigurationMapper {
 
     private final ObjectMapper mapper = new ObjectMapper();

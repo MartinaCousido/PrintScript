@@ -7,9 +7,7 @@ import java.util.Optional;
 import org.printscript.runtime.InputProvider;
 
 // lee una línea de la entrada estándar para readInput
-// recibe el BufferedReader en vez de abrir uno propio a propósito: la interfaz
-// interactiva ya tiene su lector sobre System.in para los comandos, y dos lectores
-// sobre el mismo stream se comen las líneas del otro de forma intermitente
+// recibe el BufferedReader
 final class ConsoleInputProvider implements InputProvider {
 
     private final BufferedReader reader;

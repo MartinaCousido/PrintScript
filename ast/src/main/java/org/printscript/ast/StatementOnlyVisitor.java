@@ -2,7 +2,7 @@ package org.printscript.ast;
 
 import org.printscript.common.Range;
 
-// Rechazan toda expresión de la misma manera, y cada nodo nuevo
+// Rechazan toda expresión, y cada nodo nuevo
 // de expresión se agrega una sola vez acá en lugar de en cada implementación.
 public abstract class StatementOnlyVisitor<T> implements ASTVisitor<T> {
 

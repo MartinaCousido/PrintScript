@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+// recibe una lista de mappers, elige el primero que soporta el formato y delega
 public final class ConfigurationReader {
 
     private final List<ConfigurationMapper> mappers;

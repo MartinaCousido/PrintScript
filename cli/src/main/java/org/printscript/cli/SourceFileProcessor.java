@@ -11,13 +11,10 @@ import java.util.List;
 import org.printscript.common.Failure;
 
 // abre el archivo fuente, arma el iterator de líneas con progreso y delega en el
-// caller. Es el único camino por el que cli lee un .ps del filesystem: lo comparten
-// los subcomandos (AbstractSourceFileCommand, AnalyzingCommand) y la interfaz
-// interactiva (InteractiveShell), así todos se comportan idéntico.
+// caller. Es el único camino por el que cli lee un .ps del filesystem.
 final class SourceFileProcessor {
 
-    // operación que produce fallas (execution/validation): read() se encarga de
-    // reportarlas y de traducir "hubo fallas" al exit code
+    // operación que produce fallas (execution/validation)
     @FunctionalInterface
     interface Operation {
         List<Failure<?>> execute(Iterator<String> lines);
@@ -43,6 +40,7 @@ final class SourceFileProcessor {
                 err);
     }
 
+    // se encarga de reportar fallas y de traducir "hubo fallas" al exit code
     static ExitCode read(Path sourceFile, LineConsumer consumer, PrintStream err) {
         if (!FileArguments.requireExistingRegularFile(sourceFile, err)) {
             return ExitCode.USAGE_ERROR;

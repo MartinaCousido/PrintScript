@@ -19,9 +19,9 @@ import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 
-// las reglas semánticas de PrintScript 1.0
-// el estado de error es por sentencia y no acumulado: una sentencia inválida no
-// condena a las que siguen. Lo único que se arrastra es la tabla de tipos.
+// las reglas semánticas
+// el estado de error es por sentencia y no acumulado:
+// una sentencia inválida no condena a las que siguen
 public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
 
     private final Set<Type> supportedTypes;

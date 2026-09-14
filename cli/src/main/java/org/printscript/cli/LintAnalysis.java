@@ -12,9 +12,8 @@ import org.printscript.runner.AnalysisReport;
 import org.printscript.runner.AnalyzingRunner;
 
 // Orquesta la operación de análisis estático para cli: carga la configuración de
-// reglas desde el archivo del usuario (o usa una vacía si no la pasó), corre el
-// AnalyzingRunner sobre el .ps y reporta violaciones y errores de sintaxis. Lo usan
-// tanto AnalyzingCommand como la interfaz interactiva.
+// reglas desde el archivo del usuario, corre el AnalyzingRunner sobre el .ps y
+// reporta violaciones y errores de sintaxis.
 final class LintAnalysis {
 
     private LintAnalysis() {}

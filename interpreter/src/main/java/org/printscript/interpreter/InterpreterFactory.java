@@ -13,9 +13,7 @@ import org.printscript.common.Result;
 import org.printscript.common.Version;
 import org.printscript.runtime.RuntimePorts;
 
-// acá vive todo lo que el intérprete sabe de cada versión: qué construcciones puede
-// ejecutar. Es la compuerta que hace que un programa 1.1 corrido como 1.0 falle con un
-// mensaje explícito en vez de comportarse raro.
+// acá vive lo que el intérprete sabe de cada versión
 public final class InterpreterFactory {
 
     private InterpreterFactory() {}

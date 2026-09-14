@@ -65,13 +65,22 @@ class LinterConfigurationTest {
         assertTrue(thrown.getMessage().contains(CAMEL), thrown.getMessage());
     }
 
+    // el TCK trae casos con las dos convenciones, así que las dos tienen que resolverse
     @Test
-    void snakeCaseIsNotSupportedAndSaysSo() {
-        Map<String, Object> values = Map.of(FORMAT_KEY, "snake case");
+    void snakeCaseIsSupportedInItsThreeSpellings() {
+        for (String spelling : new String[] {"snake case", "snakecase", "snake_case"}) {
+            assertEquals(
+                    Optional.of(IdentifierFormat.SNAKE_CASE),
+                    from(Map.of(FORMAT_KEY, spelling)).identifierFormat(),
+                    spelling);
+        }
+    }
 
-        IllegalArgumentException thrown =
-                assertThrows(IllegalArgumentException.class, () -> from(values));
-
-        assertTrue(thrown.getMessage().contains("snake case"), thrown.getMessage());
+    @Test
+    void theReadInputRuleIsOffUnlessItsKeyIsPresent() {
+        assertFalse(from(Map.of()).readInputOnlySimpleArgument());
+        assertTrue(
+                from(Map.of("mandatory-variable-or-literal-in-readInput", true))
+                        .readInputOnlySimpleArgument());
     }
 }

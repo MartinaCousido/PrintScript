@@ -10,9 +10,12 @@ import org.printscript.linter.config.LinterConfiguration;
 import org.printscript.linter.rules.IdentifierFormatRule;
 import org.printscript.linter.rules.LintRule;
 import org.printscript.linter.rules.PrintlnArgumentRule;
+import org.printscript.linter.rules.ReadInputArgumentRule;
 import org.printscript.linter.rules.format.CamelCaseChecker;
 import org.printscript.linter.rules.format.IdentifierFormatChecker;
+import org.printscript.linter.rules.format.SnakeCaseChecker;
 
+// arma la lista de reglas según la configuración
 public final class LinterFactory {
 
     private LinterFactory() {}
@@ -32,12 +35,16 @@ public final class LinterFactory {
         if (configuration.printlnOnlySimpleArgument()) {
             rules.add(new PrintlnArgumentRule());
         }
+        if (configuration.readInputOnlySimpleArgument()) {
+            rules.add(new ReadInputArgumentRule());
+        }
         return List.copyOf(rules);
     }
 
     private static IdentifierFormatChecker checkerFor(IdentifierFormat format) {
         return switch (format) {
             case CAMEL_CASE -> new CamelCaseChecker();
+            case SNAKE_CASE -> new SnakeCaseChecker();
         };
     }
 }

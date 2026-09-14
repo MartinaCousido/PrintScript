@@ -16,7 +16,7 @@ import org.printscript.common.Result;
 import org.printscript.common.Success;
 
 // calcula qué tipo tiene una expresión, sin evaluarla
-// mira la tabla de tipos pero no la modifica: declarar es cosa de las sentencias
+// mira la tabla de tipos pero no la modifica
 final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
 
     private final SymbolTable symbols;
