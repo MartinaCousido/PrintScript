@@ -7,10 +7,7 @@ import org.printscript.common.Failure;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 
-// la etapa completa: lo que se enchufa después del parser.
-// recie el flujo de sentencias del parser y por cada una llama al Executor
-// un error no corta la iteración, se sigue con la siguiente.
-// Decidir si frenar o no es una tarea de un módulo de más arriba que no existe
+// recibe el flujo de sentencias del parser y por cada una llama al Executor
 public final class Interpreter implements Iterator<Result<?>> {
 
     private final Iterator<Result<Statement>> statements;

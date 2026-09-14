@@ -14,6 +14,7 @@ class FormattingCommandEndToEndTest {
 
     @TempDir Path tempDir;
 
+    private static final String COMANDO = "formatting";
     private static final String CONFIG_ESPACIADO =
             "{ \"enforce-spacing-after-colon-in-declaration\": true,"
                     + " \"enforce-spacing-around-equals\": true }";
@@ -30,7 +31,7 @@ class FormattingCommandEndToEndTest {
         Path config = write("reglas.json", CONFIG_ESPACIADO);
 
         CliTestSupport.Result result =
-                CliTestSupport.run("formatting", source.toString(), "-c", config.toString());
+                CliTestSupport.run(COMANDO, source.toString(), "-c", config.toString());
 
         assertEquals(0, result.exitCode());
         assertTrue(result.stdout().contains("let a: number = 12;"), result.stdout());
@@ -53,11 +54,23 @@ class FormattingCommandEndToEndTest {
                 "el archivo tiene el código formateado");
     }
 
+    // formatting no parsea: reescribe el espacio entre tokens. Un programa que no compila
+    // igual se acomoda, que es cuando más falta hace. Validar es trabajo de `validation`.
     @Test
-    void reportsSyntaxErrorWithExitOne() throws IOException {
+    void formatsAProgramThatDoesNotParseAndExitsZero() throws IOException {
         Path source = write("roto.ps", "let x number = 1;\n");
 
-        CliTestSupport.Result result = CliTestSupport.run("formatting", source.toString());
+        CliTestSupport.Result result = CliTestSupport.run(COMANDO, source.toString());
+
+        assertEquals(0, result.exitCode());
+        assertTrue(result.stdout().contains("let x number = 1;"), result.stdout());
+    }
+
+    @Test
+    void reportsASymbolTheLexerCannotReadWithExitOne() throws IOException {
+        Path source = write("ilegible.ps", "let a: number = #;\n");
+
+        CliTestSupport.Result result = CliTestSupport.run(COMANDO, source.toString());
 
         assertEquals(1, result.exitCode());
         assertTrue(result.stderr().contains("error:"), result.stderr());
@@ -69,7 +82,7 @@ class FormattingCommandEndToEndTest {
         Path config = write("reglas", CONFIG_ESPACIADO);
 
         CliTestSupport.Result result =
-                CliTestSupport.run("formatting", source.toString(), "-c", config.toString());
+                CliTestSupport.run(COMANDO, source.toString(), "-c", config.toString());
 
         assertEquals(2, result.exitCode());
     }

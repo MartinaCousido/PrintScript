@@ -8,14 +8,14 @@ import org.printscript.common.Failure;
 import org.printscript.common.Result;
 import org.printscript.common.Version;
 
+// valida sin ejecutar
 public final class ValidationRunner {
 
-    // la consigna define la versión como argumento opcional, con 1.0 por defecto
     public List<Failure<?>> validate(Iterator<String> lines) {
         return validate(lines, Version.V10);
     }
 
-    // valida sintaxis y semántica sin ejecutar nada, como pide la consigna
+    // valida sintaxis y semántica sin ejecutar nada
     public List<Failure<?>> validate(Iterator<String> lines, Version version) {
         Iterator<Result<Statement>> statements =
                 StatementStreams.validatedStatementStream(lines, version);

@@ -10,10 +10,6 @@ import org.printscript.lexer.constructors.TokenConstructor;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 
-// pieza principal del módulo.
-// null es el centinela de "todavía no se calculó" para currentLine y pending,
-// campos mutables de un hot path; envolverlos en Optional agregaría boxing en
-// cada token sin cambiar la lógica.
 @SuppressWarnings("PMD.NullAssignment")
 public final class Lexer implements Iterator<Token> {
 
@@ -52,8 +48,6 @@ public final class Lexer implements Iterator<Token> {
     }
 
     // lee el código linea por linea y va entregando tokens de a uno
-    // el return final es la salida natural de un bucle de escaneo sin límite fijo:
-    // termina apenas encuentra un token, no hay forma más simple de expresarlo.
     @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
     private Token advance() {
         while (true) {

@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+// el enum con las 3 escrituras de cada uno
 public enum IdentifierFormat {
-    CAMEL_CASE(List.of("camel case", "camelcase", "camel_case"));
+    CAMEL_CASE(List.of("camel case", "camelcase", "camel_case")),
+    SNAKE_CASE(List.of("snake case", "snakecase", "snake_case"));
 
     private final List<String> spellings;
 

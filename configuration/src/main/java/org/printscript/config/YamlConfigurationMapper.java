@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
+// implementa YAML
 public final class YamlConfigurationMapper implements ConfigurationMapper {
 
     private final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());

@@ -12,10 +12,9 @@ import org.printscript.config.JsonConfigurationMapper;
 import org.printscript.config.RulesConfiguration;
 import org.printscript.config.YamlConfigurationMapper;
 
-// Lee el archivo de reglas del usuario (JSON/YAML, formato detectado por extensión)
-// hacia una RulesConfiguration genérica. Lo comparten las operaciones que se
-// configuran con reglas: analyzing (linter) y formatting (formatter). cli es el único
-// módulo autorizado a abrir archivos (docs/arquitectura.md, sección 5).
+// Lee el archivo de reglas del usuario (JSON/YAML) hacia una RulesConfiguration genérica.
+// Lo comparten las operaciones que se configuran con reglas:
+// analyzing (linter) y formatting (formatter).
 final class ConfigurationFiles {
 
     private ConfigurationFiles() {}

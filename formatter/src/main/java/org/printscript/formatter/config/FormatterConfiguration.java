@@ -1,64 +1,93 @@
 package org.printscript.formatter.config;
 
+import java.util.Optional;
 import org.printscript.config.RulesConfiguration;
 
+// Las reglas de formato, tal como las nombra la consigna.
+// Todas son opcionales y ninguna tiene un valor por defecto
 public record FormatterConfiguration(
-        boolean spaceBeforeColon,
-        boolean spaceAfterColon,
-        boolean spaceAroundAssign,
-        int blankLinesBeforePrintln,
-        int indentSize,
-        boolean braceOnSameLine) {
+        Optional<Boolean> spacingAroundEquals,
+        boolean spacingBeforeColon,
+        boolean spacingAfterColon,
+        boolean spaceSurroundingOperations,
+        boolean singleSpaceSeparation,
+        boolean lineBreakAfterStatement,
+        Optional<Integer> lineBreaksAfterPrintln,
+        Optional<Boolean> ifBraceOnSameLine,
+        Optional<Integer> indentInsideIf) {
 
-    public static final String SPACE_BEFORE_COLON_KEY =
+    public static final String SPACING_AROUND_EQUALS_KEY = "enforce-spacing-around-equals";
+    public static final String NO_SPACING_AROUND_EQUALS_KEY = "enforce-no-spacing-around-equals";
+    public static final String SPACING_BEFORE_COLON_KEY =
             "enforce-spacing-before-colon-in-declaration";
-    public static final String SPACE_AFTER_COLON_KEY = "enforce-spacing-after-colon-in-declaration";
-    public static final String SPACE_AROUND_ASSIGN_KEY = "enforce-spacing-around-equals";
-    public static final String BLANK_LINES_BEFORE_PRINTLN_KEY = "line-breaks-before-println";
-    public static final String INDENT_SIZE_KEY = "indent-inside-block";
-    public static final String BRACE_ON_SAME_LINE_KEY = "brace-on-same-line";
+    public static final String SPACING_AFTER_COLON_KEY =
+            "enforce-spacing-after-colon-in-declaration";
+    public static final String SPACE_SURROUNDING_OPERATIONS_KEY =
+            "mandatory-space-surrounding-operations";
+    public static final String SINGLE_SPACE_SEPARATION_KEY = "mandatory-single-space-separation";
+    public static final String LINE_BREAK_AFTER_STATEMENT_KEY =
+            "mandatory-line-break-after-statement";
+    public static final String LINE_BREAKS_AFTER_PRINTLN_KEY = "line-breaks-after-println";
+    public static final String IF_BRACE_SAME_LINE_KEY = "if-brace-same-line";
+    public static final String IF_BRACE_BELOW_LINE_KEY = "if-brace-below-line";
+    public static final String INDENT_INSIDE_IF_KEY = "indent-inside-if";
 
-    private static final int DEFAULT_INDENT_SIZE = 4;
-
-    private static final int MAX_BLANK_LINES_BEFORE_PRINTLN = 2;
-
-    // las reglas de 1.0 no dicen nada de bloques: este constructor las deja como estaban
-    // y toma los valores por defecto para lo que agrega 1.1
-    public FormatterConfiguration(
-            boolean spaceBeforeColon,
-            boolean spaceAfterColon,
-            boolean spaceAroundAssign,
-            int blankLinesBeforePrintln) {
-        this(
-                spaceBeforeColon,
-                spaceAfterColon,
-                spaceAroundAssign,
-                blankLinesBeforePrintln,
-                DEFAULT_INDENT_SIZE,
-                true);
+    // nada activado: el archivo sale tal como entró
+    public static FormatterConfiguration none() {
+        return new FormatterConfiguration(
+                Optional.empty(),
+                false,
+                false,
+                false,
+                false,
+                false,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty());
     }
 
     public FormatterConfiguration {
-        if (blankLinesBeforePrintln < 0
-                || blankLinesBeforePrintln > MAX_BLANK_LINES_BEFORE_PRINTLN) {
-            throw new IllegalArgumentException(
-                    "Cantidad de saltos de línea antes de println fuera de rango: "
-                            + blankLinesBeforePrintln
-                            + ". Admitidos: 0 a "
-                            + MAX_BLANK_LINES_BEFORE_PRINTLN);
-        }
-        if (indentSize < 0) {
-            throw new IllegalArgumentException("La sangría no puede ser negativa: " + indentSize);
-        }
+        lineBreaksAfterPrintln.ifPresent(FormatterConfiguration::requireNotNegative);
+        indentInsideIf.ifPresent(FormatterConfiguration::requireNotNegative);
     }
 
     public static FormatterConfiguration from(RulesConfiguration rules) {
         return new FormatterConfiguration(
-                rules.getBoolean(SPACE_BEFORE_COLON_KEY).orElse(false),
-                rules.getBoolean(SPACE_AFTER_COLON_KEY).orElse(false),
-                rules.getBoolean(SPACE_AROUND_ASSIGN_KEY).orElse(false),
-                rules.getInt(BLANK_LINES_BEFORE_PRINTLN_KEY).orElse(0),
-                rules.getInt(INDENT_SIZE_KEY).orElse(DEFAULT_INDENT_SIZE),
-                rules.getBoolean(BRACE_ON_SAME_LINE_KEY).orElse(true));
+                equalsSpacingOf(rules),
+                rules.getBoolean(SPACING_BEFORE_COLON_KEY).orElse(false),
+                rules.getBoolean(SPACING_AFTER_COLON_KEY).orElse(false),
+                rules.getBoolean(SPACE_SURROUNDING_OPERATIONS_KEY).orElse(false),
+                rules.getBoolean(SINGLE_SPACE_SEPARATION_KEY).orElse(false),
+                rules.getBoolean(LINE_BREAK_AFTER_STATEMENT_KEY).orElse(false),
+                rules.getInt(LINE_BREAKS_AFTER_PRINTLN_KEY),
+                bracePlacementOf(rules),
+                rules.getInt(INDENT_INSIDE_IF_KEY));
+    }
+
+    // dos claves opuestas sobre el mismo espacio: la que pide espacio manda si están las dos
+    private static Optional<Boolean> equalsSpacingOf(RulesConfiguration rules) {
+        if (rules.getBoolean(SPACING_AROUND_EQUALS_KEY).orElse(false)) {
+            return Optional.of(true);
+        }
+        if (rules.getBoolean(NO_SPACING_AROUND_EQUALS_KEY).orElse(false)) {
+            return Optional.of(false);
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<Boolean> bracePlacementOf(RulesConfiguration rules) {
+        if (rules.getBoolean(IF_BRACE_SAME_LINE_KEY).orElse(false)) {
+            return Optional.of(true);
+        }
+        if (rules.getBoolean(IF_BRACE_BELOW_LINE_KEY).orElse(false)) {
+            return Optional.of(false);
+        }
+        return Optional.empty();
+    }
+
+    private static void requireNotNegative(int value) {
+        if (value < 0) {
+            throw new IllegalArgumentException("El valor no puede ser negativo: " + value);
+        }
     }
 }

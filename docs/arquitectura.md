@@ -51,7 +51,7 @@ flowchart TD
     semantic --> ast
     interpreter --> ast
     interpreter --> runtimeapi
-    formatter --> ast
+    formatter --> token
     formatter --> config
     linter --> ast
     linter --> config
@@ -66,9 +66,9 @@ flowchart TD
 
 Cinco cosas para leer en ese grafo:
 
-- **Los seis motores no se conocen entre sí.** No hay ninguna flecha horizontal. Consumen vocabulario, nunca el módulo de al lado. El `linter` y el `formatter` en particular no conocen al `parser`: reciben el flujo de sentencias ya armado.
+- **Los seis motores no se conocen entre sí.** No hay ninguna flecha horizontal. Consumen vocabulario, nunca el módulo de al lado. El `linter` no conoce al `parser`: recibe el flujo de sentencias ya armado. El `formatter` va un paso más atrás y consume tokens, no el árbol.
 - **`semantic` está entre el parser y el interpreter**, y es lo que hace que el modo Validation de la consigna valide de verdad la semántica y no solo la sintaxis. Depende de `ast` y no de `parser`: consume el vocabulario, no la gramática.
-- **`runtime-api` es un módulo de puertos**: `OutputPrinter`, `InputProvider` y `EnvProvider`, más el `RuntimePorts` que los junta. Solo depende de `common`.
+- **`runtime-api` es un módulo de puertos**: `OutputPrinter`, `InputProvider` y `EnvProvider`, más el `RuntimePorts` que los junta. No depende de nada: es el único módulo sin una sola dependencia, y eso es lo que permite que `cli` e `interpreter` lo implementen y lo consuman sin conocerse.
 - **Nadie depende de `interpreter`, `linter` ni `formatter`.** Son hojas: lo que más cambia está arriba de todo, donde romperlo no rompe a nadie.
 - **`cli` es el único que toca filesystem, `System.out`/`System.err`, `System.getenv` y códigos de salida**, y el único punto de entrada ejecutable (`org.printscript.cli.Cli.main`). No depende de `lexer`, `parser`, `interpreter`, `ast` ni `token`: solo de `runner`, `runtime-api` y `common`.
 
@@ -81,13 +81,13 @@ Cinco cosas para leer en ese grafo:
 | `common` | Cómo viaja un dato o un error por el pipeline y cómo se ubica algo en el fuente | Casi nunca: cambiaría la forma del pipeline | — | ✅ |
 | `token` | Qué es un token y qué categorías existen | Casi nunca: cambia la noción de token, no el lenguaje | `common` | ✅ |
 | `ast` | La forma del árbol y el contrato de recorrido | El lenguaje gana construcciones | `common` | ✅ |
-| `runtime-api` | Cómo habla un programa en ejecución con el mundo exterior | Cambian los canales de E/S del programa | `common` | ✅ |
+| `runtime-api` | Cómo habla un programa en ejecución con el mundo exterior | Cambian los canales de E/S del programa | — | ✅ |
 | `lexer` | Cómo se reconoce un token dentro del texto | Cambian las reglas léxicas | `common`, `token` | ✅ |
 | `parser` | La gramática y cómo se construye el árbol | Cambian las reglas sintácticas | `common`, `token`, `ast` | ✅ |
 | `interpreter` | Qué efecto produce cada nodo al ejecutarse | Cambia la semántica de ejecución | `common`, `ast`, `runtime-api` | ✅ |
 | `configuration` | En qué formato vive la configuración (JSON, YAML, mañana TOML) | Aparecen formatos nuevos | `common` | ✅ |
 | `semantic` | Qué programas bien formados tienen sentido | Cambian las reglas de tipos y scope | `common`, `ast` | ✅ |
-| `formatter` | Cómo se ve el código | Cambian las reglas de estilo | `common`, `ast`, `configuration` | ✅ |
+| `formatter` | Cómo se ve el código | Cambian las reglas de estilo | `common`, `token`, `configuration` | ✅ |
 | `linter` | Qué convenciones se exigen | Cambian las convenciones | `common`, `ast`, `configuration` | ✅ |
 | `runner` | Cómo se arma el pipeline de cada operación | Aparecen operaciones nuevas | todos los anteriores | ✅ |
 | `cli` | La experiencia de línea de comandos | Cambian argumentos, progreso, exit codes | `runner`, `runtime-api`, `common` | ✅ |
@@ -162,7 +162,9 @@ Tan importante como las dependencias que existen son las que se evitaron deliber
 
 **`lexer` no depende de `ast`.** El lexer no sabe qué es una expresión: solo parte texto en piezas.
 
-**`formatter` y `linter` no dependen de `semantic`.** Es lo que permite formatear y lintear código con errores de tipos.
+**`linter` no depende de `semantic`.** Es lo que permite lintear código con errores de tipos.
+
+**`formatter` no depende de `ast` ni de `parser`.** Consume tokens. Formatear es decidir el espacio entre dos tokens, y el árbol no guarda esa información: el whitespace se descarta en el lexer. La posición sí sobrevive, así que el espacio original se reconstruye con la distancia entre el fin de un token y el inicio del siguiente, sin guardarse el archivo. La consecuencia visible es que se puede formatear un programa que no parsea, que es justo cuando más falta hace.
 
 **`cli` no depende de `interpreter`.** Los puertos que el `cli` implementa viven en `runtime-api`, no dentro del intérprete. Si vivieran ahí, el `cli` tendría que depender del intérprete entero para escribir dos clases de tres líneas, y cualquier cambio interno del `Executor` lo recompilaría.
 
@@ -210,6 +212,8 @@ Las fachadas del `runner` toman la versión como parámetro y mantienen además 
 
 **`Block` es un nodo y no una `List<Statement>`.** Cuesta un nodo más en el AST, y por lo tanto un `visit` más en cada visitor. Se paga por dos cosas. La primera es que `else if (b) {}` y `else { if (b) {} }` colapsarían al mismo árbol sin él, y el formatter tiene que imprimir uno en la misma línea y el otro anidado. La segunda es que el scope pasa a ser exactamente un `Block`, así que `semantic` y el intérprete abren y cierran frame en un solo lugar, sin casos especiales para el `then` y para el `else`.
 
+**El formatter reescribe, no imprime.** La consigna define un conjunto de reglas que actúan cada una sobre un espacio concreto, y exige que lo que ninguna regla nombra quede byte a byte como estaba: su caso testigo conserva `let twice_thing : string` intacto porque la regla del espacio antes del `:` está apagada. Un impresor del AST no puede cumplirlo —ese espacio ya no existe en el árbol—, así que el formatter trabaja sobre el flujo de tokens. Lo que se gana es la fidelidad que el TCK pide y poder formatear código que no parsea; lo que se pierde es el pretty-printing: un `if(true){println(1);}` en una línea sale igual, porque ninguna regla dice dónde van los saltos adentro de las llaves. Tres efectos visibles: no se agrega un salto final que el fuente no tenía, `formatting` ya no reporta errores de sintaxis (sí los símbolos que el lexer no puede leer), y la profundidad para indentar se cuenta con llaves en vez de leerse del nodo `Block`.
+
 **Visitor exhaustivo.** Agregar un nodo al AST rompe en compilación todos los visitors existentes. Se asume como mecanismo de seguridad, no como defecto: el error de compilación funciona como checklist de qué herramienta tiene que decidir qué hacer con la construcción nueva. Es lo que obligó a decidir, por ejemplo, que `println(true)` es un argumento simple y `println(readInput("x"))` no.
 
 **El costo del contrato único, y cómo se acotó.** `ASTVisitor` cubre expresiones y sentencias juntas, así que un visitor de sentencias tiene que rechazar toda expresión y viceversa. Ese rechazo se escribía repetido en cada implementación y crecía con cada nodo nuevo — CPD lo detectó como duplicación real entre `Executor` y `StatementChecker`. Ahora vive una sola vez, en `StatementOnlyVisitor` y `ExpressionOnlyVisitor`: un nodo de expresión nuevo se agrega en un solo lugar en lugar de en cuatro.
@@ -239,7 +243,7 @@ El invariante del módulo: **compone, no decide**. No tiene ni una regla del len
 
 **Trade-off asumido.** Como la ejecución es en una sola pasada, cuando aparece un error las sentencias válidas anteriores ya se ejecutaron y su salida ya salió. Quien necesite atomicidad corre primero la validación.
 
-**Comportamiento anotado: imprimir una variable declarada sin valor.** Hoy el valor guardado para una declaración sin inicializador es `null`, y `asText` lo convierte con `String.valueOf`, así que `println` imprime `null`. No es lo que debería pasar en un lenguaje con chequeo de tipos, pero nadie lo detecta porque `semantic` no existe. Queda pendiente de ese módulo.
+**Comportamiento anotado: imprimir una variable declarada sin valor.** Hoy el valor guardado para una declaración sin inicializador es `null`, y `asText` lo convierte con `String.valueOf`, así que `println` imprime `null`. No es lo que debería pasar en un lenguaje con chequeo de tipos, y `semantic` tampoco lo detecta: hoy acepta una declaración sin inicializador y no marca el uso posterior de esa variable. Queda anotado como pendiente de una regla de "usada antes de asignarse".
 
 ---
 
@@ -259,7 +263,7 @@ Es el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.m
 
 **Los puertos de entrada.** `SystemEnvProvider` es el único lugar del sistema que llama a `System.getenv`. `ConsoleInputProvider` **recibe** el `BufferedReader` en vez de abrir uno propio: la shell interactiva ya tiene su lector sobre `System.in` para los comandos, y dos lectores sobre el mismo stream se comen las líneas del otro de forma intermitente. Por eso el `readInput` lanzado desde el REPL lee del mismo lector que la shell.
 
-**`analyzing` corre el linter y `formatting` corre el formatter.** Ambas cargan las reglas del `--config` (JSON/YAML) vía el módulo `configuration` con el helper compartido `ConfigurationFiles`, y sin `--config` cada regla cae en su valor por defecto. `AnalyzingCommand`/`LintAnalysis` corren el `AnalyzingRunner` y reportan las violaciones (prefijo `lint:` + rango) y los errores de sintaxis; `FormattingCommand`/`Formatting` corren el `FormattingRunner` y escriben el código formateado por stdout o, con `--output`, a un archivo (nunca pisan el fuente). Las cuatro operaciones tienen backend hoy; el `UNSUPPORTED_OPERATION` (exit code `3`) queda reservado para cuando se sume una operación sin implementar.
+**`analyzing` corre el linter y `formatting` corre el formatter.** Ambas cargan las reglas del `--config` (JSON/YAML) vía el módulo `configuration` con el helper compartido `ConfigurationFiles`, y sin `--config` no hay ninguna regla activa: el linter no reporta nada y el formatter devuelve el archivo intacto. `AnalyzingCommand`/`LintAnalysis` corren el `AnalyzingRunner` y reportan las violaciones (prefijo `lint:` + rango) y los errores de sintaxis; `FormattingCommand`/`Formatting` corren el `FormattingRunner` y escriben el código formateado por stdout o, con `--output`, a un archivo (nunca pisan el fuente). Las cuatro operaciones tienen backend hoy; el `UNSUPPORTED_OPERATION` (exit code `3`) queda reservado para cuando se sume una operación sin implementar.
 
 **Guardar la salida (`execution --output` / `save`).** `ExecutionOutput` teea la salida del programa por un `TeeOutputPrinter` hacia la consola y hacia un `WriterOutputPrinter` sobre un archivo, así el programa se ejecuta una sola vez y su salida queda mostrada y guardada. El REPL expone esto como el comando `save`, que deriva el `.txt` junto al fuente.
 
@@ -292,7 +296,7 @@ Es una etapa más del pipeline: implementa `Iterator<Result<List<Violation>>>` y
 
 Una clave ausente deja la regla apagada. Un valor **desconocido** en `identifier_format` rompe con un mensaje que nombra el valor recibido y los soportados, en vez de apagar la regla en silencio.
 
-**`snake case` no está soportado a propósito.** La consigna admite camel case o snake case y el equipo eligió uno solo. Sumarlo es una clase que implemente `IdentifierFormatChecker` y un valor más en el enum: nada de lo que ya está escrito cambia.
+**Las dos convenciones de identificador están soportadas.** `camel case` y `snake case`, cada una con su `IdentifierFormatChecker` y su valor en el enum `IdentifierFormat`. La segunda entró para cumplir el TCK, que trae casos de las dos, y no cambió nada de lo que ya estaba escrito: es exactamente la extensión que el diseño preveía.
 
 ### El linter no sabe qué es JSON
 

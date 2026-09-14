@@ -4,8 +4,7 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-// abrir y validar archivos es responsabilidad exclusiva de cli, ver
-// docs/arquitectura.md seccion 5
+// abre y valida archivos
 final class FileArguments {
 
     private FileArguments() {}
