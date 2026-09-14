@@ -6,8 +6,8 @@ import org.printscript.ast.Statement;
 import org.printscript.common.Result;
 import org.printscript.common.Version;
 
-// acá vive todo lo que semantic sabe de cada versión: qué tipos existen
-// las reglas son las mismas para todas; lo que cambia es el vocabulario que aceptan
+// acá vive lo que semantic sabe de cada versión
+
 public final class SemanticFactory {
 
     private SemanticFactory() {}

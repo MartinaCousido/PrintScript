@@ -9,23 +9,13 @@ import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 
 // Decide qué va entre dos tokens.
-//
-// Formatear es exactamente eso: el texto de los tokens no se toca nunca, así que todo el
-// trabajo está en el espacio que los separa. Una regla activa lo fija; sin ninguna regla
-// que opine, se reconstruye el original.
-//
-// El original sale de las posiciones y no del fuente: la diferencia entre dónde terminó un
-// token y dónde empieza el siguiente ya dice cuántos saltos y cuántos espacios había. Así
-// el formatter no necesita guardarse el archivo y el pipeline sigue siendo de a un token.
 final class Gaps {
 
     private static final Set<String> OPERATIONS = Set.of("+", "-", "*", "/");
 
     private final FormatterConfiguration configuration;
 
-    // el '{' abre un nivel y el '}' lo cierra: es lo único que hace falta para indentar
     private int depth;
-    // si la sentencia que está por cerrar es un println, para los saltos que van después
     private boolean insidePrintln;
 
     Gaps(FormatterConfiguration configuration) {
@@ -52,8 +42,7 @@ final class Gaps {
         }
     }
 
-    // las reglas se consultan en orden y gana la primera que opine; ninguna se pisa con
-    // otra en la práctica, porque la consigna las prende de a una
+    // las reglas se consultan en orden y gana la primera que opine
     private Optional<String> forced(Token previous, Token current) {
         return Stream.<Supplier<Optional<String>>>of(
                         () -> afterPrintln(previous, current),
@@ -140,9 +129,6 @@ final class Gaps {
         return "\n".repeat(breaks) + indentBefore(current, current.range().start().column() - 1);
     }
 
-    // un salto que la regla inventa estrena la línea, así que no hay sangría previa que
-    // conservar: la columna que traía el token es la de donde estaba antes, a mitad de
-    // línea, y copiarla lo empujaría hasta ahí
     private String lineBreaks(int howMany, Token current) {
         return "\n".repeat(howMany) + indentBefore(current, 0);
     }

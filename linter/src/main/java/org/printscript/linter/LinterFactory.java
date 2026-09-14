@@ -15,6 +15,7 @@ import org.printscript.linter.rules.format.CamelCaseChecker;
 import org.printscript.linter.rules.format.IdentifierFormatChecker;
 import org.printscript.linter.rules.format.SnakeCaseChecker;
 
+// arma la lista de reglas según la configuración
 public final class LinterFactory {
 
     private LinterFactory() {}

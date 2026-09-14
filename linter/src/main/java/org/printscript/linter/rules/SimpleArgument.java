@@ -9,9 +9,7 @@ import org.printscript.ast.ReadEnv;
 import org.printscript.ast.ReadInput;
 import org.printscript.ast.StringLiteral;
 
-// qué cuenta como "un identificador o un literal". Lo piden dos reglas —la de println y
-// la de readInput— con el mismo criterio, así que vive una sola vez: si mañana aparece un
-// nodo de expresión nuevo, hay un único lugar donde decidir de qué lado cae.
+// qué cuenta como "un identificador o un literal".
 final class SimpleArgument {
 
     private SimpleArgument() {}

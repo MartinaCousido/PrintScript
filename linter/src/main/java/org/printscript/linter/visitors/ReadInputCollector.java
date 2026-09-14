@@ -20,9 +20,7 @@ import org.printscript.ast.Statement;
 import org.printscript.ast.StringLiteral;
 import org.printscript.ast.VariableDeclaration;
 
-// junta todos los readInput de una sentencia. A diferencia del PrintlnCollector tiene que
-// bajar también por las expresiones: el caso que importa es un readInput adentro del
-// inicializador de una declaración, que es donde la consigna lo usa.
+// junta todos los readInput de una sentencia.
 public final class ReadInputCollector implements ASTVisitor<List<ReadInput>> {
 
     @Override

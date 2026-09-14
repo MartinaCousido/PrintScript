@@ -18,6 +18,7 @@ import org.printscript.ast.ReadInput;
 import org.printscript.ast.StringLiteral;
 import org.printscript.ast.VariableDeclaration;
 
+// todos los identifiers
 public final class IdentifierCollector implements ASTVisitor<List<Identifier>> {
 
     @Override

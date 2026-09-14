@@ -8,7 +8,6 @@ import java.util.Optional;
 
 // tabla de variables
 // es la única memoria del programa mientras corre
-// es inmutable, cada cambio devuelve una tabla nueva
 // los frames son el scope: se abre uno al entrar a un Block y se cierra al salir, igual
 // que en la tabla de tipos de semantic, y en el mismo lugar
 public final class Environment {
@@ -39,7 +38,7 @@ public final class Environment {
         return new Environment(List.copyOf(frames.subList(0, frames.size() - 1)));
     }
 
-    // vacío si el nombre ya existe en ESTE scope; en uno más interno es sombra y vale
+    // vacío si el nombre ya existe en ESTE scope
     public Optional<Environment> declare(
             String name, String declaredType, Object value, boolean immutable) {
         if (innermost().containsKey(name)) {
@@ -52,7 +51,6 @@ public final class Environment {
 
     // vacío también cuando el nombre existe pero es una constante: reasignarla no se
     // puede. semantic ya lo rechaza antes; acá queda como red de seguridad.
-    // el valor se escribe en el frame donde vive la variable, no en el más interno
     public Optional<Environment> assign(String name, Object value) {
         int frame = frameOf(name);
         if (frame < 0 || frames.get(frame).get(name).immutable()) {

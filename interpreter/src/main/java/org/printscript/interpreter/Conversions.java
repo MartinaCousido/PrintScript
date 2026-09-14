@@ -6,11 +6,6 @@ import org.printscript.common.Result;
 import org.printscript.common.Success;
 
 // lleva un valor al tipo con el que se declaró la variable
-// se aplica SIEMPRE, en la declaración y en la asignación, y no solo cuando el
-// inicializador es una lectura externa: para todo lo demás es un no-op, porque semantic
-// ya garantizó que el tipo coincide. Así el Executor no tiene que preguntar de qué nodo
-// vino el valor, que es justo el enredo por el que en el repo relevado el validador y
-// el ejecutor terminan diciendo cosas distintas.
 final class Conversions {
 
     private Conversions() {}

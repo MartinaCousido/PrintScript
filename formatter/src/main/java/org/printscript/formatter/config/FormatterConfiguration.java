@@ -4,13 +4,8 @@ import java.util.Optional;
 import org.printscript.config.RulesConfiguration;
 
 // Las reglas de formato, tal como las nombra la consigna.
-//
-// Todas son opcionales y ninguna tiene un valor por defecto que "acomode" el código: una
-// regla ausente significa dejar ese espacio como estaba. Es lo que distingue a este
-// formatter de un pretty-printer, que impone un estilo entero aunque no se lo pidan.
+// Todas son opcionales y ninguna tiene un valor por defecto
 public record FormatterConfiguration(
-        // presente y true: espacio alrededor del '='. Presente y false: sin espacio.
-        // Vacío: no se toca. Son dos claves distintas que configuran el mismo espacio.
         Optional<Boolean> spacingAroundEquals,
         boolean spacingBeforeColon,
         boolean spacingAfterColon,
@@ -18,7 +13,6 @@ public record FormatterConfiguration(
         boolean singleSpaceSeparation,
         boolean lineBreakAfterStatement,
         Optional<Integer> lineBreaksAfterPrintln,
-        // presente y true: la llave va en la misma línea del if. Presente y false: abajo.
         Optional<Boolean> ifBraceOnSameLine,
         Optional<Integer> indentInsideIf) {
 

@@ -7,12 +7,13 @@ import org.printscript.ast.Statement;
 import org.printscript.linter.Violation;
 import org.printscript.linter.visitors.PrintlnCollector;
 
+// println recibe un literal o un identificador, no una expresión
 public final class PrintlnArgumentRule implements LintRule {
 
     private final PrintlnCollector collector = new PrintlnCollector();
 
     // recorre para encontrar también los println de adentro de un bloque, y reporta
-    // todos los incumplimientos, no solo el primero
+    // todos los incumplimientos
     @Override
     public List<Violation> check(Statement statement) {
         return statement.accept(collector).stream()

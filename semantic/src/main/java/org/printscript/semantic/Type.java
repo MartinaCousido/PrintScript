@@ -4,8 +4,6 @@ import java.util.Optional;
 import java.util.Set;
 
 // el tipo semántico, con el que se razona sobre qué programas tienen sentido
-// no confundir con TypeName, que es la anotación tal como fue escrita en el fuente:
-// uno es sintaxis y el otro es semántica, y por eso viven en módulos distintos
 public enum Type {
     NUMBER("number"),
     STRING("string"),

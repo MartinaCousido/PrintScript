@@ -14,15 +14,11 @@ import org.printscript.runtime.OutputPrinter;
 import org.printscript.runtime.RuntimePorts;
 
 // Ejecuta un archivo PrintScript, opcionalmente guardando la salida de sus println en
-// un archivo además de mostrarla por consola (run-and-save). Lo usan ExecutionCommand
-// (--output) y el comando save de la interfaz interactiva.
+// un archivo además de mostrarla por consola
 final class ExecutionOutput {
 
     private ExecutionOutput() {}
 
-    // reader es el lector de comandos de la interfaz interactiva cuando la ejecución
-    // sale de ahí, y null cuando sale de un subcomando: en el REPL readInput tiene que
-    // leer del MISMO lector que la shell, o los dos se comen las líneas del otro
     static ExitCode run(
             Path sourceFile,
             Path outputFile,

@@ -17,8 +17,7 @@ import org.printscript.runner.FormattingRunner;
 
 // Orquesta la operación de formateo para cli: carga las reglas del --config (o usa las
 // de por defecto), corre el FormattingRunner y escribe el código formateado a un
-// archivo (--output) o por consola. Lo usan FormattingCommand y la interfaz
-// interactiva.
+// archivo (--output) o por consola.
 final class Formatting {
 
     private Formatting() {}

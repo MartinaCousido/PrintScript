@@ -3,6 +3,7 @@ package org.printscript.common;
 import java.util.Iterator;
 import java.util.function.Function;
 
+// evita repetir "si falló, propagalo" en cada etapa
 public final class MappedResults<S, T> implements Iterator<Result<T>> {
 
     private final Iterator<Result<S>> source;

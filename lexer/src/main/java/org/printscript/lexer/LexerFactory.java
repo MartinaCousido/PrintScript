@@ -11,7 +11,7 @@ import org.printscript.lexer.constructors.StringTokenConstructor;
 import org.printscript.lexer.constructors.SymbolTokenConstructor;
 import org.printscript.token.TokenType;
 
-// acá vive todo lo que el lexer sabe de cada versión del lenguaje
+// acá vive lo que el lexer sabe de cada versión
 // el motor recibe constructores y tablas: no sabe que las versiones existen
 public final class LexerFactory {
 
@@ -37,10 +37,7 @@ public final class LexerFactory {
         return keywords;
     }
 
-    // agregar una keyword de una versión es agregar una entrada acá: el Lexer no cambia
-    // true y false salen por la misma tabla porque KeywordTokenConstructor consume la
-    // palabra entera: "trueValue" es una sola palabra que no está en la tabla, así que
-    // queda como identificador sin que haya que programar nada
+    // agregar una keyword de una versión es agregar una entrada acá
     private static Map<String, TokenType> keywordsAddedIn(Version version) {
         return switch (version) {
             case V10 -> Map.of();

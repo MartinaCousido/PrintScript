@@ -3,6 +3,7 @@ package org.printscript.linter.config;
 import java.util.Optional;
 import org.printscript.config.RulesConfiguration;
 
+// traduce el RulesConfiguration genérico a las 3 reglas con nombre
 public record LinterConfiguration(
         Optional<IdentifierFormat> identifierFormat,
         boolean printlnOnlySimpleArgument,

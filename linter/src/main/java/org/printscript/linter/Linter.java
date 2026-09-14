@@ -7,6 +7,7 @@ import org.printscript.common.MappedResults;
 import org.printscript.common.Result;
 import org.printscript.linter.rules.LintRule;
 
+// por cada sentencia, corre todas las reglas y junta lo que reportan.
 public final class Linter implements Iterator<Result<List<Violation>>> {
 
     private final List<LintRule> rules;

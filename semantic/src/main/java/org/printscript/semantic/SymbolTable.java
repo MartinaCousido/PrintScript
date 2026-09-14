@@ -6,13 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-// la única tabla de tipos del sistema: qué nombres existen, con qué tipo y si son
-// reasignables. Es inmutable, igual que Environment: cada cambio devuelve una nueva.
-// Los frames son el scope: se abre uno al entrar a un Block y se cierra al salir, y la
-// resolución de un nombre va del más interno hacia afuera.
+// qué nombres existen, con qué tipo y si son reasignables.
 public final class SymbolTable {
 
-    // cerrar el scope de más afuera no tiene sentido: no hay a dónde volver
     private static final int OUTERMOST_ONLY = 1;
 
     private final List<Map<String, Symbol>> frames;
@@ -38,8 +34,6 @@ public final class SymbolTable {
         return new SymbolTable(List.copyOf(frames.subList(0, frames.size() - 1)));
     }
 
-    // vacío si el nombre ya estaba declarado en ESTE scope; declararlo de nuevo en uno
-    // más interno es sombra, y es válido
     public Optional<SymbolTable> declare(String name, Symbol symbol) {
         if (innermost().containsKey(name)) {
             return Optional.empty();

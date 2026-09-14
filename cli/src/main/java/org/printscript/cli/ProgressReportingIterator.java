@@ -5,12 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-/*
- * Decorator sobre un Iterator<String> de líneas: reporta el progreso del
- * parseo estimando el total consumido en bytes contra el tamaño del archivo
- * (Files.size, una sola vez), sin volver a leer el archivo. El lexer/parser
- * nunca se enteran de que esto existe.
- */
+// reporta el progreso del parseo estimando el total consumido en bytes contra el tamaño del archivo
 final class ProgressReportingIterator implements Iterator<String> {
 
     private static final int MAX_PERCENT = 100;

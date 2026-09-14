@@ -13,15 +13,13 @@ import org.printscript.interpreter.InterpreterFactory;
 import org.printscript.runtime.OutputPrinter;
 import org.printscript.runtime.RuntimePorts;
 
+// ejecuta
 public final class ExecutionRunner {
 
-    // la consigna define la versión como argumento opcional, con 1.0 por defecto
     public List<Failure<?>> run(Iterator<String> lines, OutputPrinter printer) {
         return run(lines, printer, Version.V10);
     }
 
-    // sin puertos de entrada: un programa que use readInput o readEnv falla con un error
-    // explícito, en vez de leer de algún lado que nadie eligió
     public List<Failure<?>> run(Iterator<String> lines, OutputPrinter printer, Version version) {
         return run(
                 lines,

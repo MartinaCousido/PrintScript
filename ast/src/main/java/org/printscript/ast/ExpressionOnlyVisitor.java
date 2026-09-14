@@ -2,8 +2,7 @@ package org.printscript.ast;
 
 import org.printscript.common.Range;
 
-// el espejo de StatementOnlyVisitor: para los visitors que solo tienen sentido sobre
-// expresiones, como el evaluador y el que calcula tipos
+// para los visitors que solo tienen sentido sobre expresiones
 public abstract class ExpressionOnlyVisitor<T> implements ASTVisitor<T> {
 
     // qué devolver cuando lo que llegó no es una expresión evaluable

@@ -9,10 +9,8 @@ import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 
 // Reescribe el fuente token por token, entregando de a un pedazo.
-//
-// No arma el árbol y no conoce la gramática: lo que hace falta para formatear es saber qué
-// tokens hay y cuánto espacio va entre ellos. Por eso trabaja sobre el lexer y no sobre el
-// parser, y por eso puede formatear código que no parsea.
+// No arma el árbol y no conoce la gramática: lo que hace es saber qué
+// tokens hay y cuánto espacio va entre ellos.
 public final class Formatter implements Iterator<Result<String>> {
 
     private final Iterator<Token> tokens;
@@ -48,8 +46,6 @@ public final class Formatter implements Iterator<Result<String>> {
         return token.type() == TokenType.STRING ? "\"" + token.value() + "\"" : token.value();
     }
 
-    // el primer token del archivo no tiene nada antes: lo que traiga de sangría se
-    // conserva tal cual porque nace de su propia posición
     private String space(Token token) {
         return previous == null ? "" : gaps.between(previous, token);
     }

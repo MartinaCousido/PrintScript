@@ -4,6 +4,7 @@ import java.util.List;
 import org.printscript.common.Failure;
 import org.printscript.runtime.OutputPrinter;
 
+// es un main con un programa hardcodeado para probar a mano
 public final class Playground {
 
     private Playground() {}

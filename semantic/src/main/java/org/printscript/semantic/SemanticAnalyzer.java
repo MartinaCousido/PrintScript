@@ -6,9 +6,7 @@ import org.printscript.common.Failure;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
 
-// la etapa que valida que un programa sintácticamente correcto además tenga sentido
-// envuelve al parser: consume Result<Statement> y produce Result<Statement>, así se
-// encadena sin que el parser ni el intérprete sepan que existe
+// valida que un programa sintácticamente correcto además tenga sentido
 public final class SemanticAnalyzer implements Iterator<Result<Statement>> {
 
     private final Iterator<Result<Statement>> statements;

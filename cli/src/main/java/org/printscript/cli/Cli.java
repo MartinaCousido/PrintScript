@@ -12,8 +12,8 @@ public final class Cli {
         System.exit(exitCode);
     }
 
-    // sin argumentos: se abre la interfaz interactiva (REPL) en vez de fallar por
-    // falta de operación, ver docs/cli.md
+    // sin argumentos: se abre la interfaz interactiva (REPL) en vez de fallar por falta de
+    // operación
     private static int launchInteractiveShell() {
         return new InteractiveShell(System.in, System.out, System.err, Path.of("")).run();
     }

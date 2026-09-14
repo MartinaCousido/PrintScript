@@ -7,8 +7,7 @@ import org.printscript.ast.Statement;
 import org.printscript.linter.Violation;
 import org.printscript.linter.visitors.ReadInputCollector;
 
-// el mismo criterio que PrintlnArgumentRule, sobre el argumento de readInput: un
-// identificador o un literal, nunca una expresión armada
+// un identificador o un literal, nunca una expresión armada
 public final class ReadInputArgumentRule implements LintRule {
 
     private final ReadInputCollector collector = new ReadInputCollector();
