@@ -235,7 +235,7 @@ Es el único lugar del sistema donde el lexer y el parser se conocen entre sí. 
 - `validatedStatementStream` — lexer → buffer → parser → **semantic**. La usan `validate` y `execute`. Es lo que hace que el modo Validation valide semántica, y lo que le garantiza al `Executor` su precondición de recibir sentencias ya validadas.
 - `statementStream` — sin `semantic`. La usan `format` y `lint`, porque **se tiene que poder formatear y lintear un programa con errores de tipos**, que es justo cuando más falta hace. Hay un test end-to-end dedicado a que esa decisión no se pierda.
 
-`AnalyzingRunner` es la tercera fachada: arma `Lexer` → `TokenBuffer` → `Parser` → `Linter` reusando el mismo `StatementStreams`, y devuelve un `AnalysisReport` con dos listas separadas — las violaciones de estilo y los errores de sintaxis. **No pasa por `semantic`**, y no va a pasar cuando exista: se puede lintear un programa que no tipa. Tiene un segundo `analyze` que recibe el stream de configuración y su formato, y es el único lugar donde se cablean los mappers de `configuration`.
+`AnalyzingRunner` es la tercera fachada: arma `Lexer` → `TokenBuffer` → `Parser` → `Linter` reusando el mismo `StatementStreams`, y devuelve un `AnalysisReport` con dos listas separadas — las violaciones de estilo y los errores de sintaxis. **No pasa por `semantic`**: se puede lintear un programa que no tipa. Tiene un segundo `analyze` que recibe el stream de configuración y su formato, y es el único lugar donde se cablean los mappers de `configuration`.
 
 El invariante del módulo: **compone, no decide**. No tiene ni una regla del lenguaje; todo el conocimiento del lenguaje sigue en las factories.
 

@@ -145,7 +145,7 @@ propia) existe `git commit --no-verify`; la red que no se puede saltear es el CI
 
 ## Módulos
 
-Doce módulos Gradle, cada uno con su propio set de dependencias y compilando por
+Trece módulos Gradle, cada uno con su propio set de dependencias y compilando por
 separado. La configuración común vive en un convention plugin en `buildSrc/`, no
 duplicada en cada módulo.
 

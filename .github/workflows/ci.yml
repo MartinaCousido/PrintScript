@@ -2,8 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [master]
   pull_request:
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build:
@@ -33,6 +36,21 @@ jobs:
 
       - name: Build de los trece módulos
         run: ./gradlew build jacocoRootReport --no-daemon --warning-mode all
+
+      - name: Derivar versión trazable del commit
+        run: echo "PACKAGE_VERSION=0.2.0-ci.${GITHUB_RUN_NUMBER}.${GITHUB_SHA::12}" >> "$GITHUB_ENV"
+
+      - name: Ejecutar el TCK oficial contra este commit
+        run: ./tck/run-official-tck.sh "$PACKAGE_VERSION"
+
+      # Los PR de forks no reciben un token con escritura. En push, en cambio, este
+      # paso publica los mismos jars que acaba de consumir el TCK.
+      - name: Publicar snapshot del commit en GitHub Packages
+        if: github.event_name == 'push'
+        run: ./gradlew publish -PprintscriptVersion="$PACKAGE_VERSION" --no-daemon
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publicar los reportes de test
         if: always()

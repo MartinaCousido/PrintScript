@@ -75,7 +75,7 @@ prompt con su propia salida de progreso; el binario de `installDist` no lo neces
 | Operación | Alias | Qué hace |
 |---|---|---|
 | `execution` | `exec` | Ejecuta el archivo: corre lexer → parser → intérprete e imprime la salida del programa por stdout |
-| `validation` | `validate` | Valida sintaxis (y semántica, cuando exista el módulo `semantic`) sin ejecutar nada |
+| `validation` | `validate` | Valida sintaxis y semántica sin ejecutar nada |
 | `formatting` | `format`, `fmt` | Formatea el archivo con el módulo `formatter`, aplicando las reglas del `--config`; escribe por stdout o, con `--output`, a un archivo |
 | `analyzing` | `analyze`, `lint` | Analiza estáticamente con el módulo `linter`, aplicando las reglas del `--config` (sin config, ninguna regla está prendida) |
 
@@ -172,7 +172,7 @@ printscript [-h] [-v=<version>] COMANDO ARCHIVO [-c=<config>] [-o=<salida>]
 | Argumento | Aplica a | Descripción |
 |---|---|---|
 | `ARCHIVO` | las 4 operaciones | Posicional, requerido. Debe existir y ser un archivo regular. |
-| `-v`, `--version` | global | Opcional, default `1.0`. Es la versión del **lenguaje** PrintScript a interpretar, no la versión de la CLI. Hoy solo se acepta `1.0`; cualquier otro valor falla con exit code `2`. |
+| `-v`, `--version` | global | Opcional, default `1.0`. Es la versión del **lenguaje** PrintScript a interpretar, no la versión de la CLI. Se aceptan `1.0` y `1.1`; cualquier otro valor falla con exit code `2`. |
 | `-c`, `--config` | `formatting`, `analyzing` | Archivo de configuración YAML/JSON de reglas, que se lee y se aplica (ver arriba). El formato se detecta por la extensión (`.json`/`.yaml`/`.yml`); una extensión desconocida o un archivo inexistente fallan con exit code `2`. |
 | `-o`, `--output` | `execution`, `formatting` | Archivo de salida. En `execution` guarda la salida del programa (además de mostrarla); en `formatting` escribe el código formateado ahí en vez de por stdout. |
 | `-h`, `--help` | global | Muestra la ayuda de picocli para el comando (o subcomando) actual. |

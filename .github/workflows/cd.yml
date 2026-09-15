@@ -45,6 +45,9 @@ jobs:
       - name: Verificar antes de publicar
         run: ./gradlew build -PprintscriptVersion=$VERSION --no-daemon --warning-mode all
 
+      - name: Ejecutar el TCK oficial antes de publicar
+        run: ./tck/run-official-tck.sh "$VERSION"
+
       - name: Armar la distribución de la CLI
         run: ./gradlew :cli:distZip :cli:distTar -PprintscriptVersion=$VERSION --no-daemon
 

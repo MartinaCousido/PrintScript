@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+    echo "Uso: ./tck/run-official-tck.sh <version>" >&2
+    exit 2
+fi
+
+readonly VERSION="$1"
+readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly TCK_DIR="$ROOT_DIR/build/official-tck"
+readonly TCK_COMMIT="510028a8246f6fd607a3195394310f509d9047a2"
+
+cd "$ROOT_DIR"
+
+# Maven Local es el puente deliberado entre ambos builds: el TCK prueba estos jars,
+# publicados desde el working tree, no una versión vieja descargada de Internet.
+./gradlew publishToMavenLocal -PprintscriptVersion="$VERSION" --no-daemon
+
+rm -rf "$TCK_DIR"
+git clone --quiet https://github.com/austral-ingsis/printscript-tck.git "$TCK_DIR"
+git -C "$TCK_DIR" checkout --quiet "$TCK_COMMIT"
+
+cp "$ROOT_DIR/tck/implementation/CustomImplementationFactory.java" \
+    "$TCK_DIR/src/main/java/implementation/CustomImplementationFactory.java"
+cp "$ROOT_DIR/tck/implementation/PrintScriptAdapters.java" \
+    "$TCK_DIR/src/main/java/implementation/PrintScriptAdapters.java"
+rm "$TCK_DIR/src/main/java/implementation/NotImplementedException.java"
+
+PRINTSCRIPT_TCK_VERSION="$VERSION" ./gradlew \
+    -p "$TCK_DIR" \
+    --init-script "$ROOT_DIR/tck/tck.init.gradle" \
+    clean test --no-daemon --console=plain

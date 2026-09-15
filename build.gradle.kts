@@ -22,7 +22,7 @@ tasks.register<JacocoReport>("jacocoRootReport") {
     }
 }
 
-// El convention plugin trae los repositorios, pero lo aplican los ocho módulos
+// El convention plugin trae los repositorios, pero lo aplican los trece módulos
 // y no el raíz: ktlint se baja desde acá, así que el raíz necesita el suyo.
 repositories {
     mavenCentral()

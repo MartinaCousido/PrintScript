@@ -16,22 +16,18 @@ para que se revisen junto con el resto del código.
 No tienen lógica de lenguaje. Si hiciera falta tocarlos para que un caso pase, el cambio
 va en el módulo que corresponda, no acá.
 
-## Pasos
+## Comando reproducible
 
 ```sh
-# 1. publicar la implementación donde el TCK la pueda resolver
-./gradlew publishToMavenLocal -PprintscriptVersion=0.2.0-SNAPSHOT
-
-# 2. clonar el TCK y copiar el adapter
-git clone https://github.com/austral-ingsis/printscript-tck
-cp tck/implementation/*.java printscript-tck/src/main/java/implementation/
-rm printscript-tck/src/main/java/implementation/NotImplementedException.java
-
-# 3. correr
-cd printscript-tck && ./gradlew test
+./tck/run-official-tck.sh 0.2.0-SNAPSHOT
 ```
 
-## Tres ajustes que necesita el `build.gradle` del TCK
+El script publica los trece módulos del working tree en Maven Local, clona el TCK oficial
+en `build/official-tck`, fija el commit `510028a8246f6fd607a3195394310f509d9047a2`,
+copia los adapters y ejecuta sus 59 casos. `tck/tck.init.gradle` agrega las dependencias,
+JDK 25 y la frontera de heap sin modificar el repositorio externo.
+
+## Ajustes aplicados al TCK
 
 ```groovy
 java {
@@ -50,22 +46,35 @@ dependencies {
 }
 
 test {
-    // las clases de util/ son ayudantes del arnés y no tests: sin esto JUnit intenta
-    // correrlas y reporta ocho initializationError que no son de la implementación
-    include '**/*Test.class'
+    minHeapSize = '5m'
+    maxHeapSize = '5m'
 }
 ```
 
 ## Estado
 
-**58 de 59.** Formatter 23/23, linter 7/7, validation 13/13, print-statement 14/14,
-archivo grande 1/2.
+**59 de 59**, verificado con JDK 25, Gradle 9.5.0 y el commit fijado del TCK.
 
-El que falla es `InterpreterLargeFileTest.testWithCollector`, y falla por exceso de
-eficiencia: corre 32.768 `println` acumulados en una lista con **8 MB de heap** y espera
-que la implementación se quede sin memoria y reporte `"Java heap space"`. La nuestra
-termina sin agotar la memoria, porque el pipeline es de a una sentencia y no retiene nada
-entre una y la siguiente, así que la lista del arnés es lo único que crece.
+`InterpreterLargeFileTest.testWithCollector` depende deliberadamente de una frontera de
+memoria: acumula 32.768 salidas y espera `"Java heap space"`; `testWithCounter` procesa la
+misma entrada sin retenerla y debe terminar. El upstream declara 5 MB iniciales y 7 MB
+máximos, pero con JDK 25 el collector entra en 7 MB. Fijar máximo e inicial en los 5 MB ya
+declarados por el TCK conserva el propósito: el collector agota memoria, el counter no.
 
-El adapter igual atrapa el `OutOfMemoryError` y lo reporta como pide el TCK, para el caso
-de que el arnés corra con menos memoria todavía.
+## Automatización
+
+`.github/workflows/ci.yml` ejecuta primero todo el `build`, luego este TCK y, solo en
+eventos `push`, publica en GitHub Packages una versión única trazable al SHA. Los pull
+requests ejecutan build y TCK, pero no publican porque un PR de fork no recibe credenciales
+de escritura. `.github/workflows/cd.yml` también exige el TCK antes de publicar un tag.
+
+Para publicar deliberadamente el working tree local, incluidos cambios sin commit:
+
+```sh
+export GITHUB_ACTOR=usuario
+export GITHUB_TOKEN=token_con_write_packages
+./scripts/publish-working-tree.sh 0.2.0-prueba-unica
+```
+
+El script no publica si falla `build`, cobertura o el TCK. La versión debe ser nueva: GitHub
+Packages no es Maven Local y la operación sí escribe en un servicio remoto.

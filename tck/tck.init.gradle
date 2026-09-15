@@ -1,0 +1,35 @@
+// Adaptación reproducible del TCK oficial a los artefactos de este repository.
+// Se aplica con Gradle 9.5 desde tck/run-official-tck.sh; no modifica el clon del TCK.
+def implementationVersion = System.getenv('PRINTSCRIPT_TCK_VERSION')
+if (!implementationVersion) {
+    throw new GradleException('PRINTSCRIPT_TCK_VERSION no está definido')
+}
+
+allprojects {
+    plugins.withId('java') {
+        repositories {
+            mavenLocal()
+            mavenCentral()
+        }
+
+        dependencies {
+            implementation "org.printscript:runner:${implementationVersion}"
+            implementation "org.printscript:runtime-api:${implementationVersion}"
+            implementation "org.printscript:common:${implementationVersion}"
+            implementation "org.printscript:configuration:${implementationVersion}"
+            implementation "org.printscript:linter:${implementationVersion}"
+            implementation "org.printscript:formatter:${implementationVersion}"
+        }
+
+    }
+
+    afterEvaluate {
+        java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+        tasks.withType(Test).configureEach {
+            // El TCK prueba streaming: el collector debe agotar memoria, pero el counter no.
+            // Con JDK 25, 5 MB conserva exactamente esa frontera; con 7 MB el collector entra.
+            minHeapSize = '5m'
+            maxHeapSize = '5m'
+        }
+    }
+}
