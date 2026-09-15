@@ -51,6 +51,10 @@ public final class LexerFactory {
                             "boolean", TokenType.KEYWORD,
                             "true", TokenType.BOOLEAN,
                             "false", TokenType.BOOLEAN);
+            // Para agregar una V12 que herede lo anterior, combinar lo previo con lo nuevo:
+            // case V12 -> merge(keywordsAddedIn(Version.V11),
+            //         Map.of("nuevaKeyword", TokenType.KEYWORD));
+            // sirve igual para symbolsAddedIn.
         };
     }
 
@@ -74,5 +78,12 @@ public final class LexerFactory {
             case V10 -> Map.of();
             case V11 -> Map.of("{", TokenType.PUNCTUATION, "}", TokenType.PUNCTUATION);
         };
+    }
+
+    private static Map<String, TokenType> merge(
+            Map<String, TokenType> base, Map<String, TokenType> added) {
+        Map<String, TokenType> result = new LinkedHashMap<>(base);
+        result.putAll(added);
+        return result;
     }
 }

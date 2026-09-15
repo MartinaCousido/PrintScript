@@ -51,7 +51,10 @@ public final class Lexer implements Iterator<Token> {
     @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
     private Token advance() {
         while (true) {
-            if (currentLine == null || columnIndex >= currentLine.length()) {
+            // Carga una nueva linea en currentLine
+            boolean noLineDetected = currentLine == null;
+            boolean reachedLineEnd = !noLineDetected && columnIndex >= currentLine.length();
+            if (noLineDetected || reachedLineEnd) {
                 if (!lines.hasNext()) {
                     return null;
                 }
@@ -60,11 +63,13 @@ public final class Lexer implements Iterator<Token> {
                 columnIndex = 0;
                 continue;
             }
+            // Salta espacio vacío o salto de línea
             char character = currentLine.charAt(columnIndex);
             if (character == ' ' || character == '\t') {
                 columnIndex = columnIndex + 1;
                 continue;
             }
+            // Obtiene token
             return buildTokenAtCurrentColumn();
         }
     }
