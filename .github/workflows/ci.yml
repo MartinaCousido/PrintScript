@@ -21,6 +21,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Maven usa coordenadas como org.printscript:runner, pero la API de Packages
+      # asigna su propio nombre al paquete. Se consultan esos nombres en vez de
+      # duplicar una convención que GitHub no garantiza.
+      - name: Identificar los paquetes Maven vinculados
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            "/orgs/${GITHUB_REPOSITORY_OWNER}/packages?package_type=maven&per_page=100" |
+            jq -r --arg repository "$GITHUB_REPOSITORY" \
+              '.[] | select(.repository.full_name == $repository) | .name'
+
       # El toolchain que compila el proyecto está declarado en el convention plugin
       # (Java 25). Lo instalamos acá para que Gradle lo encuentre local en vez de
       # descargarlo en cada corrida. Quien desarrolla no necesita tenerlo: el
@@ -51,29 +64,6 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # El TCK vive en otro owner (austral-ingsis). Su GITHUB_TOKEN no puede leer
-      # paquetes privados de ingsis-ua, aunque el publish haya terminado bien.
-      # Los paquetes públicos siguen requiriendo autenticación Maven, pero el token
-      # del workflow oficial ya alcanza, igual que en los PR verdes de otros grupos.
-      - name: Hacer públicos los paquetes consumidos por el TCK
-        if: github.event_name == 'push'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for package in \
-            org.printscript.runner \
-            org.printscript.runtime-api \
-            org.printscript.common \
-            org.printscript.configuration \
-            org.printscript.linter \
-            org.printscript.formatter
-          do
-            gh api \
-              --method PATCH \
-              "/orgs/${GITHUB_REPOSITORY_OWNER}/packages/maven/${package}" \
-              -f visibility=public
-          done
 
       - name: Publicar los reportes de test
         if: always()
