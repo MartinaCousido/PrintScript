@@ -95,8 +95,9 @@ Mostrar las tasks reales desde **Gradle** o Terminal:
 
 El segundo comando es la comprobación completa interna. Durante esta revisión falló
 primero en `:lexer:pmdMain`: `LexerFactory.merge` era un método privado agregado en el
-último commit pero sin llamadas. PMD aplicó `UnusedPrivateMethod`. Se eliminó el método y
-su comentario de ejemplo; no cambió la lógica. Luego Spotless señaló la indentación del
+último commit pero sin llamadas. PMD aplicó `UnusedPrivateMethod`. Se conservó únicamente
+como ejemplo comentado: documenta la extensión futura sin formar parte del bytecode ni del
+análisis de código muerto. Luego Spotless señaló la indentación del
 comentario restante: se corrigió y el build completo quedó verde. Es un buen ejemplo de
 por qué `build` vale más que “compila en mi IDE”.
 
@@ -375,7 +376,7 @@ ambas suites pero no publica. Los tags disparan el workflow CD de release.
 **¿Hay deployment?** No. Hay packaging, publicación Maven y GitHub Releases.
 
 **¿Qué estaba roto?** El último commit dejó un método privado sin uso en `LexerFactory`;
-PMD frenaba `build`. Se retiró código muerto. El TCK tenía además una frontera de heap no
+PMD frenaba `build`. Se conservó como ejemplo comentado, no como método compilado. El TCK tenía además una frontera de heap no
 reproducible en JDK 25; el arnés automatizado fija 5 MB y pasa 59/59.
 
 ## 16. Machete final de IntelliJ

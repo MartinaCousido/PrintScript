@@ -76,4 +76,12 @@ public final class LexerFactory {
             case V11 -> Map.of("{", TokenType.PUNCTUATION, "}", TokenType.PUNCTUATION);
         };
     }
+
+    // Ejemplo para una versión futura; queda como documentación y no como código muerto:
+    // private static Map<String, TokenType> merge(
+    //         Map<String, TokenType> base, Map<String, TokenType> added) {
+    //     Map<String, TokenType> result = new LinkedHashMap<>(base);
+    //     result.putAll(added);
+    //     return result;
+    // }
 }
