@@ -1,0 +1,73 @@
+@startuml
+title PrintScript - módulos de alto nivel
+
+top to bottom direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+component "CLI\nEntrada, archivos y consola" as cli
+component "Runner\nCompone los pipelines" as runner
+
+package "Motores del lenguaje" {
+  component Lexer as lexer
+  component Parser as parser
+  component Semantic as semantic
+  component Interpreter as interpreter
+  component Formatter as formatter
+  component Linter as linter
+}
+
+package "Modelos y contratos compartidos" {
+  component Token as token
+  component AST as ast
+  component "Runtime API" as runtime
+  component Configuration as configuration
+  component Common as common
+}
+
+cli --> runner
+cli --> runtime
+cli --> common
+
+runner --> lexer
+runner --> parser
+runner --> semantic
+runner --> interpreter
+runner --> formatter
+runner --> linter
+runner --> configuration
+runner --> runtime
+runner --> common
+
+lexer --> token
+parser --> token
+parser --> ast
+semantic --> ast
+interpreter --> ast
+interpreter --> runtime
+formatter --> token
+formatter --> configuration
+linter --> ast
+linter --> configuration
+
+token --> common
+ast --> common
+configuration --> common
+lexer --> common
+parser --> common
+semantic --> common
+interpreter --> common
+formatter --> common
+linter --> common
+
+note right of runner
+  Único módulo que conecta
+  las etapas del lenguaje.
+end note
+
+note bottom of common
+  Resultados, errores,
+  posiciones e iteración.
+end note
+
+@enduml
