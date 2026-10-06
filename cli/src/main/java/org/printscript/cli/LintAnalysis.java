@@ -8,7 +8,6 @@ import org.printscript.common.Range;
 import org.printscript.common.Version;
 import org.printscript.linter.Violation;
 import org.printscript.linter.config.LinterConfiguration;
-import org.printscript.runner.AnalysisReport;
 import org.printscript.runner.AnalyzingRunner;
 
 // Orquesta la operación de análisis estático para cli: carga la configuración de
@@ -28,7 +27,17 @@ final class LintAnalysis {
         }
         return SourceFileProcessor.read(
                 sourceFile,
-                lines -> report(new AnalyzingRunner().analyze(lines, configuration, version), err),
+                lines -> {
+                    boolean clean =
+                            new AnalyzingRunner()
+                                    .analyze(
+                                            lines,
+                                            configuration,
+                                            version,
+                                            violation -> err.println(format(violation)),
+                                            new FailureReporter(err)::report);
+                    return clean ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
+                },
                 err);
     }
 
@@ -36,16 +45,6 @@ final class LintAnalysis {
     // su clave no aparece), así que el análisis no reporta violaciones
     private static LinterConfiguration loadConfiguration(Path configFile) throws IOException {
         return LinterConfiguration.from(ConfigurationFiles.read(configFile));
-    }
-
-    private static ExitCode report(AnalysisReport analysisReport, PrintStream err) {
-        new FailureReporter(err).report(analysisReport.failures());
-        for (Violation violation : analysisReport.violations()) {
-            err.println(format(violation));
-        }
-        boolean clean =
-                analysisReport.failures().isEmpty() && analysisReport.violations().isEmpty();
-        return clean ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
     }
 
     private static String format(Violation violation) {

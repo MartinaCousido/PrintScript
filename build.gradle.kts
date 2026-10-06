@@ -3,6 +3,13 @@ plugins {
     id("jacoco")
 }
 
+allprojects {
+    dependencyLocking {
+        lockAllConfigurations()
+        lockMode.set(LockMode.STRICT)
+    }
+}
+
 group = "org.printscript"
 version = providers.gradleProperty("printscriptVersion").getOrElse("0.1.0-SNAPSHOT")
 

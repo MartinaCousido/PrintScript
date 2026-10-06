@@ -7,6 +7,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Consumer;
 import org.printscript.common.Failure;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -29,13 +30,31 @@ public final class FormattingRunner {
             FormatterConfiguration configuration,
             Writer destination,
             Version version) {
-        Formatter formatter = new Formatter(LexerFactory.create(lines, version), configuration);
         List<Failure<?>> failures = new ArrayList<>();
+        format(lines, configuration, destination, version, failures::add);
+        return failures;
+    }
+
+    /** Streams output and diagnostics, flushes, and leaves the borrowed writer open. */
+    public boolean format(
+            Iterator<String> lines,
+            FormatterConfiguration configuration,
+            Writer destination,
+            Version version,
+            Consumer<Failure<?>> report) {
+        Formatter formatter = new Formatter(LexerFactory.create(lines, version), configuration);
+        boolean clean = true;
         while (formatter.hasNext()) {
-            write(formatter.next(), destination, failures);
+            Result<String> result = formatter.next();
+            if (result instanceof Failure<String> failure) {
+                report.accept(failure);
+                clean = false;
+            } else {
+                writeText(destination, ((Success<String>) result).value());
+            }
         }
         flush(destination);
-        return failures;
+        return clean;
     }
 
     public List<Failure<?>> format(
@@ -45,14 +64,6 @@ public final class FormattingRunner {
                 FormatterConfiguration.from(
                         ConfigurationReader.standard().read(configuration, format)),
                 destination);
-    }
-
-    private static void write(
-            Result<String> result, Writer destination, List<Failure<?>> failures) {
-        switch (result) {
-            case Failure<String> failure -> failures.add(failure);
-            case Success<String> formatted -> writeText(destination, formatted.value());
-        }
     }
 
     private static void writeText(Writer destination, String text) {

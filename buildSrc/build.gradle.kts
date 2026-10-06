@@ -12,3 +12,8 @@ repositories {
 dependencies {
     implementation("com.diffplug.spotless:spotless-plugin-gradle:7.0.4")
 }
+
+dependencyLocking {
+    lockAllConfigurations()
+    lockMode.set(LockMode.STRICT)
+}

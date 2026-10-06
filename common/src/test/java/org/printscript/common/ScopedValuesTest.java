@@ -61,4 +61,23 @@ class ScopedValuesTest {
         assertThrows(NullPointerException.class, () -> values.read(null));
         assertThrows(NullPointerException.class, () -> values.replace(NAME, null));
     }
+
+    @Test
+    void deepScopesAndOuterAssignmentsPreserveHistoricalSnapshots() {
+        final int depth = 10_000;
+        ScopedValues<Integer> original =
+                new ScopedValues<Integer>().declare(COUNT, 1).orElseThrow();
+        ScopedValues<Integer> nested = original;
+        for (int index = 0; index < depth; index++) {
+            nested = nested.openScope();
+        }
+        ScopedValues<Integer> changed = nested.replace(COUNT, 2).orElseThrow();
+        assertEquals(Optional.of(1), nested.read(COUNT));
+        assertEquals(Optional.of(2), changed.read(COUNT));
+        for (int index = 0; index < depth; index++) {
+            changed = changed.closeScope();
+        }
+        assertEquals(Optional.of(2), changed.read(COUNT));
+        assertEquals(Optional.of(1), original.read(COUNT));
+    }
 }

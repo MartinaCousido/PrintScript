@@ -16,7 +16,7 @@ final class StatementStreams {
     private StatementStreams() {}
 
     // lexer -> buffer -> parser
-    // lo consumen el formatter y el linter, que trabajan sobre el árbol
+    // lo consume el linter; el formatter recibe tokens, sin construir un árbol
     static Iterator<Result<Statement>> statementStream(Iterator<String> lines, Version version) {
         Lexer lexer = LexerFactory.create(lines, version);
         TokenBuffer buffer = new TokenBuffer(lexer);

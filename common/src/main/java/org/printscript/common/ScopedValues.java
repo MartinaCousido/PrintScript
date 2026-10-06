@@ -1,78 +1,78 @@
 package org.printscript.common;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Immutable stack of named values. Names in inner scopes shadow outer scopes. */
+/** Immutable lexical scopes with O(1) entry/exit and O(log n) writes within a frame. */
 public final class ScopedValues<T> {
-
-    private static final int OUTERMOST_FRAME_COUNT = 1;
-
-    private final List<Map<String, T>> frames;
+    private final Frame<T> current;
 
     public ScopedValues() {
-        this(List.of(Map.of()));
+        this(new Frame<>(new PersistentNames<>(), null));
     }
 
-    private ScopedValues(List<Map<String, T>> frames) {
-        this.frames = frames;
+    private ScopedValues(Frame<T> current) {
+        this.current = current;
     }
 
     public ScopedValues<T> openScope() {
-        List<Map<String, T>> opened = new ArrayList<>(frames);
-        opened.add(Map.of());
-        return new ScopedValues<>(List.copyOf(opened));
+        return new ScopedValues<>(new Frame<>(new PersistentNames<>(), current));
     }
 
     public ScopedValues<T> closeScope() {
-        if (frames.size() == OUTERMOST_FRAME_COUNT) {
-            return this;
-        }
-        return new ScopedValues<>(List.copyOf(frames.subList(0, frames.size() - 1)));
+        return current.parent == null ? this : new ScopedValues<>(current.parent);
     }
 
     public Optional<ScopedValues<T>> declare(String name, T value) {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(value, "value");
-        if (frames.getLast().containsKey(name)) {
+        if (current.values.read(name).isPresent()) {
             return Optional.empty();
         }
-        return Optional.of(replaceInFrame(frames.size() - 1, name, value));
+        return Optional.of(
+                new ScopedValues<>(new Frame<>(current.values.put(name, value), current.parent)));
     }
 
     public Optional<ScopedValues<T>> replace(String name, T value) {
+        Objects.requireNonNull(name, "name");
         Objects.requireNonNull(value, "value");
-        int frame = frameOf(name);
-        if (frame < 0) {
+        Deque<Frame<T>> inner = new ArrayDeque<>();
+        Frame<T> target = current;
+        while (target != null && target.values.read(name).isEmpty()) {
+            inner.push(target);
+            target = target.parent;
+        }
+        if (target == null) {
             return Optional.empty();
         }
-        return Optional.of(replaceInFrame(frame, name, value));
+        Frame<T> updated = new Frame<>(target.values.put(name, value), target.parent);
+        while (!inner.isEmpty()) {
+            Frame<T> frame = inner.pop();
+            updated = new Frame<>(frame.values, updated);
+        }
+        return Optional.of(new ScopedValues<>(updated));
     }
 
     public Optional<T> read(String name) {
-        int frame = frameOf(name);
-        return frame < 0 ? Optional.empty() : Optional.of(frames.get(frame).get(name));
-    }
-
-    private int frameOf(String name) {
         Objects.requireNonNull(name, "name");
-        for (int index = frames.size() - 1; index >= 0; index--) {
-            if (frames.get(index).containsKey(name)) {
-                return index;
+        for (Frame<T> frame = current; frame != null; frame = frame.parent) {
+            Optional<T> value = frame.values.read(name);
+            if (value.isPresent()) {
+                return value;
             }
         }
-        return -1;
+        return Optional.empty();
     }
 
-    private ScopedValues<T> replaceInFrame(int frame, String name, T value) {
-        Map<String, T> updated = new HashMap<>(frames.get(frame));
-        updated.put(name, value);
-        List<Map<String, T>> replaced = new ArrayList<>(frames);
-        replaced.set(frame, Map.copyOf(updated));
-        return new ScopedValues<>(List.copyOf(replaced));
+    private static final class Frame<T> {
+        private final PersistentNames<T> values;
+        private final Frame<T> parent;
+
+        private Frame(PersistentNames<T> values, Frame<T> parent) {
+            this.values = values;
+            this.parent = parent;
+        }
     }
 }

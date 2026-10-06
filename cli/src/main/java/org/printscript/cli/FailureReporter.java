@@ -18,8 +18,12 @@ final class FailureReporter {
 
     void report(List<Failure<?>> failures) {
         for (Failure<?> failure : failures) {
-            target.println(format(failure));
+            report(failure);
         }
+    }
+
+    void report(Failure<?> failure) {
+        target.println(format(failure));
     }
 
     private static String format(Failure<?> failure) {

@@ -3,7 +3,6 @@ package implementation;
 import static implementation.PrintScriptAdapters.envPort;
 import static implementation.PrintScriptAdapters.inputPort;
 import static implementation.PrintScriptAdapters.lines;
-import static implementation.PrintScriptAdapters.report;
 import static implementation.PrintScriptAdapters.versionOf;
 
 import interpreter.PrintScriptFormatter;
@@ -16,9 +15,7 @@ import java.lang.ref.Reference;
 import org.printscript.config.ConfigurationReader;
 import org.printscript.config.RulesConfiguration;
 import org.printscript.formatter.config.FormatterConfiguration;
-import org.printscript.linter.Violation;
 import org.printscript.linter.config.LinterConfiguration;
-import org.printscript.runner.AnalysisReport;
 import org.printscript.runner.AnalyzingRunner;
 import org.printscript.runner.ExecutionRunner;
 import org.printscript.runner.FormattingRunner;
@@ -51,7 +48,8 @@ public class CustomImplementationFactory implements PrintScriptFactory {
             // vez de una Exception es lo correcto.
             byte[] errorReportingReserve = new byte[ERROR_REPORTING_RESERVE_BYTES];
             try {
-                report(new ExecutionRunner().run(lines(src), ports, versionOf(version)), handler);
+                new ExecutionRunner().run(lines(src), ports, versionOf(version),
+                        failure -> handler.reportError(PrintScriptAdapters.describe(failure.message(), failure.range())));
             } catch (OutOfMemoryError exhausted) {
                 errorReportingReserve = null;
                 handler.reportError(exhausted.getMessage());
@@ -75,17 +73,9 @@ public class CustomImplementationFactory implements PrintScriptFactory {
     @Override
     public PrintScriptLinter linter() {
         return (src, version, config, handler) -> {
-            AnalysisReport reporte =
-                    new AnalyzingRunner()
-                            .analyze(
-                                    lines(src),
-                                    LinterConfiguration.from(rules(config)),
-                                    versionOf(version));
-            for (Violation violation : reporte.violations()) {
-                handler.reportError(
-                        PrintScriptAdapters.describe(violation.message(), violation.range()));
-            }
-            report(reporte.failures(), handler);
+            new AnalyzingRunner().analyze(lines(src), LinterConfiguration.from(rules(config)), versionOf(version),
+                    violation -> handler.reportError(PrintScriptAdapters.describe(violation.message(), violation.range())),
+                    failure -> handler.reportError(PrintScriptAdapters.describe(failure.message(), failure.range())));
         };
     }
 

@@ -63,8 +63,10 @@ final class ExecutionOutput {
                         printer,
                         new ConsoleInputProvider(standardInput(reader)),
                         new SystemEnvProvider());
-        return SourceFileProcessor.process(
-                sourceFile, lines -> new ExecutionRunner().run(lines, ports, version), err);
+        return SourceFileProcessor.processStreaming(
+                sourceFile,
+                (lines, report) -> new ExecutionRunner().run(lines, ports, version, report),
+                err);
     }
 
     private static BufferedReader standardInput(BufferedReader reader) {
