@@ -48,6 +48,30 @@ class ConfigurationReaderTest {
     }
 
     @Test
+    void standardReaderSupportsBothBuiltInFormats() {
+        ConfigurationReader standard = ConfigurationReader.standard();
+
+        assertEquals(
+                Optional.of(CAMEL),
+                standard.read(streamOf("{\"" + FORMAT + "\": \"" + CAMEL + "\"}"), JSON)
+                        .getString(FORMAT));
+        assertEquals(
+                Optional.of(CAMEL),
+                standard.read(streamOf(FORMAT + ": " + CAMEL), YAML).getString(FORMAT));
+    }
+
+    @Test
+    void readerRequiresAtLeastOneMapper() {
+        assertThrows(IllegalArgumentException.class, () -> new ConfigurationReader(List.of()));
+    }
+
+    @Test
+    void readerRejectsMissingSourceOrFormat() {
+        assertThrows(NullPointerException.class, () -> reader.read(null, JSON));
+        assertThrows(NullPointerException.class, () -> reader.read(streamOf("{}"), null));
+    }
+
+    @Test
     void theShortYamlExtensionIsAlsoYaml() {
         RulesConfiguration configuration = reader.read(streamOf(OTRA + ": false\n"), "yml");
 

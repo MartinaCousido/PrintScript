@@ -17,6 +17,9 @@ import org.printscript.runtime.RuntimePorts;
 // un archivo además de mostrarla por consola
 final class ExecutionOutput {
 
+    private static final String SOURCE_EXTENSION = ".ps";
+    private static final String OUTPUT_EXTENSION = ".out.txt";
+
     private ExecutionOutput() {}
 
     static ExitCode run(
@@ -72,7 +75,10 @@ final class ExecutionOutput {
     static Path defaultOutputFor(Path sourceFile) {
         Path absolute = sourceFile.toAbsolutePath();
         String name = absolute.getFileName().toString();
-        String base = name.endsWith(".ps") ? name.substring(0, name.length() - 3) : name;
-        return absolute.resolveSibling(base + ".out.txt");
+        String base =
+                name.endsWith(SOURCE_EXTENSION)
+                        ? name.substring(0, name.length() - SOURCE_EXTENSION.length())
+                        : name;
+        return absolute.resolveSibling(base + OUTPUT_EXTENSION);
     }
 }

@@ -93,11 +93,11 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
 
     @Override
     public Result<Void> visitIfStatement(IfStatement ifStatement) {
-        Result<Object> condition = evaluate(ifStatement.condition());
-        if (condition instanceof Failure<Object> failure) {
-            return propagate(failure);
-        }
-        Object value = valueOf(condition);
+        return evaluate(ifStatement.condition())
+                .andThen(value -> executeConditionalBranch(ifStatement, value));
+    }
+
+    private Result<Void> executeConditionalBranch(IfStatement ifStatement, Object value) {
         // semantic ya garantizó que es booleana; si igual no lo es, se falla de forma
         // explícita en vez de elegir una rama por defecto y seguir como si nada
         if (!(value instanceof Boolean taken)) {
@@ -115,12 +115,12 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
 
     @Override
     public Result<Void> visitPrintlnStatement(PrintlnStatement printlnStatement) {
-        Result<Object> evaluated = evaluate(printlnStatement.expression());
-        if (evaluated instanceof Failure<Object> failure) {
-            return propagate(failure);
-        }
-        ports.printer().println(ExpressionEvaluator.asText(valueOf(evaluated)));
-        return new Success<>(null);
+        return evaluate(printlnStatement.expression())
+                .map(
+                        value -> {
+                            ports.printer().println(ExpressionEvaluator.asText(value));
+                            return null;
+                        });
     }
 
     private Result<Object> evaluate(Expression expression) {
@@ -134,19 +134,16 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
             Optional<Expression> initializer,
             Range range,
             boolean immutable) {
-        Object value = null;
-        if (initializer.isPresent()) {
-            Result<Object> evaluated = evaluate(initializer.get());
-            if (evaluated instanceof Failure<Object> failure) {
-                return propagate(failure);
-            }
-            Result<Object> converted =
-                    Conversions.toDeclaredType(declaredType, valueOf(evaluated), range);
-            if (converted instanceof Failure<Object> failure) {
-                return propagate(failure);
-            }
-            value = valueOf(converted);
+        if (initializer.isEmpty()) {
+            return declareValue(name, declaredType, null, range, immutable);
         }
+        return evaluate(initializer.get())
+                .andThen(value -> Conversions.toDeclaredType(declaredType, value, range))
+                .andThen(value -> declareValue(name, declaredType, value, range, immutable));
+    }
+
+    private Result<Void> declareValue(
+            String name, String declaredType, Object value, Range range, boolean immutable) {
         return environment
                 .declare(name, declaredType, value, immutable)
                 .<Result<Void>>map(this::commit)
@@ -165,14 +162,6 @@ public final class Executor extends StatementOnlyVisitor<Result<Void>> {
     private Result<Void> commit(Environment updated) {
         this.environment = updated;
         return new Success<>(null);
-    }
-
-    private static Object valueOf(Result<Object> result) {
-        return ((Success<Object>) result).value();
-    }
-
-    private static Result<Void> propagate(Failure<Object> failure) {
-        return new Failure<>(failure.message(), failure.range());
     }
 
     @Override

@@ -4,13 +4,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.printscript.config.ConfigurationReader;
-import org.printscript.config.JsonConfigurationMapper;
 import org.printscript.config.RulesConfiguration;
-import org.printscript.config.YamlConfigurationMapper;
 
 // Lee el archivo de reglas del usuario (JSON/YAML) hacia una RulesConfiguration genérica.
 // Lo comparten las operaciones que se configuran con reglas:
@@ -30,10 +27,7 @@ final class ConfigurationFiles {
         }
         String format = formatOf(configFile);
         try (InputStream source = Files.newInputStream(configFile)) {
-            ConfigurationReader reader =
-                    new ConfigurationReader(
-                            List.of(new JsonConfigurationMapper(), new YamlConfigurationMapper()));
-            return reader.read(source, format);
+            return ConfigurationReader.standard().read(source, format);
         }
     }
 

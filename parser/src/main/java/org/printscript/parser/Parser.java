@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import org.printscript.ast.Statement;
 import org.printscript.common.Failure;
@@ -23,9 +24,12 @@ public final class Parser implements Iterator<Result<Statement>> {
             TokenBuffer buffer,
             List<StatementParser> statementParsers,
             StatementDelimiter delimiter) {
-        this.buffer = buffer;
+        this.buffer = Objects.requireNonNull(buffer, "buffer");
         this.statementParsers = List.copyOf(statementParsers);
-        this.delimiter = delimiter;
+        if (this.statementParsers.isEmpty()) {
+            throw new IllegalArgumentException("At least one statement parser is required");
+        }
+        this.delimiter = Objects.requireNonNull(delimiter, "delimiter");
     }
 
     @Override

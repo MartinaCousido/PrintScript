@@ -46,11 +46,14 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
     // que el usuario tipea
     @Override
     public Result<Object> visitReadInput(ReadInput readInput) {
-        Result<Object> prompt = readInput.prompt().accept(this);
-        if (prompt instanceof Failure<Object> failure) {
-            return failure;
-        }
-        ports.printer().print(asText(((Success<Object>) prompt).value()));
+        return readInput
+                .prompt()
+                .accept(this)
+                .andThen(prompt -> readInputAfterPrompt(readInput, prompt));
+    }
+
+    private Result<Object> readInputAfterPrompt(ReadInput readInput, Object prompt) {
+        ports.printer().print(asText(prompt));
         return ports.input()
                 .readLine()
                 .<Result<Object>>map(Success::new)
@@ -63,11 +66,12 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
 
     @Override
     public Result<Object> visitReadEnv(ReadEnv readEnv) {
-        Result<Object> name = readEnv.name().accept(this);
-        if (name instanceof Failure<Object> failure) {
-            return failure;
-        }
-        String variable = asText(((Success<Object>) name).value());
+        return readEnv.name()
+                .accept(this)
+                .andThen(name -> readEnvironmentVariable(readEnv, asText(name)));
+    }
+
+    private Result<Object> readEnvironmentVariable(ReadEnv readEnv, String variable) {
         return ports.env()
                 .read(variable)
                 .<Result<Object>>map(Success::new)
@@ -92,19 +96,17 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
 
     @Override
     public Result<Object> visitBinaryExpression(BinaryExpression binaryExpression) {
-        Result<Object> left = binaryExpression.left().accept(this);
-        if (left instanceof Failure<Object> failure) {
-            return failure;
-        }
-        Result<Object> right = binaryExpression.right().accept(this);
-        if (right instanceof Failure<Object> failure) {
-            return failure;
-        }
-        return combine(
-                ((Success<Object>) left).value(),
-                binaryExpression.operator(),
-                ((Success<Object>) right).value(),
-                binaryExpression.range());
+        return binaryExpression
+                .left()
+                .accept(this)
+                .andThen(left -> evaluateRight(binaryExpression, left));
+    }
+
+    private Result<Object> evaluateRight(BinaryExpression expression, Object left) {
+        return expression
+                .right()
+                .accept(this)
+                .andThen(right -> combine(left, expression.operator(), right, expression.range()));
     }
 
     // pasa un número a texto

@@ -1,6 +1,5 @@
 package org.printscript.runner;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import org.printscript.ast.Statement;
@@ -19,13 +18,6 @@ public final class ValidationRunner {
     public List<Failure<?>> validate(Iterator<String> lines, Version version) {
         Iterator<Result<Statement>> statements =
                 StatementStreams.validatedStatementStream(lines, version);
-        List<Failure<?>> failures = new ArrayList<>();
-        while (statements.hasNext()) {
-            Result<?> result = statements.next();
-            if (result instanceof Failure<?> failure) {
-                failures.add(failure);
-            }
-        }
-        return failures;
+        return FailureCollector.collect(statements);
     }
 }

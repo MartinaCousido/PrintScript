@@ -8,11 +8,11 @@ import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-//preguntas cortas que se repiten mucho, "este token es la palabra let?" "es un ;?
+
+// Consultas sobre la categoría y el texto de un token.
 final class Tokens {
 
-    private Tokens() {
-    }
+    private Tokens() {}
 
     static boolean isKeyword(Token token, String text) {
         return token.type() == TokenType.KEYWORD && text.equals(token.value());
@@ -26,16 +26,18 @@ final class Tokens {
         return token.type() == TokenType.OPERATOR && text.equals(token.value());
     }
 
-    static Result<Token> expect(TokenBuffer tokens, Predicate<Token> shape, String message, Range fallback) {
+    static Result<Token> expect(
+            TokenBuffer tokens, Predicate<Token> matches, String message, Range fallback) {
         Optional<Token> next = tokens.lookahead(0);
         if (next.isEmpty()) {
             return new Failure<>(message, fallback);
         }
-        if (!shape.test(next.get())) {
-            return new Failure<>(message, next.get().range());
+        Token candidate = next.get();
+        if (!matches.test(candidate)) {
+            return new Failure<>(message, candidate.range());
         }
         tokens.commit(1);
-        return new Success<>(next.get());
+        return new Success<>(candidate);
     }
 
     static <T> Failure<T> forward(Failure<?> failure) {

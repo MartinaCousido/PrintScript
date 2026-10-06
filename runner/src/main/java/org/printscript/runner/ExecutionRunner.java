@@ -1,6 +1,5 @@
 package org.printscript.runner;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -33,13 +32,6 @@ public final class ExecutionRunner {
         Iterator<Result<Statement>> statements =
                 StatementStreams.validatedStatementStream(lines, version);
         Interpreter interpreter = InterpreterFactory.create(statements, ports, version);
-        List<Failure<?>> failures = new ArrayList<>();
-        while (interpreter.hasNext()) {
-            Result<?> result = interpreter.next();
-            if (result instanceof Failure<?> failure) {
-                failures.add(failure);
-            }
-        }
-        return failures;
+        return FailureCollector.collect(interpreter);
     }
 }

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Iterator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.printscript.ast.AssignmentStatement;
@@ -57,6 +58,30 @@ class AssignmentParserTest {
                                 token(TokenType.IDENTIFIER, "x", 1),
                                 token(TokenType.PUNCTUATION, ":", 2))));
         assertFalse(parser.matches(bufferOf()));
+    }
+
+    @Test
+    void nonIdentifierDoesNotReadTheNextToken() {
+        Iterator<Token> source =
+                new Iterator<>() {
+                    private boolean firstTokenRead;
+
+                    @Override
+                    public boolean hasNext() {
+                        if (firstTokenRead) {
+                            throw new AssertionError("Unexpected read beyond the first token");
+                        }
+                        return true;
+                    }
+
+                    @Override
+                    public Token next() {
+                        firstTokenRead = true;
+                        return token(TokenType.KEYWORD, "let", 1);
+                    }
+                };
+
+        assertFalse(parser.matches(new TokenBuffer(source)));
     }
 
     @Test

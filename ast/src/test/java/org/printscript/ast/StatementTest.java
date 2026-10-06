@@ -18,12 +18,13 @@ class StatementTest {
         return new Range(new Position(1, startColumn), new Position(1, endColumn));
     }
 
+    @SuppressWarnings("PMD.UnusedLocalVariable")
     private static String describe(Statement statement) {
         return switch (statement) {
             case VariableDeclaration declaration -> "declaration:" + declaration.name().name();
             case ConstDeclaration declaration -> "const:" + declaration.name().name();
             case AssignmentStatement assignment -> "assignment:" + assignment.name().name();
-            case PrintlnStatement _ -> "println";
+            case PrintlnStatement println -> "println";
             case Block block -> "block:" + block.statements().size();
             case IfStatement conditional ->
                     "if:" + (conditional.elseBranch().isPresent() ? "con-else" : "solo");

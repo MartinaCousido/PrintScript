@@ -12,6 +12,7 @@ class ExpressionTest {
         return new Range(new Position(1, startColumn), new Position(1, endColumn));
     }
 
+    @SuppressWarnings("PMD.UnusedLocalVariable")
     private static String describe(Expression expression) {
         return switch (expression) {
             case NumberLiteral number -> "number:" + number.value();
@@ -19,8 +20,8 @@ class ExpressionTest {
             case BooleanLiteral bool -> "boolean:" + bool.value();
             case Identifier identifier -> "identifier:" + identifier.name();
             case BinaryExpression binary -> "binary:" + binary.operator();
-            case ReadInput _ -> "readInput";
-            case ReadEnv _ -> "readEnv";
+            case ReadInput input -> "readInput";
+            case ReadEnv env -> "readEnv";
         };
     }
 
