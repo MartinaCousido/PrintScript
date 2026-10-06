@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -143,6 +144,40 @@ class InteractiveShellTest {
         // sin comando exit: el REPL termina al agotarse el stdin (Ctrl-D)
         Output result = run(dir, "pwd\n");
 
+        assertEquals(0, result.exitCode());
+    }
+
+    @Test
+    void inputReadFailuresReturnAUsageError(@TempDir Path dir) throws IOException {
+        try (InputStream brokenInput =
+                new InputStream() {
+                    @Override
+                    public int read() throws IOException {
+                        throw new IOException("input failure");
+                    }
+                }) {
+            ByteArrayOutputStream errors = new ByteArrayOutputStream();
+            PrintStream err = new PrintStream(errors, true, StandardCharsets.UTF_8);
+            int exitCode = new InteractiveShell(brokenInput, err, err, dir).run();
+            assertEquals(ExitCode.USAGE_ERROR.code(), exitCode);
+            assertTrue(errors.toString(StandardCharsets.UTF_8).contains("input failure"));
+        }
+    }
+
+    @Test
+    void quotedPathsAndTabSeparatedCommandsWorkInTheRepl(@TempDir Path dir) throws IOException {
+        writeFile(dir.resolve("mi fuente.ps"), "let a:number=12;");
+        writeFile(dir.resolve("mis reglas.json"), "{\"enforce-spacing-around-equals\":true}");
+        Output result = run(dir, "format\t\"mi fuente.ps\" \"mis reglas.json\"\nexit\n");
+        assertTrue(result.out().contains("a:number = 12"), result.out());
+        assertFalse(result.err().contains("No se pudo"), result.err());
+    }
+
+    @Test
+    void malformedQuotesAreReportedAndTheSessionContinues(@TempDir Path dir) {
+        Output result = run(dir, "run \"sin cerrar\npwd\nexit\n");
+        assertTrue(result.err().contains("Comillas sin cerrar"));
+        assertTrue(result.out().contains(dir.toString()));
         assertEquals(0, result.exitCode());
     }
 }

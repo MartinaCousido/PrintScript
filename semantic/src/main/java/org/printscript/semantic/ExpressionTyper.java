@@ -3,6 +3,7 @@ package org.printscript.semantic;
 import org.printscript.ast.BinaryExpression;
 import org.printscript.ast.BooleanLiteral;
 import org.printscript.ast.Expression;
+import org.printscript.ast.ExpressionFold;
 import org.printscript.ast.ExpressionOnlyVisitor;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -43,16 +44,12 @@ final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
     // las dos lecturas externas valen string: lo que entra de afuera es texto
     @Override
     public Result<Type> visitReadInput(ReadInput readInput) {
-        return stringArgument(readInput.prompt(), "readInput");
+        return evaluate(readInput);
     }
 
     @Override
     public Result<Type> visitReadEnv(ReadEnv readEnv) {
-        return stringArgument(readEnv.name(), "readEnv");
-    }
-
-    private Result<Type> stringArgument(Expression argument, String function) {
-        return argument.accept(this).andThen(actual -> requireString(actual, argument, function));
+        return evaluate(readEnv);
     }
 
     private static Result<Type> requireString(Type actual, Expression argument, String function) {
@@ -77,17 +74,21 @@ final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
 
     @Override
     public Result<Type> visitBinaryExpression(BinaryExpression binaryExpression) {
-        return binaryExpression
-                .left()
-                .accept(this)
-                .andThen(left -> typeRight(binaryExpression, left));
+        return evaluate(binaryExpression);
     }
 
-    private Result<Type> typeRight(BinaryExpression expression, Type left) {
-        return expression
-                .right()
-                .accept(this)
-                .andThen(right -> combine(left, expression.operator(), right, expression));
+    private Result<Type> evaluate(Expression expression) {
+        return ExpressionFold.evaluate(
+                expression,
+                leaf -> leaf.accept(this),
+                (binary, left, right) -> combine(left, binary.operator(), right, binary),
+                (read, argument) ->
+                        switch (read) {
+                            case ReadInput input ->
+                                    requireString(argument, input.prompt(), "readInput");
+                            case ReadEnv env -> requireString(argument, env.name(), "readEnv");
+                            default -> throw new IllegalStateException("Expected an external read");
+                        });
     }
 
     // la concatenación es el único caso donde los dos lados pueden tener tipos distintos

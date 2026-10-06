@@ -1,6 +1,8 @@
 package org.printscript.parser;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -14,11 +16,7 @@ import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.token.Token;
 
-// arma el if con su bloque y su else opcional
-// el cuerpo se parsea con los mismos StatementParser que el nivel de arriba: lo que es
-// una sentencia válida afuera lo es adentro, y no hay gramática duplicada. El
-// anidamiento lo resuelve la recursión, no la aritmética de índices: nunca se busca "la
-// primera llave que cierra", que es como se rompen los if anidados.
+/** Parses conditional blocks with explicit continuations, independent of JVM stack depth. */
 public final class IfParser implements StatementParser {
 
     private final ExpressionBuilder expressionBuilder;
@@ -39,50 +37,126 @@ public final class IfParser implements StatementParser {
 
     @Override
     public Result<Statement> parse(TokenBuffer tokens) {
-        Token keyword = tokens.lookahead(0).orElseThrow();
-        tokens.commit(1);
-        return condition(tokens, keyword)
-                .andThen(condition -> thenBranch(tokens, keyword, condition));
+        return new ParseSession(tokens).parse();
     }
 
-    private Result<Statement> thenBranch(TokenBuffer tokens, Token keyword, Expression condition) {
-        return block(tokens, condition.range())
-                .andThen(thenBlock -> ifStatement(tokens, keyword, condition, thenBlock));
-    }
+    private final class ParseSession {
+        private final TokenBuffer tokens;
+        private final Deque<Runnable> continuations = new ArrayDeque<>();
+        private Statement completed;
+        private Failure<Statement> failure;
 
-    // el else es opcional, y de eso depende dónde termina el if entero
-    private Result<Statement> ifStatement(
-            TokenBuffer tokens, Token keyword, Expression condition, Block thenBlock) {
-        if (!startsElse(tokens)) {
-            return new Success<>(
-                    new IfStatement(
-                            condition,
-                            thenBlock,
-                            Optional.empty(),
-                            new Range(keyword.range().start(), thenBlock.range().end())));
+        private ParseSession(TokenBuffer tokens) {
+            this.tokens = tokens;
         }
-        Token elseKeyword = tokens.lookahead(0).orElseThrow();
-        tokens.commit(1);
-        return elseBranch(tokens, elseKeyword)
-                .map(branch -> withElse(keyword, condition, thenBlock, branch));
-    }
 
-    private static IfStatement withElse(
-            Token keyword, Expression condition, Block thenBlock, Statement branch) {
-        return new IfStatement(
-                condition,
-                thenBlock,
-                Optional.of(branch),
-                new Range(keyword.range().start(), branch.range().end()));
-    }
-
-    // else seguido de otro if es "else if": la rama es ese if, sin ningún Block que lo
-    // envuelva, y eso es lo que después deja al formatter imprimirlo en una línea
-    private Result<Statement> elseBranch(TokenBuffer tokens, Token elseKeyword) {
-        if (matches(tokens)) {
-            return parse(tokens);
+        private Result<Statement> parse() {
+            continuations.push(this::parseConditional);
+            while (failure == null && !continuations.isEmpty()) {
+                continuations.pop().run();
+            }
+            return failure == null ? new Success<>(completed) : failure;
         }
-        return block(tokens, elseKeyword.range()).map(block -> (Statement) block);
+
+        private void fail(Failure<?> error) {
+            failure = new Failure<>(error.message(), error.range());
+        }
+
+        private void parseConditional() {
+            Token keyword = tokens.lookahead(0).orElseThrow();
+            tokens.commit(1);
+            Result<Expression> parsed = condition(tokens, keyword);
+            if (parsed instanceof Failure<Expression> error) {
+                fail(error);
+                return;
+            }
+            Expression expression = ((Success<Expression>) parsed).value();
+            continuations.push(() -> finishConditional(keyword, expression, (Block) completed));
+            startBlock(expression.range());
+        }
+
+        private void finishConditional(Token keyword, Expression expression, Block thenBlock) {
+            if (!startsElse(tokens)) {
+                completed =
+                        new IfStatement(
+                                expression,
+                                thenBlock,
+                                Optional.empty(),
+                                new Range(keyword.range().start(), thenBlock.range().end()));
+                return;
+            }
+            Token elseKeyword = tokens.lookahead(0).orElseThrow();
+            tokens.commit(1);
+            continuations.push(
+                    () ->
+                            completed =
+                                    new IfStatement(
+                                            expression,
+                                            thenBlock,
+                                            Optional.of(completed),
+                                            new Range(
+                                                    keyword.range().start(),
+                                                    completed.range().end())));
+            if (matches(tokens)) {
+                continuations.push(this::parseConditional);
+            } else {
+                startBlock(elseKeyword.range());
+            }
+        }
+
+        private void startBlock(Range previous) {
+            Result<Token> opening = openBrace(tokens, previous);
+            if (opening instanceof Failure<Token> error) {
+                fail(error);
+                return;
+            }
+            Token open = ((Success<Token>) opening).value();
+            List<Statement> statements = new ArrayList<>();
+            continuations.push(() -> nextInBlock(open, statements));
+        }
+
+        private void nextInBlock(Token open, List<Statement> statements) {
+            if (startsClosingBrace(tokens)) {
+                Token close = tokens.lookahead(0).orElseThrow();
+                tokens.commit(1);
+                completed =
+                        new Block(statements, new Range(open.range().start(), close.range().end()));
+                return;
+            }
+            Optional<Token> next = tokens.lookahead(0);
+            if (next.isEmpty()) {
+                failure = new Failure<>("Expected '}' to close the block", open.range());
+                return;
+            }
+            Optional<StatementParser> matching =
+                    statementParsers.get().stream()
+                            .filter(parser -> parser.matches(tokens))
+                            .findFirst();
+            if (matching.isPresent()) {
+                parseInBlock(matching.get(), open, statements);
+                return;
+            }
+            failure = new Failure<>("Unrecognized statement", next.get().range());
+        }
+
+        private void parseInBlock(StatementParser parser, Token open, List<Statement> statements) {
+            if (IfParser.this.equals(parser)) {
+                continuations.push(
+                        () -> {
+                            statements.add(completed);
+                            continuations.push(() -> nextInBlock(open, statements));
+                        });
+                continuations.push(this::parseConditional);
+            } else {
+                Result<Statement> parsed = parser.parse(tokens);
+                if (parsed instanceof Failure<Statement> error) {
+                    fail(error);
+                } else {
+                    statements.add(((Success<Statement>) parsed).value());
+                    continuations.push(() -> nextInBlock(open, statements));
+                }
+            }
+        }
     }
 
     private Result<Expression> condition(TokenBuffer tokens, Token keyword) {
@@ -107,48 +181,12 @@ public final class IfParser implements StatementParser {
                 condition.range());
     }
 
-    private Result<Block> block(TokenBuffer tokens, Range previous) {
-        return openBrace(tokens, previous).andThen(open -> statements(tokens, open));
-    }
-
     private Result<Token> openBrace(TokenBuffer tokens, Range previous) {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, "{"),
                 "Expected '{' to open the block",
                 previous);
-    }
-
-    // el único lugar que sigue desarmando el Result a mano: es un bucle que acumula, y
-    // ahí no hay cadena que encadenar
-    private Result<Block> statements(TokenBuffer tokens, Token open) {
-        List<Statement> statements = new ArrayList<>();
-        while (!startsClosingBrace(tokens)) {
-            Result<Statement> statement = nextStatement(tokens, open.range());
-            if (statement instanceof Failure<Statement> failure) {
-                return Tokens.forward(failure);
-            }
-            statements.add(((Success<Statement>) statement).value());
-        }
-        Token close = tokens.lookahead(0).orElseThrow();
-        tokens.commit(1);
-        return new Success<>(
-                new Block(statements, new Range(open.range().start(), close.range().end())));
-    }
-
-    // el error de una sentencia de adentro viaja como dato y con su propio rango: el if
-    // entero falla apuntando a la sentencia ofensora, no a la llave
-    private Result<Statement> nextStatement(TokenBuffer tokens, Range open) {
-        Optional<Token> next = tokens.lookahead(0);
-        if (next.isEmpty()) {
-            return new Failure<>("Expected '}' to close the block", open);
-        }
-        for (StatementParser parser : statementParsers.get()) {
-            if (parser.matches(tokens)) {
-                return parser.parse(tokens);
-            }
-        }
-        return new Failure<>("Unrecognized statement", next.get().range());
     }
 
     private static boolean startsElse(TokenBuffer tokens) {

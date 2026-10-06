@@ -1,7 +1,10 @@
 package org.printscript.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -112,5 +115,32 @@ class BlockAwareDelimiterTest {
         assertEquals(
                 "Expected ';' before the end of the stream",
                 delimiter.unterminatedMessage(Lexemes.tokensOf("let x : number = 1")));
+    }
+
+    @Test
+    void incrementalScannerNeverReadsPreviouslyAccumulatedTokens() {
+        List<Token> forbidden =
+                new AbstractList<>() {
+                    @Override
+                    public Token get(int index) {
+                        throw new AssertionError("Rescanned a token");
+                    }
+
+                    @Override
+                    public int size() {
+                        throw new AssertionError("Read accumulated tokens");
+                    }
+                };
+        List<Token> tokens = Lexemes.tokensOf("{ x = 1 ; }");
+        StatementDelimiter scanner = delimiter.forStatement();
+        for (Token token : tokens.subList(0, tokens.size() - 1)) {
+            assertFalse(scanner.endsStatement(forbidden, token, Optional::empty));
+        }
+        assertTrue(scanner.endsStatement(forbidden, tokens.getLast(), Optional::empty));
+        assertTrue(
+                delimiter
+                        .forStatement()
+                        .endsStatement(
+                                forbidden, Lexemes.tokensOf(";").getFirst(), Optional::empty));
     }
 }

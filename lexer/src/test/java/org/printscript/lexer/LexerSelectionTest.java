@@ -3,6 +3,7 @@ package org.printscript.lexer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -69,5 +70,29 @@ class LexerSelectionTest {
         Token recognized = lexer.next();
         assertEquals(TokenType.IDENTIFIER, recognized.type());
         assertEquals("b", recognized.value());
+    }
+
+    @Test
+    void constructorsReceiveViewsWithoutCopyingTheUnconsumedLine() {
+        List<Integer> observedLengths = new ArrayList<>();
+        TokenConstructor constructor =
+                new TokenConstructor() {
+                    @Override
+                    public Optional<Token> tryBuild(String rest, Position start) {
+                        throw new AssertionError("Copied the remaining source");
+                    }
+
+                    @Override
+                    public Optional<Token> tryBuild(CharSequence rest, Position start) {
+                        observedLengths.add(rest.length());
+                        return Optional.of(
+                                new Token(TokenType.IDENTIFIER, "x", new Range(start, start)));
+                    }
+                };
+        Lexer lexer = lexerOf("xxxx", List.of(constructor));
+        while (lexer.hasNext()) {
+            lexer.next();
+        }
+        assertEquals(List.of(4, 3, 2, 1), observedLengths);
     }
 }

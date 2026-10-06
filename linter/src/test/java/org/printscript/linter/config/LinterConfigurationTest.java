@@ -83,4 +83,9 @@ class LinterConfigurationTest {
                 from(Map.of("mandatory-variable-or-literal-in-readInput", true))
                         .readInputOnlySimpleArgument());
     }
+
+    @Test
+    void wrongRuleTypesFailInsteadOfDisablingTheRule() {
+        assertThrows(IllegalArgumentException.class, () -> from(Map.of(FORMAT_KEY, true)));
+    }
 }

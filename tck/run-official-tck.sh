@@ -17,6 +17,7 @@ if [[ "$SOURCE_MODE" == --published ]]; then
     : "${GITHUB_TOKEN:?Falta GITHUB_TOKEN}"
 fi
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly IMPLEMENTATION_DIR="${PRINTSCRIPT_TCK_IMPLEMENTATION_SOURCE:-$ROOT_DIR/tck/implementation}"
 readonly TCK_DIR="$ROOT_DIR/build/official-tck"
 readonly TCK_COMMIT="510028a8246f6fd607a3195394310f509d9047a2"
 
@@ -32,9 +33,9 @@ rm -rf "$TCK_DIR"
 git clone --quiet https://github.com/austral-ingsis/printscript-tck.git "$TCK_DIR"
 git -C "$TCK_DIR" checkout --quiet "$TCK_COMMIT"
 
-cp "$ROOT_DIR/tck/implementation/CustomImplementationFactory.java" \
+cp "$IMPLEMENTATION_DIR/CustomImplementationFactory.java" \
     "$TCK_DIR/src/main/java/implementation/CustomImplementationFactory.java"
-cp "$ROOT_DIR/tck/implementation/PrintScriptAdapters.java" \
+cp "$IMPLEMENTATION_DIR/PrintScriptAdapters.java" \
     "$TCK_DIR/src/main/java/implementation/PrintScriptAdapters.java"
 rm "$TCK_DIR/src/main/java/implementation/NotImplementedException.java"
 

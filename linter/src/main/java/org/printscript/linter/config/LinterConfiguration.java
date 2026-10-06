@@ -1,5 +1,6 @@
 package org.printscript.linter.config;
 
+import java.util.Map;
 import java.util.Optional;
 import org.printscript.config.RulesConfiguration;
 
@@ -15,6 +16,11 @@ public record LinterConfiguration(
             "mandatory-variable-or-literal-in-readInput";
 
     public static LinterConfiguration from(RulesConfiguration rules) {
+        rules.validateTypes(
+                Map.ofEntries(
+                        Map.entry(IDENTIFIER_FORMAT_KEY, String.class),
+                        Map.entry(PRINTLN_ARGUMENT_KEY, Boolean.class),
+                        Map.entry(READ_INPUT_ARGUMENT_KEY, Boolean.class)));
         return new LinterConfiguration(
                 rules.getString(IDENTIFIER_FORMAT_KEY).map(LinterConfiguration::identifierFormatOf),
                 rules.getBoolean(PRINTLN_ARGUMENT_KEY).orElse(false),
