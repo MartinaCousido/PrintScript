@@ -13,6 +13,5 @@ spotless {
         removeUnusedImports()
     }
 
-    // Requiere historia de git completa: el CI clona con fetch-depth 0 por esto.
-    ratchetFrom("origin/master")
+    // Se verifica toda la base; el contrato de formato no depende del checkout Git.
 }
