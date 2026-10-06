@@ -4,7 +4,7 @@ Base: `master` `aec6ec6c26fae25d875a7d52e2e38e59b626db2e` después de integrar #
 
 ## Alcance y evidencia
 
-Se leyeron los contratos y fuentes de los 13 módulos (135 archivos Java de
+Se leyeron los contratos y fuentes de los 13 módulos (136 archivos Java de
 producción en esta rama), los dos adapters del TCK y la configuración de build/calidad.
 Se inventariaron los escenarios de 101 archivos Java de test, se revisaron en detalle
 los tests de los contratos modificados y se ejecutó la suite completa. Eso no equivale a
