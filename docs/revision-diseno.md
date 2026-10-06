@@ -4,7 +4,7 @@
 
 La rama `design/systematic-quality` contiene un merge explícito de
 `fix/systematic-correctness` ([PR #19](https://github.com/ingsis-ua/ingsis-interpreter/pull/19)).
-Esta PR se apila sobre esa rama para mostrar solamente diseño. Al integrar #19,
+Esta PR se apila sobre esa rama para mostrar solamente diseño. Al integrar #19 con merge commit (sin squash/rebase),
 se cambia la base de esta PR a master. Java 25 se mantiene.
 
 ## Cambios

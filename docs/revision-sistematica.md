@@ -118,7 +118,7 @@ pero no se configura auto-merge. Las Actions se fijan a commits completos confor
 - Bugfixes: `fix/systematic-correctness` sobre master, [PR #19](https://github.com/ingsis-ua/ingsis-interpreter/pull/19).
 - Diseño: `design/systematic-quality`, contiene un merge explícito de bugfixes. PR
   inicialmente apilada sobre la rama de bugfixes para mostrar solo diseño; después de
-  integrar #19 se cambia la base a master. La historia compartida evita resolver nuevamente
+  integrar #19 con merge commit (sin squash/rebase) se cambia la base a master. La historia compartida evita resolver nuevamente
   los cambios de bugfixes al integrar diseño (sin cambios concurrentes sobre las mismas áreas).
 
 ## CI/CD y credenciales
