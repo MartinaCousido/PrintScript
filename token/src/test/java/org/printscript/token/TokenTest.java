@@ -3,6 +3,7 @@ package org.printscript.token;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -51,5 +52,13 @@ class TokenTest {
         assertFalse(categories.contains("LET"));
         assertFalse(categories.contains("PLUS"));
         assertFalse(categories.contains("SYMBOL"));
+    }
+
+    @Test
+    void tokenRequiresItsTypeTextAndRange() {
+        assertThrows(NullPointerException.class, () -> new Token(null, "let", anyRange()));
+        assertThrows(
+                NullPointerException.class, () -> new Token(TokenType.KEYWORD, null, anyRange()));
+        assertThrows(NullPointerException.class, () -> new Token(TokenType.KEYWORD, "let", null));
     }
 }

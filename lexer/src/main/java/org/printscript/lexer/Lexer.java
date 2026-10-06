@@ -3,6 +3,7 @@ package org.printscript.lexer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -21,8 +22,8 @@ public final class Lexer implements Iterator<Token> {
     private Token pending;
 
     public Lexer(Iterator<String> lines, List<TokenConstructor> constructors) {
-        this.lines = lines;
-        this.constructors = constructors;
+        this.lines = Objects.requireNonNull(lines, "lines");
+        this.constructors = List.copyOf(constructors);
         this.currentLine = null;
         this.lineNumber = 0;
         this.columnIndex = 0;

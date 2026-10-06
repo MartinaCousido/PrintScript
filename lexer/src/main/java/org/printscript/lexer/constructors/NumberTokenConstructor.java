@@ -5,7 +5,8 @@ import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-//reconoce números, enteros y con coma decimal
+
+// reconoce números, enteros y con coma decimal
 public final class NumberTokenConstructor implements TokenConstructor {
 
     @Override
@@ -31,9 +32,9 @@ public final class NumberTokenConstructor implements TokenConstructor {
     }
 
     private static boolean hasDecimalPartAt(String rest, int index) {
-        return index < rest.length()
-            && rest.charAt(index) == '.'
-            && index + 1 < rest.length()
-            && Character.isDigit(rest.charAt(index + 1));
+        boolean decimalPoint = index < rest.length() && rest.charAt(index) == '.';
+        boolean followedByDigit =
+                index + 1 < rest.length() && Character.isDigit(rest.charAt(index + 1));
+        return decimalPoint && followedByDigit;
     }
 }

@@ -52,11 +52,11 @@ final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
     }
 
     private Result<Type> stringArgument(Expression argument, String function) {
-        Result<Type> actual = argument.accept(this);
-        if (actual instanceof Failure<Type> failure) {
-            return failure;
-        }
-        if (((Success<Type>) actual).value() != Type.STRING) {
+        return argument.accept(this).andThen(actual -> requireString(actual, argument, function));
+    }
+
+    private static Result<Type> requireString(Type actual, Expression argument, String function) {
+        if (actual != Type.STRING) {
             return new Failure<>(
                     "El argumento de " + function + " tiene que ser string", argument.range());
         }
@@ -77,19 +77,17 @@ final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
 
     @Override
     public Result<Type> visitBinaryExpression(BinaryExpression binaryExpression) {
-        Result<Type> left = binaryExpression.left().accept(this);
-        if (left instanceof Failure<Type> failure) {
-            return failure;
-        }
-        Result<Type> right = binaryExpression.right().accept(this);
-        if (right instanceof Failure<Type> failure) {
-            return failure;
-        }
-        return combine(
-                ((Success<Type>) left).value(),
-                binaryExpression.operator(),
-                ((Success<Type>) right).value(),
-                binaryExpression);
+        return binaryExpression
+                .left()
+                .accept(this)
+                .andThen(left -> typeRight(binaryExpression, left));
+    }
+
+    private Result<Type> typeRight(BinaryExpression expression, Type left) {
+        return expression
+                .right()
+                .accept(this)
+                .andThen(right -> combine(left, expression.operator(), right, expression));
     }
 
     // la concatenación es el único caso donde los dos lados pueden tener tipos distintos

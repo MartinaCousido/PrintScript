@@ -123,12 +123,12 @@ public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
 
     @Override
     public Result<Void> visitIfStatement(IfStatement ifStatement) {
-        // la condición se evalúa en el scope de afuera, que es lo correcto y sale solo
-        Result<Type> condition = ExpressionTyper.typeOf(ifStatement.condition(), symbols);
-        if (condition instanceof Failure<Type> failure) {
-            return propagate(failure);
-        }
-        if (((Success<Type>) condition).value() != Type.BOOLEAN) {
+        return ExpressionTyper.typeOf(ifStatement.condition(), symbols)
+                .andThen(type -> checkConditionAndBranches(ifStatement, type));
+    }
+
+    private Result<Void> checkConditionAndBranches(IfStatement ifStatement, Type type) {
+        if (type != Type.BOOLEAN) {
             return new Failure<>(
                     "La condición de un if tiene que ser boolean", ifStatement.condition().range());
         }
@@ -145,29 +145,25 @@ public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
     @Override
     public Result<Void> visitPrintlnStatement(PrintlnStatement println) {
         // println acepta cualquier tipo básico: solo hace falta que la expresión tipe
-        Result<Type> actual = ExpressionTyper.typeOf(println.expression(), symbols);
-        if (actual instanceof Failure<Type> failure) {
-            return propagate(failure);
-        }
-        return success();
+        return ExpressionTyper.typeOf(println.expression(), symbols).map(type -> null);
     }
 
     private Result<Void> checkAssignable(Expression expression, Type declared) {
-        Result<Type> actual = ExpressionTyper.typeOf(expression, symbols);
-        if (actual instanceof Failure<Type> failure) {
-            return propagate(failure);
-        }
-        Type type = ((Success<Type>) actual).value();
+        return ExpressionTyper.typeOf(expression, symbols)
+                .andThen(actual -> compareTypes(expression, declared, actual));
+    }
+
+    private static Result<Void> compareTypes(Expression expression, Type declared, Type actual) {
         // excepción acotada: lo que entra de afuera es texto, y el tipo declarado manda
         // la conversión. Vale solo cuando el inicializador es exactamente una lectura;
         // adentro de una expresión es un string común, o si no deja de ser checkeable.
         if (isExternalRead(expression)) {
             return success();
         }
-        if (type != declared) {
+        if (actual != declared) {
             return new Failure<>(
                     "No se puede asignar "
-                            + type.writtenName()
+                            + actual.writtenName()
                             + " a una variable "
                             + declared.writtenName(),
                     expression.range());
@@ -181,10 +177,6 @@ public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
 
     private static Result<Void> success() {
         return new Success<>(null);
-    }
-
-    private static Result<Void> propagate(Failure<Type> failure) {
-        return new Failure<>(failure.message(), failure.range());
     }
 
     @Override

@@ -42,13 +42,12 @@ public final class IfParser implements StatementParser {
         Token keyword = tokens.lookahead(0).orElseThrow();
         tokens.commit(1);
         return condition(tokens, keyword)
-                .andThen(
-                        condition ->
-                                block(tokens, condition.range())
-                                        .andThen(
-                                                then ->
-                                                        ifStatement(
-                                                                tokens, keyword, condition, then)));
+                .andThen(condition -> thenBranch(tokens, keyword, condition));
+    }
+
+    private Result<Statement> thenBranch(TokenBuffer tokens, Token keyword, Expression condition) {
+        return block(tokens, condition.range())
+                .andThen(thenBlock -> ifStatement(tokens, keyword, condition, thenBlock));
     }
 
     // el else es opcional, y de eso depende dónde termina el if entero

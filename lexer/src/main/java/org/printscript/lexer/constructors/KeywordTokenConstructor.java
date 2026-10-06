@@ -6,13 +6,14 @@ import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-//reconoce palabras y decide su categoría según la tabla que le pasan
+
+// reconoce palabras y decide su categoría según la tabla que le pasan
 public final class KeywordTokenConstructor implements TokenConstructor {
 
     private final Map<String, TokenType> keywords;
 
     public KeywordTokenConstructor(Map<String, TokenType> keywords) {
-        this.keywords = keywords;
+        this.keywords = Map.copyOf(keywords);
     }
 
     @Override

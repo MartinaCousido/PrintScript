@@ -50,14 +50,32 @@ final class Formatting {
             PrintStream err,
             Version version) {
         if (outputFile == null) {
-            // no se cierra la consola (rompería el stdout del resto del proceso), solo
-            // se vuelca; el FormattingRunner además hace flush del Writer
-            Writer destination = new OutputStreamWriter(console, StandardCharsets.UTF_8);
-            List<Failure<?>> failures =
-                    new FormattingRunner().format(lines, configuration, destination, version);
-            flush(destination);
-            return finish(failures, err);
+            return formatToConsole(lines, configuration, console, err, version);
         }
+        return formatToFile(lines, configuration, outputFile, console, err, version);
+    }
+
+    private static ExitCode formatToConsole(
+            Iterator<String> lines,
+            FormatterConfiguration configuration,
+            PrintStream console,
+            PrintStream err,
+            Version version) {
+        // No se cierra la consola: el resto del proceso sigue usándola.
+        Writer destination = new OutputStreamWriter(console, StandardCharsets.UTF_8);
+        List<Failure<?>> failures =
+                new FormattingRunner().format(lines, configuration, destination, version);
+        flush(destination);
+        return finish(failures, err);
+    }
+
+    private static ExitCode formatToFile(
+            Iterator<String> lines,
+            FormatterConfiguration configuration,
+            Path outputFile,
+            PrintStream console,
+            PrintStream err,
+            Version version) {
         try (Writer destination = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8)) {
             List<Failure<?>> failures =
                     new FormattingRunner().format(lines, configuration, destination, version);

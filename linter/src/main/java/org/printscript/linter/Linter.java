@@ -2,6 +2,7 @@ package org.printscript.linter;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import org.printscript.ast.Statement;
 import org.printscript.common.MappedResults;
 import org.printscript.common.Result;
@@ -15,7 +16,8 @@ public final class Linter implements Iterator<Result<List<Violation>>> {
 
     public Linter(Iterator<Result<Statement>> statements, List<LintRule> rules) {
         this.rules = List.copyOf(rules);
-        this.checked = new MappedResults<>(statements, this::check);
+        this.checked =
+                new MappedResults<>(Objects.requireNonNull(statements, "statements"), this::check);
     }
 
     @Override

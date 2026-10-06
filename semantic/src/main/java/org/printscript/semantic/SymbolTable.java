@@ -1,65 +1,34 @@
 package org.printscript.semantic;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import org.printscript.common.ScopedValues;
 
-// qué nombres existen, con qué tipo y si son reasignables.
+// Tabla de nombres y tipos. La política de redeclaración pertenece a ScopedValues.
 public final class SymbolTable {
 
-    private static final int OUTERMOST_ONLY = 1;
-
-    private final List<Map<String, Symbol>> frames;
+    private final ScopedValues<Symbol> symbols;
 
     public SymbolTable() {
-        this(List.of(Map.of()));
+        this(new ScopedValues<>());
     }
 
-    private SymbolTable(List<Map<String, Symbol>> frames) {
-        this.frames = frames;
+    private SymbolTable(ScopedValues<Symbol> symbols) {
+        this.symbols = symbols;
     }
 
     public SymbolTable openScope() {
-        List<Map<String, Symbol>> opened = new ArrayList<>(frames);
-        opened.add(Map.of());
-        return new SymbolTable(List.copyOf(opened));
+        return new SymbolTable(symbols.openScope());
     }
 
     public SymbolTable closeScope() {
-        if (frames.size() == OUTERMOST_ONLY) {
-            return this;
-        }
-        return new SymbolTable(List.copyOf(frames.subList(0, frames.size() - 1)));
+        return new SymbolTable(symbols.closeScope());
     }
 
     public Optional<SymbolTable> declare(String name, Symbol symbol) {
-        if (innermost().containsKey(name)) {
-            return Optional.empty();
-        }
-        Map<String, Symbol> updated = new HashMap<>(innermost());
-        updated.put(name, symbol);
-        return Optional.of(withInnermost(updated));
+        return symbols.declare(name, symbol).map(SymbolTable::new);
     }
 
     public Optional<Symbol> read(String name) {
-        for (int index = frames.size() - 1; index >= 0; index = index - 1) {
-            Symbol found = frames.get(index).get(name);
-            if (found != null) {
-                return Optional.of(found);
-            }
-        }
-        return Optional.empty();
-    }
-
-    private Map<String, Symbol> innermost() {
-        return frames.getLast();
-    }
-
-    private SymbolTable withInnermost(Map<String, Symbol> updated) {
-        List<Map<String, Symbol>> replaced = new ArrayList<>(frames);
-        replaced.set(replaced.size() - 1, Map.copyOf(updated));
-        return new SymbolTable(List.copyOf(replaced));
+        return symbols.read(name);
     }
 }

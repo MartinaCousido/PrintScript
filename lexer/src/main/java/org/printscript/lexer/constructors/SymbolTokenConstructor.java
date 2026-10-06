@@ -6,13 +6,14 @@ import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-//reconoce los simbolos: + - * / = ; : ( )
+
+// reconoce los simbolos: + - * / = ; : ( )
 public final class SymbolTokenConstructor implements TokenConstructor {
 
     private final Map<String, TokenType> symbols;
 
     public SymbolTokenConstructor(Map<String, TokenType> symbols) {
-        this.symbols = symbols;
+        this.symbols = Map.copyOf(symbols);
     }
 
     @Override

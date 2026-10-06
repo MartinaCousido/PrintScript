@@ -10,8 +10,6 @@ import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.common.Version;
 import org.printscript.config.ConfigurationReader;
-import org.printscript.config.JsonConfigurationMapper;
-import org.printscript.config.YamlConfigurationMapper;
 import org.printscript.linter.Linter;
 import org.printscript.linter.LinterFactory;
 import org.printscript.linter.Violation;
@@ -38,10 +36,10 @@ public final class AnalyzingRunner {
 
     public AnalysisReport analyze(
             Iterator<String> lines, InputStream configuration, String format) {
-        ConfigurationReader reader =
-                new ConfigurationReader(
-                        List.of(new JsonConfigurationMapper(), new YamlConfigurationMapper()));
-        return analyze(lines, LinterConfiguration.from(reader.read(configuration, format)));
+        return analyze(
+                lines,
+                LinterConfiguration.from(
+                        ConfigurationReader.standard().read(configuration, format)));
     }
 
     private static void collect(

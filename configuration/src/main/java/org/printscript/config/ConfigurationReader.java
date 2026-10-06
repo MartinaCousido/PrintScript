@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 // recibe una lista de mappers, elige el primero que soporta el formato y delega
 public final class ConfigurationReader {
@@ -13,9 +14,19 @@ public final class ConfigurationReader {
 
     public ConfigurationReader(List<ConfigurationMapper> mappers) {
         this.mappers = List.copyOf(mappers);
+        if (this.mappers.isEmpty()) {
+            throw new IllegalArgumentException("At least one configuration mapper is required");
+        }
+    }
+
+    public static ConfigurationReader standard() {
+        return new ConfigurationReader(
+                List.of(new JsonConfigurationMapper(), new YamlConfigurationMapper()));
     }
 
     public RulesConfiguration read(InputStream source, String format) {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(format, "format");
         String normalized = format.toLowerCase(Locale.ROOT);
         ConfigurationMapper mapper =
                 mappers.stream()

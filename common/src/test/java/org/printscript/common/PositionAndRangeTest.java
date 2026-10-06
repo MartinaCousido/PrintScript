@@ -1,6 +1,7 @@
 package org.printscript.common;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -34,5 +35,28 @@ class PositionAndRangeTest {
         Range other = new Range(new Position(1, 5), new Position(1, 7));
 
         assertEquals(one, other);
+    }
+
+    @Test
+    void positionsRejectZeroBasedCoordinates() {
+        assertThrows(IllegalArgumentException.class, () -> new Position(0, 1));
+        assertThrows(IllegalArgumentException.class, () -> new Position(1, 0));
+    }
+
+    @Test
+    void rangesRejectReversedEndpoints() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new Range(new Position(2, 1), new Position(1, 9)));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new Range(new Position(1, 5), new Position(1, 4)));
+    }
+
+    @Test
+    void rangesRejectMissingEndpoints() {
+        Position position = new Position(1, 1);
+        assertThrows(NullPointerException.class, () -> new Range(null, position));
+        assertThrows(NullPointerException.class, () -> new Range(position, null));
     }
 }

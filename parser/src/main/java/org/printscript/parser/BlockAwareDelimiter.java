@@ -28,7 +28,8 @@ public final class BlockAwareDelimiter implements StatementDelimiter {
         }
         // solo acá se consulta el token siguiente, que cuesta una línea más de fuente:
         // un 'else' continúa la misma sentencia, y con eso 'else if' sale gratis
-        return depth != 1 ? false : !isElse(next.get());
+        boolean closesOutermostBlock = depth == 1;
+        return closesOutermostBlock && !isElse(next.get());
     }
 
     @Override
