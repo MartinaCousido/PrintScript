@@ -53,73 +53,94 @@ class ExpressionBuilderTest {
 
     @Test
     void multiplicationBindsTighterThanAddition() {
-        TokenBuffer tokens = bufferOf(
-            number("2", 1), operator("+", 3), number("3", 5), operator("*", 7), number("4", 9));
+        TokenBuffer tokens =
+                bufferOf(
+                        number("2", 1),
+                        operator("+", 3),
+                        number("3", 5),
+                        operator("*", 7),
+                        number("4", 9));
 
         Result<Expression> result = builder.build(tokens, range(1, 1));
 
-        Expression expected = new BinaryExpression(
-            new NumberLiteral(2.0, range(1, 1)),
-            Operator.PLUS,
-            new BinaryExpression(
-                new NumberLiteral(3.0, range(5, 5)),
-                Operator.MULTIPLY,
-                new NumberLiteral(4.0, range(9, 9)),
-                range(5, 9)),
-            range(1, 9));
+        Expression expected =
+                new BinaryExpression(
+                        new NumberLiteral(2.0, range(1, 1)),
+                        Operator.PLUS,
+                        new BinaryExpression(
+                                new NumberLiteral(3.0, range(5, 5)),
+                                Operator.MULTIPLY,
+                                new NumberLiteral(4.0, range(9, 9)),
+                                range(5, 9)),
+                        range(1, 9));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void parenthesesGroupAgainstPrecedence() {
-        TokenBuffer tokens = bufferOf(
-            punctuation("(", 1), number("2", 2), operator("+", 4), number("3", 6),
-            punctuation(")", 7), operator("*", 9), number("4", 11));
+        TokenBuffer tokens =
+                bufferOf(
+                        punctuation("(", 1),
+                        number("2", 2),
+                        operator("+", 4),
+                        number("3", 6),
+                        punctuation(")", 7),
+                        operator("*", 9),
+                        number("4", 11));
 
         Result<Expression> result = builder.build(tokens, range(1, 1));
 
-        Expression expected = new BinaryExpression(
-            new BinaryExpression(
-                new NumberLiteral(2.0, range(2, 2)),
-                Operator.PLUS,
-                new NumberLiteral(3.0, range(6, 6)),
-                range(1, 7)),
-            Operator.MULTIPLY,
-            new NumberLiteral(4.0, range(11, 11)),
-            range(1, 11));
+        Expression expected =
+                new BinaryExpression(
+                        new BinaryExpression(
+                                new NumberLiteral(2.0, range(2, 2)),
+                                Operator.PLUS,
+                                new NumberLiteral(3.0, range(6, 6)),
+                                range(1, 7)),
+                        Operator.MULTIPLY,
+                        new NumberLiteral(4.0, range(11, 11)),
+                        range(1, 11));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void subtractionIsLeftAssociative() {
-        TokenBuffer tokens = bufferOf(
-            number("10", 1), operator("-", 4), number("2", 6), operator("-", 8), number("3", 10));
+        TokenBuffer tokens =
+                bufferOf(
+                        number("10", 1),
+                        operator("-", 4),
+                        number("2", 6),
+                        operator("-", 8),
+                        number("3", 10));
 
         Result<Expression> result = builder.build(tokens, range(1, 1));
 
-        Expression expected = new BinaryExpression(
-            new BinaryExpression(
-                new NumberLiteral(10.0, range(1, 2)),
-                Operator.MINUS,
-                new NumberLiteral(2.0, range(6, 6)),
-                range(1, 6)),
-            Operator.MINUS,
-            new NumberLiteral(3.0, range(10, 10)),
-            range(1, 10));
+        Expression expected =
+                new BinaryExpression(
+                        new BinaryExpression(
+                                new NumberLiteral(10.0, range(1, 2)),
+                                Operator.MINUS,
+                                new NumberLiteral(2.0, range(6, 6)),
+                                range(1, 6)),
+                        Operator.MINUS,
+                        new NumberLiteral(3.0, range(10, 10)),
+                        range(1, 10));
         assertEquals(new Success<>(expected), result);
     }
 
     @Test
     void concatenationCombinesStringsAndIdentifiers() {
-        TokenBuffer tokens = bufferOf(string("Hello ", 1), operator("+", 10), identifier("name", 12));
+        TokenBuffer tokens =
+                bufferOf(string("Hello ", 1), operator("+", 10), identifier("name", 12));
 
         Result<Expression> result = builder.build(tokens, range(1, 1));
 
-        Expression expected = new BinaryExpression(
-            new StringLiteral("Hello ", range(1, 8)),
-            Operator.PLUS,
-            new Identifier("name", range(12, 15)),
-            range(1, 15));
+        Expression expected =
+                new BinaryExpression(
+                        new StringLiteral("Hello ", range(1, 8)),
+                        Operator.PLUS,
+                        new Identifier("name", range(12, 15)),
+                        range(1, 15));
         assertEquals(new Success<>(expected), result);
     }
 
@@ -135,8 +156,8 @@ class ExpressionBuilderTest {
 
     @Test
     void unclosedParenthesisFailsAtTheOpeningParenthesis() {
-        TokenBuffer tokens = bufferOf(
-            punctuation("(", 1), number("2", 2), operator("+", 4), number("3", 6));
+        TokenBuffer tokens =
+                bufferOf(punctuation("(", 1), number("2", 2), operator("+", 4), number("3", 6));
 
         Result<Expression> result = builder.build(tokens, range(1, 1));
 
@@ -146,8 +167,8 @@ class ExpressionBuilderTest {
 
     @Test
     void unexpectedTokenInOperandPositionFailsAtThatToken() {
-        TokenBuffer tokens = bufferOf(
-            number("2", 1), operator("+", 3), operator("*", 5), number("3", 7));
+        TokenBuffer tokens =
+                bufferOf(number("2", 1), operator("+", 3), operator("*", 5), number("3", 7));
 
         Result<Expression> result = builder.build(tokens, range(1, 1));
 

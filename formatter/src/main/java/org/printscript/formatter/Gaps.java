@@ -76,7 +76,7 @@ final class Gaps {
         }
         return configuration
                 .lineBreaksAfterPrintln()
-                .map(howMany -> lineBreaks(howMany + 1, current));
+                .map(howMany -> lineBreaks(Math.addExact(howMany, 1), current));
     }
 
     // solo si la sentencia siguiente arranca en la misma línea: si ya había un salto, la
@@ -151,7 +151,7 @@ final class Gaps {
         int level = isPunctuation(current, "}") ? depth - 1 : depth;
         return configuration
                 .indentInsideIf()
-                .map(size -> spaces(size * level))
+                .map(size -> spaces(Math.multiplyExact(size, Math.max(0, level))))
                 .orElseGet(() -> spaces(asItWas));
     }
 
