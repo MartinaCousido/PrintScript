@@ -258,19 +258,29 @@ descargarlo en cada corrida.
 
 ## Entrega continua
 
-El CI verifica; el CD entrega, y entregar es una decisión explícita. El workflow de
-[`.github/workflows/cd.yml`](.github/workflows/cd.yml) corre **solo cuando se tagea una
-versión**:
+El [CD](.github/workflows/cd.yml) publica después de cada CI exitoso de un push a
+`master` o `main`, incluidos los merges de PR. Usa el SHA exacto validado y una versión
+`0.2.0-main.<run-id>.<attempt>` que permite reintentos sin sobrescribir paquetes.
+Los PR ejecutan CI y TCK local, pero no publican.
+
+Después de publicar, otro job en un runner nuevo descarga esa versión de GitHub Packages
+y ejecuta los 59 tests del TCK. No usa Maven Local ni el cache Gradle de publicación.
+Los tests se conservan; la configuración de Java 25 y heap se explica en [tck/README.md](tck/README.md).
+
+No requiere un fork personal ni secrets manuales: cada job usa el `GITHUB_TOKEN`
+automático con sus permisos de lectura o publicación. Los paquetes deben estar asociados
+a este repositorio y permitir el acceso de sus workflows; un error de permisos falla el CD.
+
+Los tags `v*` también verifican y publican una versión estable. El Release de la CLI se
+crea únicamente después de que pase la validación de los paquetes publicados:
 
 ```sh
 git tag v0.2.0
 git push origin v0.2.0
 ```
 
-El tag es la única fuente del número de versión: se le saca la `v` y se pasa como
-`-PprintscriptVersion`, así el jar publicado, el zip de la CLI y el tag dicen siempre lo
-mismo. Antes de publicar corre `./gradlew build` completo: un tag sobre un commit roto
-falla ahí y no queda publicado a medias.
+Un tag identifica una versión inmutable: si una publicación estable queda incompleta,
+se debe resolver esa publicación antes de reintentar el mismo tag.
 
 Publica dos cosas:
 

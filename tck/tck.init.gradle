@@ -1,5 +1,6 @@
 // Adaptación reproducible del TCK oficial a los artefactos de este repository.
 // Se aplica con Gradle 9.5 desde tck/run-official-tck.sh; no modifica el clon del TCK.
+def published = System.getenv('PRINTSCRIPT_TCK_SOURCE_MODE') == '--published'
 def implementationVersion = System.getenv('PRINTSCRIPT_TCK_VERSION')
 if (!implementationVersion) {
     throw new GradleException('PRINTSCRIPT_TCK_VERSION no está definido')
@@ -8,7 +9,22 @@ if (!implementationVersion) {
 allprojects {
     plugins.withId('java') {
         repositories {
-            mavenLocal()
+            if (published) {
+                exclusiveContent {
+                    forRepository {
+                        maven {
+                            url = uri('https://maven.pkg.github.com/ingsis-ua/ingsis-interpreter')
+                            credentials {
+                                username = System.getenv('GITHUB_ACTOR')
+                                password = System.getenv('GITHUB_TOKEN')
+                            }
+                        }
+                    }
+                    filter { includeGroup('org.printscript') }
+                }
+            } else {
+                mavenLocal()
+            }
             mavenCentral()
         }
 
@@ -24,6 +40,9 @@ allprojects {
     }
 
     afterEvaluate {
+        if (published) {
+            repositories.removeAll { it.name == 'MavenLocal' }
+        }
         java.toolchain.languageVersion = JavaLanguageVersion.of(25)
         tasks.withType(Test).configureEach {
             // El TCK prueba streaming: el collector debe agotar memoria, pero el counter no.

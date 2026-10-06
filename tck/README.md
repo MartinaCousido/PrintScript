@@ -63,10 +63,27 @@ declarados por el TCK conserva el propósito: el collector agota memoria, el cou
 
 ## Automatización
 
-`.github/workflows/ci.yml` ejecuta primero todo el `build`, luego este TCK y, solo en
-eventos `push`, publica en GitHub Packages una versión única trazable al SHA. Los pull
-requests ejecutan build y TCK, pero no publican porque un PR de fork no recibe credenciales
-de escritura. `.github/workflows/cd.yml` también exige el TCK antes de publicar un tag.
+El CI ejecuta `build` y el TCK contra Maven Local en cada push y PR, sin publicar.
+El CD se activa después de un CI exitoso de un push/merge a `master` o `main`, publica
+el commit validado y ejecuta el TCK contra GitHub Packages en otro runner.
+Los tags `v*` conservan la publicación estable y el Release, condicionado al TCK publicado.
+
+El modo de verificación del registro es:
+
+```sh
+./tck/run-official-tck.sh 0.2.0-main.123.1 --published
+```
+
+Este modo exige `GITHUB_ACTOR` y `GITHUB_TOKEN`, omite `publishToMavenLocal` y resuelve
+exclusivamente el grupo `org.printscript` desde GitHub Packages. También elimina el
+repositorio Maven Local que declara upstream. Una versión local no puede ocultar un
+paquete ausente o mal publicado. El job desactiva el cache compartido de Gradle.
+
+En Actions se utiliza el token automático del job; no hay PAT, secrets manuales ni fork
+personal. El CI tiene solo lectura de contenido; publicación tiene `packages: write`;
+verificación tiene `packages: read`; Release tiene `contents: write`.
+El TCK se ejecuta en este repositorio con las pruebas del commit upstream fijado, no
+mediante una corrida remota del workflow de un fork.
 
 Para publicar deliberadamente el working tree local, incluidos cambios sin commit:
 
