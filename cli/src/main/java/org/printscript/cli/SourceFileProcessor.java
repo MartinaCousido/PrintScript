@@ -3,6 +3,7 @@ package org.printscript.cli;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -54,7 +55,7 @@ final class SourceFileProcessor {
                         new ProgressReportingIterator(reader.lines().iterator(), totalBytes, err);
                 return consumer.consume(lines);
             }
-        } catch (IOException e) {
+        } catch (IOException | UncheckedIOException e) {
             err.println("No se pudo leer '" + sourceFile + "': " + e.getMessage());
             return ExitCode.USAGE_ERROR;
         }

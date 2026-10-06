@@ -2,6 +2,7 @@ package org.printscript.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
@@ -10,9 +11,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class RulesConfigurationTest {
+    private static final String ENABLED = "enabled";
 
     private static final String FORMAT = "identifier_format";
-    private static final String ENABLED = "enabled";
     private static final String CAMEL = "camel case";
     private static final String BREAKS = "line-breaks-before-println";
 
@@ -76,5 +77,14 @@ class RulesConfigurationTest {
         RulesConfiguration configuration = new RulesConfiguration(Map.of(BREAKS, CAMEL));
 
         assertTrue(configuration.getInt(BREAKS).isEmpty());
+    }
+
+    @Test
+    void schemaRejectsWrongTypesAndAllowsAbsentOrUnrelatedKeys() {
+        RulesConfiguration rules = new RulesConfiguration(Map.of(ENABLED, "true", "other", 1));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> rules.validateTypes(Map.of(ENABLED, Boolean.class)));
+        rules.validateTypes(Map.of(ENABLED, String.class, "absent", Integer.class));
     }
 }

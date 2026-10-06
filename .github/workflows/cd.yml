@@ -86,9 +86,16 @@ jobs:
       contents: read
       packages: read
     steps:
+      # Las herramientas pertenecen al workflow; los adapters pertenecen al artefacto.
+      # Un CI anterior puede terminar después de integrar una nueva versión del CD.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: workflow-tools
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.publicar.outputs.commit }}
+          path: release-source
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -99,15 +106,16 @@ jobs:
       - name: Validar la versión descargada del registro
         env:
           VERSION: ${{ needs.publicar.outputs.version }}
+          PRINTSCRIPT_TCK_IMPLEMENTATION_SOURCE: ${{ github.workspace }}/release-source/tck/implementation
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./tck/run-official-tck.sh "$VERSION" --published
+        run: ./workflow-tools/tck/run-official-tck.sh "$VERSION" --published
       - name: Guardar el resultado del TCK
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: tck-paquetes-publicados
-          path: build/official-tck/build/reports/tests/test
+          path: workflow-tools/build/official-tck/build/reports/tests/test
 
   release:
     name: Crear Release de la CLI validada

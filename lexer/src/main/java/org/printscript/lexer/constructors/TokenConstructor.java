@@ -9,5 +9,11 @@ import org.printscript.token.Token;
 @FunctionalInterface
 public interface TokenConstructor {
 
+    /** Returns a token starting at start, spanning at least one source character on that line. */
     Optional<Token> tryBuild(String rest, Position start);
+
+    /** Allows zero-copy source slices. Existing constructors keep their String contract. */
+    default Optional<Token> tryBuild(CharSequence rest, Position start) {
+        return tryBuild(rest.toString(), start);
+    }
 }

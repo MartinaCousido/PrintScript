@@ -23,6 +23,18 @@ public final class RulesConfiguration {
         return valueOf(key, Integer.class);
     }
 
+    /** Validates recognized keys without rejecting keys belonging to other rule sets. */
+    public void validateTypes(Map<String, Class<?>> schema) {
+        schema.forEach(
+                (key, type) -> {
+                    Object value = values.get(key);
+                    if (value != null && !type.isInstance(value)) {
+                        throw new IllegalArgumentException(
+                                "La regla '" + key + "' requiere " + type.getSimpleName());
+                    }
+                });
+    }
+
     private <T> Optional<T> valueOf(String key, Class<T> type) {
         return Optional.ofNullable(values.get(key)).filter(type::isInstance).map(type::cast);
     }

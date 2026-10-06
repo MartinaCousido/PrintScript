@@ -9,6 +9,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -45,8 +46,8 @@ final class InteractiveShell {
     private void registerCommands() {
         register(argument -> printHelp(), "help", "?", "ayuda");
         register(argument -> out.println(navigator.current()), "pwd");
-        register(navigator::list, "ls", "dir");
-        register(navigator::change, "cd");
+        register(argument -> navigator.list(ShellArguments.singlePath(argument)), "ls", "dir");
+        register(argument -> navigator.change(ShellArguments.singlePath(argument)), "cd");
         register(this::runExecution, "execution", "exec", "run");
         register(this::runSave, "save", "guardar");
         register(this::runValidation, "validation", "validate");
@@ -64,6 +65,15 @@ final class InteractiveShell {
 
     // devuelve el código de salida del proceso; 0 al terminar el REPL normalmente
     int run() {
+        try {
+            return runSession();
+        } catch (UncheckedIOException exception) {
+            err.println("No se pudo leer la entrada: " + exception.getMessage());
+            return ExitCode.USAGE_ERROR.code();
+        }
+    }
+
+    private int runSession() {
         printBanner();
         while (running) {
             out.print(prompt());
@@ -92,7 +102,13 @@ final class InteractiveShell {
     // separa el comando (primer token) del resto de la línea, que se toma tal cual
     // como argumento; así los paths con espacios funcionan sin comillas
     private void dispatch(String line) {
-        int separator = line.indexOf(' ');
+        int separator = -1;
+        for (int index = 0; index < line.length(); index++) {
+            if (Character.isWhitespace(line.charAt(index))) {
+                separator = index;
+                break;
+            }
+        }
         boolean hasArgument = separator >= 0;
         String commandName = hasArgument ? line.substring(0, separator) : line;
         String command = commandName.toLowerCase(Locale.ROOT);
@@ -106,7 +122,11 @@ final class InteractiveShell {
                             + "'. Escribí 'help' para ver los comandos disponibles.");
             return;
         }
-        handler.accept(argument);
+        try {
+            handler.accept(argument);
+        } catch (IllegalArgumentException exception) {
+            err.println(exception.getMessage());
+        }
     }
 
     // --- operaciones sobre archivos ---
@@ -118,8 +138,8 @@ final class InteractiveShell {
             out.println("Versión del lenguaje: " + version.label());
             return;
         }
-        LanguageVersion elegida = LanguageVersion.of(argument);
-        if (elegida == null) {
+        LanguageVersion selected = LanguageVersion.of(argument);
+        if (selected == null) {
             err.println(
                     "'"
                             + argument
@@ -128,7 +148,7 @@ final class InteractiveShell {
                             + ")");
             return;
         }
-        version = elegida;
+        version = selected;
         out.println("Versión del lenguaje: " + version.label());
     }
 
@@ -192,7 +212,7 @@ final class InteractiveShell {
             err.println("Falta el archivo. Uso: <operación> <archivo.ps>");
             return;
         }
-        action.run(navigator.resolve(argument));
+        action.run(navigator.resolve(ShellArguments.singlePath(argument)));
     }
 
     // <archivo> [config]: el segundo token opcional es el archivo de reglas
@@ -201,9 +221,13 @@ final class InteractiveShell {
             err.println("Falta el archivo. Uso: " + uso);
             return;
         }
-        String[] parts = argument.split("\\s+", SOURCE_AND_CONFIG_PARTS);
-        Path source = navigator.resolve(parts[0]);
-        Path config = parts.length > 1 ? navigator.resolve(parts[1]) : null;
+        List<String> parts = ShellArguments.tokenize(argument);
+        if (parts.isEmpty() || parts.size() > SOURCE_AND_CONFIG_PARTS) {
+            err.println("Argumentos inválidos. Uso: " + uso);
+            return;
+        }
+        Path source = navigator.resolve(parts.getFirst());
+        Path config = parts.size() > 1 ? navigator.resolve(parts.get(1)) : null;
         operation.run(source, config);
     }
 
@@ -240,6 +264,8 @@ final class InteractiveShell {
     }
 
     private void printConfigNote() {
+        out.println(
+                "    Usá comillas para rutas con espacios: format \"mi fuente.ps\" \"mis reglas.yaml\"");
         out.println("    [config] es un archivo de reglas .json/.yaml/.yml (opcional):");
         out.println("      · format sin [config]  → reglas por defecto (sin espaciado extra)");
         out.println("      · analyze sin [config] → ninguna regla activa (no reporta nada)");

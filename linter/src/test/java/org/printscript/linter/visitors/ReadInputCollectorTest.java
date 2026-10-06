@@ -112,4 +112,11 @@ class ReadInputCollectorTest {
         assertEquals(0, found(declaration(new BooleanLiteral(true, R))));
         assertEquals(0, found(declaration(new Identifier("otra", R))));
     }
+
+    @Test
+    void descendsIntoThePromptOfAnotherReadInput() {
+        ReadInput inner = read();
+        ReadInput outer = new ReadInput(inner, R);
+        assertEquals(List.of(outer, inner), outer.accept(collector));
+    }
 }

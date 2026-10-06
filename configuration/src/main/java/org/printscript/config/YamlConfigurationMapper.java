@@ -1,5 +1,6 @@
 package org.printscript.config;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -10,7 +11,8 @@ import java.util.Map;
 // implementa YAML
 public final class YamlConfigurationMapper implements ConfigurationMapper {
 
-    private final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+    private final ObjectMapper mapper =
+            new ObjectMapper(new YAMLFactory()).disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
 
     @Override
     public boolean supports(String format) {

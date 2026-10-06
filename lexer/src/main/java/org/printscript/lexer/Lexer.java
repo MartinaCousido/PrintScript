@@ -1,5 +1,6 @@
 package org.printscript.lexer;
 
+import java.nio.CharBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -77,7 +78,7 @@ public final class Lexer implements Iterator<Token> {
 
     private Token buildTokenAtCurrentColumn() {
         Position start = new Position(lineNumber, columnIndex + 1);
-        String rest = currentLine.substring(columnIndex);
+        CharSequence rest = CharBuffer.wrap(currentLine, columnIndex, currentLine.length()).slice();
         Token longest = null;
         int longestLength = 0;
         for (TokenConstructor constructor : constructors) {

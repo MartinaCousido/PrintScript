@@ -8,7 +8,7 @@ import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 
 // reconoce los simbolos: + - * / = ; : ( )
-public final class SymbolTokenConstructor implements TokenConstructor {
+public final class SymbolTokenConstructor extends TextTokenConstructor {
 
     private final Map<String, TokenType> symbols;
 
@@ -17,10 +17,10 @@ public final class SymbolTokenConstructor implements TokenConstructor {
     }
 
     @Override
-    public Optional<Token> tryBuild(String rest, Position start) {
+    public Optional<Token> tryBuild(CharSequence rest, Position start) {
         String longest = null;
         for (String lexeme : symbols.keySet()) {
-            if (rest.startsWith(lexeme) && isLongerThan(lexeme, longest)) {
+            if (startsWith(rest, lexeme) && isLongerThan(lexeme, longest)) {
                 longest = lexeme;
             }
         }
@@ -29,6 +29,18 @@ public final class SymbolTokenConstructor implements TokenConstructor {
         }
         Position end = new Position(start.line(), start.column() + longest.length() - 1);
         return Optional.of(new Token(symbols.get(longest), longest, new Range(start, end)));
+    }
+
+    private static boolean startsWith(CharSequence text, String prefix) {
+        if (prefix.length() > text.length()) {
+            return false;
+        }
+        for (int index = 0; index < prefix.length(); index++) {
+            if (text.charAt(index) != prefix.charAt(index)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean isLongerThan(String lexeme, String current) {

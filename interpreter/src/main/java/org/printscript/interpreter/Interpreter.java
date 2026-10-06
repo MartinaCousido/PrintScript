@@ -24,7 +24,7 @@ public final class Interpreter implements Iterator<Result<?>> {
             Set<Class<? extends Statement>> supportedNodes) {
         this.statements = statements;
         this.executor = executor;
-        this.supportedNodes = supportedNodes;
+        this.supportedNodes = supportedNodes == null ? null : Set.copyOf(supportedNodes);
     }
 
     @Override

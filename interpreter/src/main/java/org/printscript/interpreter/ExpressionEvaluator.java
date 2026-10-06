@@ -3,6 +3,8 @@ package org.printscript.interpreter;
 import java.math.BigDecimal;
 import org.printscript.ast.BinaryExpression;
 import org.printscript.ast.BooleanLiteral;
+import org.printscript.ast.Expression;
+import org.printscript.ast.ExpressionFold;
 import org.printscript.ast.ExpressionOnlyVisitor;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -46,10 +48,7 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
     // que el usuario tipea
     @Override
     public Result<Object> visitReadInput(ReadInput readInput) {
-        return readInput
-                .prompt()
-                .accept(this)
-                .andThen(prompt -> readInputAfterPrompt(readInput, prompt));
+        return evaluate(readInput);
     }
 
     private Result<Object> readInputAfterPrompt(ReadInput readInput, Object prompt) {
@@ -66,9 +65,7 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
 
     @Override
     public Result<Object> visitReadEnv(ReadEnv readEnv) {
-        return readEnv.name()
-                .accept(this)
-                .andThen(name -> readEnvironmentVariable(readEnv, asText(name)));
+        return evaluate(readEnv);
     }
 
     private Result<Object> readEnvironmentVariable(ReadEnv readEnv, String variable) {
@@ -96,17 +93,20 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
 
     @Override
     public Result<Object> visitBinaryExpression(BinaryExpression binaryExpression) {
-        return binaryExpression
-                .left()
-                .accept(this)
-                .andThen(left -> evaluateRight(binaryExpression, left));
+        return evaluate(binaryExpression);
     }
 
-    private Result<Object> evaluateRight(BinaryExpression expression, Object left) {
-        return expression
-                .right()
-                .accept(this)
-                .andThen(right -> combine(left, expression.operator(), right, expression.range()));
+    private Result<Object> evaluate(Expression expression) {
+        return ExpressionFold.evaluate(
+                expression,
+                leaf -> leaf.accept(this),
+                (binary, left, right) -> combine(left, binary.operator(), right, binary.range()),
+                (read, argument) ->
+                        switch (read) {
+                            case ReadInput input -> readInputAfterPrompt(input, argument);
+                            case ReadEnv env -> readEnvironmentVariable(env, asText(argument));
+                            default -> throw new IllegalStateException("Expected an external read");
+                        });
     }
 
     // pasa un número a texto

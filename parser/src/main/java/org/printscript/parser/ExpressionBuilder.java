@@ -1,5 +1,7 @@
 package org.printscript.parser;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Map;
 import java.util.Optional;
 import org.printscript.ast.BinaryExpression;
@@ -32,71 +34,168 @@ public final class ExpressionBuilder {
         this.reads = Map.copyOf(reads);
     }
 
+    /** Parses nested expressions with heap frames instead of the JVM call stack. */
     public Result<Expression> build(TokenBuffer tokens, Range anchor) {
-        return parseBinary(tokens, 0, anchor);
+        return new BuildSession(tokens, anchor).parse();
     }
 
-    private Result<Expression> parseBinary(TokenBuffer tokens, int minPrecedence, Range anchor) {
-        Result<Expression> leftResult = parsePrimary(tokens, anchor);
-        if (!(leftResult instanceof Success<Expression>(Expression left))) {
-            return leftResult;
+    private final class BuildSession {
+        private final TokenBuffer tokens;
+        private final Deque<ExpressionFrame> frames = new ArrayDeque<>();
+        private Result<Expression> completed;
+
+        private BuildSession(TokenBuffer tokens, Range anchor) {
+            this.tokens = tokens;
+            frames.push(new ExpressionFrame(anchor, null, null));
         }
-        while (true) {
-            Optional<Token> operatorToken = tokens.lookahead(0);
-            Optional<Operator> operator = bindingOperator(operatorToken, minPrecedence);
-            if (operator.isEmpty()) {
-                return new Success<>(left);
+
+        private Result<Expression> parse() {
+            while (completed == null) {
+                ExpressionFrame frame = frames.peek();
+                Optional<Token> next = tokens.lookahead(0);
+                if (frame.needsOperand) {
+                    operand(frame, next);
+                } else {
+                    Optional<Operator> operator = next.flatMap(OperatorPrecedence::operatorFor);
+                    if (operator.isPresent()) {
+                        frame.pushOperator(operator.get());
+                        frame.anchor = next.orElseThrow().range();
+                        tokens.commit(1);
+                    } else {
+                        finish(frame, next);
+                    }
+                }
+            }
+            return completed;
+        }
+
+        private void operand(ExpressionFrame frame, Optional<Token> next) {
+            if (next.isEmpty()) {
+                completed = new Failure<>("Missing operand", frame.anchor);
+                return;
+            }
+            Token token = next.get();
+            boolean group = Tokens.isPunctuation(token, "(");
+            boolean read = token.type() == TokenType.KEYWORD && reads.containsKey(token.value());
+            if (group || read) {
+                enter(token, read);
+                return;
+            }
+            Result<Expression> operand = simpleOperand(token);
+            if (operand instanceof Failure<Expression>) {
+                completed = operand;
+            } else {
+                tokens.commit(1);
+                frame.accept(((Success<Expression>) operand).value());
+            }
+        }
+
+        private void enter(Token token, boolean read) {
+            tokens.commit(1);
+            Token open = token;
+            if (read) {
+                Result<Token> opening = openParenthesis(tokens, token);
+                if (opening instanceof Failure<Token> failure) {
+                    completed = new Failure<>(failure.message(), failure.range());
+                    return;
+                }
+                open = ((Success<Token>) opening).value();
+            }
+            frames.push(new ExpressionFrame(open.range(), open, read ? token : null));
+        }
+
+        private void finish(ExpressionFrame frame, Optional<Token> next) {
+            Expression expression = frame.finish();
+            if (frame.open == null) {
+                completed = new Success<>(expression);
+                return;
+            }
+            Result<Expression> closed = close(frame, expression, next);
+            if (closed instanceof Failure<Expression>) {
+                completed = closed;
+            } else {
+                frames.pop();
+                frames.peek().accept(((Success<Expression>) closed).value());
+            }
+        }
+
+        private Result<Expression> close(
+                ExpressionFrame frame, Expression expression, Optional<Token> next) {
+            if (frame.keyword != null) {
+                return closeParenthesis(tokens, frame.keyword, expression)
+                        .map(closing -> read(frame.keyword, expression, closing));
+            }
+            if (next.isEmpty()) {
+                return new Failure<>("Unclosed parenthesis", frame.open.range());
+            }
+            Token closing = next.get();
+            if (!Tokens.isPunctuation(closing, ")")) {
+                return new Failure<>("Expected ')'", closing.range());
             }
             tokens.commit(1);
-            Result<Expression> rightResult =
-                    parseBinary(
-                            tokens, rightPrecedence(operator.get()), operatorToken.get().range());
-            if (!(rightResult instanceof Success<Expression>(Expression right))) {
-                return rightResult;
-            }
-            left = combine(left, operator.get(), right);
+            return new Success<>(
+                    withRange(
+                            expression,
+                            new Range(frame.open.range().start(), closing.range().end())));
         }
     }
 
-    // el operador que sigue, solo si liga con al menos esta precedencia; si no, la
-    // expresión de este nivel ya terminó
-    private static Optional<Operator> bindingOperator(Optional<Token> token, int minPrecedence) {
-        return token.flatMap(OperatorPrecedence::operatorFor)
-                .filter(operator -> OperatorPrecedence.precedenceOf(operator) >= minPrecedence);
+    private static final class ExpressionFrame {
+        private final Deque<Expression> operands = new ArrayDeque<>();
+        private final Deque<Operator> operators = new ArrayDeque<>();
+        private final Token open;
+        private final Token keyword;
+        private Range anchor;
+        private boolean needsOperand = true;
+
+        private ExpressionFrame(Range anchor, Token open, Token keyword) {
+            this.anchor = anchor;
+            this.open = open;
+            this.keyword = keyword;
+        }
+
+        private void accept(Expression expression) {
+            operands.push(expression);
+            needsOperand = false;
+        }
+
+        private void pushOperator(Operator operator) {
+            while (!operators.isEmpty()
+                    && OperatorPrecedence.precedenceOf(operators.peek())
+                            >= OperatorPrecedence.precedenceOf(operator)) {
+                reduce();
+            }
+            operators.push(operator);
+            needsOperand = true;
+        }
+
+        private void reduce() {
+            Expression right = operands.pop();
+            Expression left = operands.pop();
+            operands.push(combine(left, operators.pop(), right));
+        }
+
+        private Expression finish() {
+            while (!operators.isEmpty()) {
+                reduce();
+            }
+            return operands.pop();
+        }
     }
 
-    // el lado derecho liga más fuerte, y así los operadores quedan asociando a izquierda
-    private static int rightPrecedence(Operator operator) {
-        return OperatorPrecedence.precedenceOf(operator) + 1;
+    private static Result<Expression> simpleOperand(Token token) {
+        return switch (token.type()) {
+            case NUMBER -> numberLiteral(token);
+            case STRING -> stringLiteral(token);
+            case BOOLEAN -> booleanLiteral(token);
+            case IDENTIFIER -> identifier(token);
+            default -> unexpectedToken(token);
+        };
     }
 
     private static Expression combine(Expression left, Operator operator, Expression right) {
         return new BinaryExpression(
                 left, operator, right, new Range(left.range().start(), right.range().end()));
-    }
-
-    private Result<Expression> parsePrimary(TokenBuffer tokens, Range anchor) {
-        Optional<Token> next = tokens.lookahead(0);
-        if (next.isEmpty()) {
-            return new Failure<>("Missing operand", anchor);
-        }
-        Token token = next.get();
-        return switch (token.type()) {
-            case NUMBER -> consume(tokens, numberLiteral(token));
-            case STRING -> consume(tokens, stringLiteral(token));
-            case BOOLEAN -> consume(tokens, booleanLiteral(token));
-            case IDENTIFIER -> consume(tokens, identifier(token));
-            case PUNCTUATION -> parsePunctuation(tokens, token);
-            case KEYWORD -> parseKeyword(tokens, token);
-            default -> unexpectedToken(token);
-        };
-    }
-
-    // los cuatro operandos simples se arman con el token que se está mirando y después lo
-    // consumen: armarlo antes o después da igual porque ninguno toca el buffer
-    private static Result<Expression> consume(TokenBuffer tokens, Result<Expression> operand) {
-        tokens.commit(1);
-        return operand;
     }
 
     private static Result<Expression> stringLiteral(Token token) {
@@ -110,27 +209,6 @@ public final class ExpressionBuilder {
 
     private static Result<Expression> identifier(Token token) {
         return new Success<>(new Identifier(token.value(), token.range()));
-    }
-
-    private Result<Expression> parsePunctuation(TokenBuffer tokens, Token token) {
-        return "(".equals(token.value()) ? parseGrouped(tokens, token) : unexpectedToken(token);
-    }
-
-    // las funciones de lectura de la versión; en 1.0 la tabla está vacía y una keyword
-    // en posición de operando es un error como cualquier otra
-    private Result<Expression> parseKeyword(TokenBuffer tokens, Token token) {
-        return reads.containsKey(token.value()) ? parseRead(tokens, token) : unexpectedToken(token);
-    }
-
-    // readInput("x") y readEnv("X") se parsean igual: keyword, paréntesis, un argumento
-    private Result<Expression> parseRead(TokenBuffer tokens, Token keyword) {
-        tokens.commit(1);
-        return openParenthesis(tokens, keyword)
-                .andThen(open -> parseBinary(tokens, 0, open.range()))
-                .andThen(
-                        argument ->
-                                closeParenthesis(tokens, keyword, argument)
-                                        .map(close -> read(keyword, argument, close)));
     }
 
     private static Result<Token> openParenthesis(TokenBuffer tokens, Token keyword) {
@@ -153,24 +231,6 @@ public final class ExpressionBuilder {
     private Expression read(Token keyword, Expression argument, Token close) {
         return reads.get(keyword.value())
                 .build(argument, new Range(keyword.range().start(), close.range().end()));
-    }
-
-    private Result<Expression> parseGrouped(TokenBuffer tokens, Token openParenthesis) {
-        tokens.commit(1);
-        Result<Expression> innerResult = parseBinary(tokens, 0, openParenthesis.range());
-        if (!(innerResult instanceof Success<Expression>(Expression inner))) {
-            return innerResult;
-        }
-        Optional<Token> close = tokens.lookahead(0);
-        if (close.isEmpty()) {
-            return new Failure<>("Unclosed parenthesis", openParenthesis.range());
-        }
-        if (close.get().type() != TokenType.PUNCTUATION || !")".equals(close.get().value())) {
-            return new Failure<>("Expected ')'", close.get().range());
-        }
-        tokens.commit(1);
-        Range grouped = new Range(openParenthesis.range().start(), close.get().range().end());
-        return new Success<>(withRange(inner, grouped));
     }
 
     private static Expression withRange(Expression expression, Range range) {
