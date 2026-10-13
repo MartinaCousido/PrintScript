@@ -5,7 +5,8 @@ import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-//reconoce textos entre comillas, simples o dobles
+
+// reconoce textos entre comillas, simples o dobles
 public final class StringTokenConstructor implements TokenConstructor {
 
     @Override
