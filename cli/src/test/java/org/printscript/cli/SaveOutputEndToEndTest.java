@@ -30,7 +30,8 @@ class SaveOutputEndToEndTest {
                 CliTestSupport.run("execution", source.toString(), "-o", output.toString());
 
         assertEquals(0, result.exitCode());
-        assertTrue(result.stdout().contains("hola"), "muestra la salida por stdout");
+        assertEquals("hola\nchau\n", result.stdout());
+        assertTrue(result.stderr().contains("Salida guardada en"), result.stderr());
         assertTrue(Files.exists(output), "crea el archivo de salida");
         String saved = Files.readString(output, StandardCharsets.UTF_8);
         assertTrue(saved.contains("hola") && saved.contains("chau"), saved);

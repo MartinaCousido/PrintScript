@@ -13,12 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # fetch-depth 0 trae la historia completa. El ratchet de Spotless compara
-      # contra origin/master para saber qué archivos cambiaron, y con el clon
-      # superficial que hace el checkout por defecto esa referencia no existe.
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
       # El toolchain que compila el proyecto está declarado en el convention plugin
       # (Java 25). Lo instalamos acá para que Gradle lo encuentre local en vez de

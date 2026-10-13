@@ -9,6 +9,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -92,11 +93,9 @@ final class InteractiveShell {
     // separa el comando (primer token) del resto de la línea, que se toma tal cual
     // como argumento; así los paths con espacios funcionan sin comillas
     private void dispatch(String line) {
-        int separator = line.indexOf(' ');
-        boolean hasArgument = separator >= 0;
-        String commandName = hasArgument ? line.substring(0, separator) : line;
-        String command = commandName.toLowerCase(Locale.ROOT);
-        String argument = hasArgument ? line.substring(separator + 1).strip() : "";
+        String[] parts = line.split("\\s+", SOURCE_AND_CONFIG_PARTS);
+        String command = parts[0].toLowerCase(Locale.ROOT);
+        String argument = parts.length > 1 ? parts[1].strip() : "";
 
         Consumer<String> handler = commands.get(command);
         if (handler == null) {
@@ -106,7 +105,11 @@ final class InteractiveShell {
                             + "'. Escribí 'help' para ver los comandos disponibles.");
             return;
         }
-        handler.accept(argument);
+        try {
+            handler.accept(argument);
+        } catch (IllegalArgumentException e) {
+            err.println(e.getMessage());
+        }
     }
 
     // --- operaciones sobre archivos ---
@@ -201,9 +204,16 @@ final class InteractiveShell {
             err.println("Falta el archivo. Uso: " + uso);
             return;
         }
-        String[] parts = argument.split("\\s+", SOURCE_AND_CONFIG_PARTS);
-        Path source = navigator.resolve(parts[0]);
-        Path config = parts.length > 1 ? navigator.resolve(parts[1]) : null;
+        List<String> parts = ShellArguments.split(argument);
+        if (parts.size() > SOURCE_AND_CONFIG_PARTS) {
+            err.println(
+                    "Demasiados argumentos. Uso: "
+                            + uso
+                            + ". Usá comillas para las rutas con espacios.");
+            return;
+        }
+        Path source = navigator.resolve(parts.getFirst());
+        Path config = parts.size() > 1 ? navigator.resolve(parts.get(1)) : null;
         operation.run(source, config);
     }
 
@@ -223,6 +233,8 @@ final class InteractiveShell {
         out.println();
         printFileCommands();
         printConfigNote();
+        out.println("    Rutas con espacios: format \"mi programa.ps\" \"mis reglas.json\"");
+        out.println();
         printNavigationCommands();
         printSessionCommands();
     }
@@ -233,7 +245,8 @@ final class InteractiveShell {
         helpLine(
                 "save <archivo>",
                 "Como run, y además guarda la salida en <fuente>.out.txt junto al .ps");
-        helpLine("validate <archivo>", "Valida la sintaxis sin ejecutar el programa");
+        helpLine(
+                "validate <archivo>", "Valida la sintaxis y la semántica sin ejecutar el programa");
         helpLine("format <archivo> [config]", "Formatea el archivo e imprime el resultado");
         helpLine("analyze <archivo> [config]", "Lintea el archivo y reporta las violaciones");
         out.println();
@@ -241,8 +254,8 @@ final class InteractiveShell {
 
     private void printConfigNote() {
         out.println("    [config] es un archivo de reglas .json/.yaml/.yml (opcional):");
-        out.println("      · format sin [config]  → reglas por defecto (sin espaciado extra)");
-        out.println("      · analyze sin [config] → ninguna regla activa (no reporta nada)");
+        out.println("      · format sin [config]  → no aplica reglas de formato; muestra un aviso");
+        out.println("      · analyze sin [config] → solo revisa sintaxis; muestra un aviso");
         out.println("      · alias: exec=execution, format=fmt=formatting, analyze=lint=analyzing");
         out.println();
     }
@@ -257,6 +270,7 @@ final class InteractiveShell {
 
     private void printSessionCommands() {
         out.println("  Sesión");
+        helpLine("version [1.0|1.1]", "Muestra o cambia la versión del lenguaje (inicial: 1.0)");
         helpLine("help|?", "Muestra esta ayuda");
         helpLine("exit|quit", "Sale de la interfaz (también con Ctrl-D)");
     }

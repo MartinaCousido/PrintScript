@@ -34,7 +34,8 @@ final class ExecutionOutput {
         }
         // se valida el fuente antes de crear el archivo de salida para no dejar un .txt
         // vacío cuando el .ps no existe
-        if (!FileArguments.requireExistingRegularFile(sourceFile, err)) {
+        if (!FileArguments.requireExistingRegularFile(sourceFile, err)
+                || !FileArguments.requireSeparateOutput(sourceFile, outputFile, err)) {
             return ExitCode.USAGE_ERROR;
         }
         try (Writer writer = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8)) {
@@ -42,7 +43,7 @@ final class ExecutionOutput {
                     new TeeOutputPrinter(
                             new ConsoleOutputPrinter(console), new WriterOutputPrinter(writer));
             ExitCode code = execute(sourceFile, printer, err, version, reader);
-            console.println("Salida guardada en " + outputFile);
+            err.println("Salida guardada en " + outputFile);
             return code;
         } catch (IOException e) {
             err.println("No se pudo escribir la salida en '" + outputFile + "': " + e.getMessage());

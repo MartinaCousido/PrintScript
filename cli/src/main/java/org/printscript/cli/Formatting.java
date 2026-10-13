@@ -15,8 +15,8 @@ import org.printscript.common.Version;
 import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.runner.FormattingRunner;
 
-// Orquesta la operación de formateo para cli: carga las reglas del --config (o usa las
-// de por defecto), corre el FormattingRunner y escribe el código formateado a un
+// Orquesta la operación de formateo para cli: carga las reglas del --config,
+// corre el FormattingRunner y escribe el código formateado a un
 // archivo (--output) o por consola.
 final class Formatting {
 
@@ -29,12 +29,19 @@ final class Formatting {
             PrintStream console,
             PrintStream err,
             Version version) {
+        if (!FileArguments.requireExistingRegularFile(sourceFile, err)
+                || !FileArguments.requireSeparateOutput(sourceFile, outputFile, err)) {
+            return ExitCode.USAGE_ERROR;
+        }
         FormatterConfiguration configuration;
         try {
             configuration = FormatterConfiguration.from(ConfigurationFiles.read(configFile));
         } catch (IOException | IllegalArgumentException e) {
             err.println("No se pudo leer la configuración: " + e.getMessage());
             return ExitCode.USAGE_ERROR;
+        }
+        if (configuration.equals(FormatterConfiguration.none())) {
+            err.println("Aviso: no hay reglas de formato activas. Usá --config para activarlas.");
         }
         return SourceFileProcessor.read(
                 sourceFile,
@@ -52,7 +59,7 @@ final class Formatting {
         if (outputFile == null) {
             return formatToConsole(lines, configuration, console, err, version);
         }
-        return formatToFile(lines, configuration, outputFile, console, err, version);
+        return formatToFile(lines, configuration, outputFile, err, version);
     }
 
     private static ExitCode formatToConsole(
@@ -73,14 +80,13 @@ final class Formatting {
             Iterator<String> lines,
             FormatterConfiguration configuration,
             Path outputFile,
-            PrintStream console,
             PrintStream err,
             Version version) {
         try (Writer destination = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8)) {
             List<Failure<?>> failures =
                     new FormattingRunner().format(lines, configuration, destination, version);
             ExitCode code = finish(failures, err);
-            console.println("Código formateado guardado en " + outputFile);
+            err.println("Código formateado guardado en " + outputFile);
             return code;
         } catch (IOException e) {
             err.println("No se pudo escribir '" + outputFile + "': " + e.getMessage());

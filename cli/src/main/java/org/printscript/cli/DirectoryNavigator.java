@@ -27,7 +27,7 @@ final class DirectoryNavigator {
     }
 
     Path resolve(String argument) {
-        return workingDir.resolve(argument).normalize();
+        return workingDir.resolve(ShellArguments.path(argument)).normalize();
     }
 
     void list(String argument) {

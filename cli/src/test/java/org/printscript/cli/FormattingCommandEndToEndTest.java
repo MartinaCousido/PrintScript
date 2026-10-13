@@ -48,6 +48,8 @@ class FormattingCommandEndToEndTest {
                         "fmt", source.toString(), "-c", config.toString(), "-o", output.toString());
 
         assertEquals(0, result.exitCode());
+        assertEquals("", result.stdout());
+        assertTrue(result.stderr().contains("Código formateado guardado en"), result.stderr());
         assertTrue(Files.exists(output), "escribe el archivo de salida");
         assertTrue(
                 Files.readString(output, StandardCharsets.UTF_8).contains("let a: number = 12;"),

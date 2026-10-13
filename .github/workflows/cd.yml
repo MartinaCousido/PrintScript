@@ -29,11 +29,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # fetch-depth 0 por la misma razón que en el CI: el ratchet de Spotless compara
-      # contra origin/master y necesita la historia completa.
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
 
       - name: Registrar el commit publicado
