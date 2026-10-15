@@ -290,7 +290,7 @@ Publica dos cosas:
 
   ```kotlin
   repositories {
-      maven("https://maven.pkg.github.com/ingsis-ua/ingsis-interpreter")
+      maven("https://maven.pkg.github.com/MartinaCousido/PrintScript")
   }
   dependencies {
       implementation("org.printscript:runner:0.2.0")
