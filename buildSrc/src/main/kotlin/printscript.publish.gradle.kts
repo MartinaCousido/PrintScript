@@ -27,7 +27,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/ingsis-ua/ingsis-interpreter")
+            url = uri("https://maven.pkg.github.com/MartinaCousido/PrintScript")
             // En CI los toma del entorno; en local, de ~/.gradle/gradle.properties.
             // Nunca se commitean: publicar desde una máquina es la excepción, no la regla.
             credentials {

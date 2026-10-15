@@ -272,7 +272,7 @@ Las palabras no son sinónimos:
 Maven coordinates: group `org.printscript`, artifactId igual al nombre de módulo,
 version pasada por `-PprintscriptVersion`. Maven Local queda bajo
 `~/.m2/repository/org/printscript/<módulo>/<versión>/`. GitHub Packages usa
-`https://maven.pkg.github.com/ingsis-ua/ingsis-interpreter`.
+`https://maven.pkg.github.com/MartinaCousido/PrintScript`.
 
 Publicar remotamente el working tree desde IntelliJ:
 
