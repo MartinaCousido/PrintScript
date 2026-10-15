@@ -14,6 +14,7 @@ application {
 // no conecta la entrada estándar del proceso Gradle al de la aplicación
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
+    workingDir = rootProject.projectDir
 }
 
 dependencies {
