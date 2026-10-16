@@ -3,6 +3,7 @@ package org.printscript.interpreter;
 import java.util.Iterator;
 import java.util.Set;
 import org.printscript.ast.Statement;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -41,6 +42,7 @@ public final class Interpreter implements Iterator<Result<?>> {
         Statement statement = ((Success<Statement>) next).value();
         if (supportedNodes != null && !supportedNodes.contains(statement.getClass())) {
             return new Failure<>(
+                    ErrorCode.UNSUPPORTED_NODE,
                     "Nodo "
                             + statement.getClass().getSimpleName()
                             + " no soportado por PrintScript",

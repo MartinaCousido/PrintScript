@@ -9,14 +9,16 @@ public sealed interface Result<T> permits Success, Failure {
     default <R> Result<R> map(Function<? super T, ? extends R> mapping) {
         return switch (this) {
             case Success<T> success -> new Success<>(mapping.apply(success.value()));
-            case Failure<T> failure -> new Failure<>(failure.message(), failure.range());
+            case Failure<T> failure ->
+                    new Failure<>(failure.code(), failure.message(), failure.range());
         };
     }
 
     default <R> Result<R> andThen(Function<? super T, ? extends Result<R>> next) {
         return switch (this) {
             case Success<T> success -> next.apply(success.value());
-            case Failure<T> failure -> new Failure<>(failure.message(), failure.range());
+            case Failure<T> failure ->
+                    new Failure<>(failure.code(), failure.message(), failure.range());
         };
     }
 }

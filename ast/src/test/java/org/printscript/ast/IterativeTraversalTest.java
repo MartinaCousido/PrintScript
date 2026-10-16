@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -35,11 +36,11 @@ class IterativeTraversalTest {
                         leaf -> {
                             String name = ((Identifier) leaf).name();
                             effects.add(name);
-                            return new Failure<>(FAILED, RANGE);
+                            return new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, FAILED, RANGE);
                         },
                         (binary, left, right) -> new Success<>(left + right),
                         (read, argument) -> new Success<>(argument));
-        assertEquals(new Failure<>(FAILED, RANGE), failure);
+        assertEquals(new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, FAILED, RANGE), failure);
         assertEquals(List.of("left"), effects);
     }
 
@@ -73,10 +74,10 @@ class IterativeTraversalTest {
                         RANGE);
         AtomicInteger scopes = new AtomicInteger();
         assertEquals(
-                new Failure<>(FAILED, RANGE),
+                new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, FAILED, RANGE),
                 StatementTraversal.execute(
                         nested,
-                        leaf -> new Failure<>(FAILED, RANGE),
+                        leaf -> new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, FAILED, RANGE),
                         conditional -> new Success<>(List.of()),
                         scopes::incrementAndGet,
                         scopes::decrementAndGet));
@@ -114,11 +115,12 @@ class IterativeTraversalTest {
                         () -> {}));
         assertEquals(1, visited.get());
         assertEquals(
-                new Failure<>("condition", RANGE),
+                new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, "condition", RANGE),
                 StatementTraversal.execute(
                         conditional,
                         leaf -> new Success<>(null),
-                        statement -> new Failure<>("condition", RANGE),
+                        statement ->
+                                new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, "condition", RANGE),
                         () -> {},
                         () -> {}));
     }
@@ -162,7 +164,7 @@ class IterativeTraversalTest {
 
                     @Override
                     protected Result<Void> notAStatement(Range range) {
-                        return new Failure<>("statement", range);
+                        return new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, "statement", range);
                     }
                 };
         Block body = new Block(List.of(new PrintlnStatement(ONE, RANGE)), RANGE);

@@ -8,6 +8,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -34,6 +35,17 @@ class ValidationRunnerTest {
         } finally {
             System.setOut(originalOut);
         }
+    }
+
+    @Test
+    void eachFailureSaysWhichRuleWasBroken() {
+        List<Failure<?>> missingSemicolon = validateProgram("let x: number = 1");
+        List<Failure<?>> undeclared = validateProgram("println(y);");
+        List<Failure<?>> wrongType = validateProgram("let x: number = \"hola\";");
+
+        assertEquals(ErrorCode.MISSING_SEMICOLON, missingSemicolon.getFirst().code());
+        assertEquals(ErrorCode.UNDECLARED_VARIABLE, undeclared.getFirst().code());
+        assertEquals(ErrorCode.TYPE_MISMATCH, wrongType.getFirst().code());
     }
 
     @Test

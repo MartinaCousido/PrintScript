@@ -4,6 +4,7 @@ import java.util.List;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.Statement;
 import org.printscript.linter.Violation;
+import org.printscript.linter.config.LinterConfiguration;
 import org.printscript.linter.rules.format.IdentifierFormatChecker;
 import org.printscript.linter.visitors.IdentifierCollector;
 
@@ -27,6 +28,7 @@ public final class IdentifierFormatRule implements LintRule {
 
     private Violation violationFor(Identifier identifier) {
         return new Violation(
+                LinterConfiguration.IDENTIFIER_FORMAT_KEY,
                 "El identificador '"
                         + identifier.name()
                         + "' debe estar escrito en "

@@ -5,6 +5,7 @@ import org.printscript.ast.Expression;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
 import org.printscript.linter.Violation;
+import org.printscript.linter.config.LinterConfiguration;
 import org.printscript.linter.visitors.PrintlnCollector;
 
 // println recibe un literal o un identificador, no una expresión
@@ -25,6 +26,8 @@ public final class PrintlnArgumentRule implements LintRule {
 
     private static Violation violationFor(Expression argument) {
         return new Violation(
-                "println solo puede llamarse con un identificador o un literal", argument.range());
+                LinterConfiguration.PRINTLN_ARGUMENT_KEY,
+                "println solo puede llamarse con un identificador o un literal",
+                argument.range());
     }
 }

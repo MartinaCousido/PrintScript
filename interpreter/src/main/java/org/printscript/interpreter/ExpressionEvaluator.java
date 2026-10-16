@@ -12,6 +12,7 @@ import org.printscript.ast.Operator;
 import org.printscript.ast.ReadEnv;
 import org.printscript.ast.ReadInput;
 import org.printscript.ast.StringLiteral;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
@@ -60,6 +61,7 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
                 .orElseGet(
                         () ->
                                 new Failure<>(
+                                        ErrorCode.MISSING_INPUT,
                                         "No hay más entrada disponible para readInput",
                                         readInput.range()));
     }
@@ -76,6 +78,7 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
                 .orElseGet(
                         () ->
                                 new Failure<>(
+                                        ErrorCode.MISSING_ENVIRONMENT_VARIABLE,
                                         "La variable de entorno " + variable + " no está definida",
                                         readEnv.range()));
     }
@@ -88,6 +91,7 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
                 .orElseGet(
                         () ->
                                 new Failure<>(
+                                        ErrorCode.UNDECLARED_VARIABLE,
                                         "Variable no declarada: " + identifier.name(),
                                         identifier.range()));
     }
@@ -127,6 +131,7 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
             return new Success<>(asText(left) + asText(right));
         }
         return new Failure<>(
+                ErrorCode.INVALID_OPERATION,
                 "No se puede aplicar "
                         + operator
                         + " entre "
@@ -154,6 +159,6 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
 
     @Override
     protected Result<Object> notAnExpression(Range range) {
-        return new Failure<>("No es una expresión evaluable", range);
+        return new Failure<>(ErrorCode.UNSUPPORTED_NODE, "No es una expresión evaluable", range);
     }
 }

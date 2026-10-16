@@ -3,6 +3,9 @@ package org.printscript.parser;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+import org.printscript.common.ErrorCode;
+import org.printscript.common.Failure;
+import org.printscript.common.Range;
 import org.printscript.token.Token;
 
 public final class BlockAwareDelimiter implements StatementDelimiter {
@@ -30,14 +33,20 @@ public final class BlockAwareDelimiter implements StatementDelimiter {
     }
 
     @Override
-    public String unterminatedMessage(List<Token> accumulated) {
-        return missingTerminator(depthOf(accumulated));
+    public <T> Failure<T> unterminated(List<Token> accumulated, Range range) {
+        return missingTerminator(depthOf(accumulated), range);
     }
 
-    private static String missingTerminator(int depth) {
+    private static <T> Failure<T> missingTerminator(int depth, Range range) {
         return depth > 0
-                ? "Expected '}' before the end of the stream"
-                : "Expected ';' before the end of the stream";
+                ? new Failure<>(
+                        ErrorCode.UNCLOSED_BLOCK,
+                        "Expected '}' before the end of the stream",
+                        range)
+                : new Failure<>(
+                        ErrorCode.MISSING_SEMICOLON,
+                        "Expected ';' before the end of the stream",
+                        range);
     }
 
     @Override
@@ -62,8 +71,8 @@ public final class BlockAwareDelimiter implements StatementDelimiter {
         }
 
         @Override
-        public String unterminatedMessage(List<Token> accumulated) {
-            return missingTerminator(depth);
+        public <T> Failure<T> unterminated(List<Token> accumulated, Range range) {
+            return missingTerminator(depth, range);
         }
     }
 

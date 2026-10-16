@@ -22,6 +22,7 @@ import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.linter.Violation;
+import org.printscript.linter.config.LinterConfiguration;
 
 class PrintlnArgumentRuleTest {
 
@@ -97,6 +98,7 @@ class PrintlnArgumentRuleTest {
         Violation violation = rule.check(new PrintlnStatement(sum(ANY), ANY)).get(0);
 
         assertTrue(violation.message().contains("println"), violation.message());
+        assertEquals(LinterConfiguration.PRINTLN_ARGUMENT_KEY, violation.rule());
     }
 
     @Test

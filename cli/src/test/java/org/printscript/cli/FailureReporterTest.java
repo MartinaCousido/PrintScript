@@ -7,6 +7,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -20,7 +21,11 @@ class FailureReporterTest {
                 new FailureReporter(new PrintStream(buffer, true, StandardCharsets.UTF_8));
 
         reporter.report(
-                List.of(new Failure<>("boom", new Range(new Position(3, 4), new Position(3, 9)))));
+                List.of(
+                        new Failure<>(
+                                ErrorCode.UNRECOGNIZED_STATEMENT,
+                                "boom",
+                                new Range(new Position(3, 4), new Position(3, 9)))));
 
         String output = buffer.toString(StandardCharsets.UTF_8);
         assertTrue(output.contains("boom"));

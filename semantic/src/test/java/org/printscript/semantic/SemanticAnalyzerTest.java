@@ -14,6 +14,7 @@ import org.printscript.ast.Identifier;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
 import org.printscript.ast.StringLiteral;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -68,7 +69,8 @@ class SemanticAnalyzerTest {
 
     @Test
     void aSyntaxErrorTravelsThroughUnchanged() {
-        Failure<Statement> syntaxError = new Failure<>(MISSING_SEMICOLON, rangeAt(3, 7));
+        Failure<Statement> syntaxError =
+                new Failure<>(ErrorCode.MISSING_SEMICOLON, MISSING_SEMICOLON, rangeAt(3, 7));
         SemanticAnalyzer analyzer = analyzerOver(new Statements(List.of(syntaxError)));
 
         Result<Statement> result = analyzer.next();
@@ -80,7 +82,12 @@ class SemanticAnalyzerTest {
     void aSyntaxErrorKeepsItsMessageAndItsRange() {
         SemanticAnalyzer analyzer =
                 analyzerOver(
-                        new Statements(List.of(new Failure<>(MISSING_SEMICOLON, rangeAt(3, 7)))));
+                        new Statements(
+                                List.of(
+                                        new Failure<>(
+                                                ErrorCode.MISSING_SEMICOLON,
+                                                MISSING_SEMICOLON,
+                                                rangeAt(3, 7)))));
 
         Failure<Statement> failure = assertInstanceOf(Failure.class, analyzer.next());
 
@@ -107,7 +114,10 @@ class SemanticAnalyzerTest {
                 analyzerOver(
                         new Statements(
                                 List.of(
-                                        new Failure<>(MISSING_SEMICOLON, rangeAt(1, 5)),
+                                        new Failure<>(
+                                                ErrorCode.MISSING_SEMICOLON,
+                                                MISSING_SEMICOLON,
+                                                rangeAt(1, 5)),
                                         new Success<>(valid))));
 
         assertInstanceOf(Failure.class, analyzer.next());

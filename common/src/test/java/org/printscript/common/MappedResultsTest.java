@@ -52,7 +52,8 @@ class MappedResultsTest {
 
     @Test
     void aFailurePassesThroughWithItsMessageAndRange() {
-        MappedResults<String, Integer> lengths = lengthsOf(List.of(new Failure<>("roto", ANY)));
+        MappedResults<String, Integer> lengths =
+                lengthsOf(List.of(new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, "roto", ANY)));
 
         Failure<Integer> failure = assertInstanceOf(Failure.class, lengths.next());
         assertEquals("roto", failure.message());

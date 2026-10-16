@@ -6,6 +6,7 @@ import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.Statement;
 import org.printscript.ast.TypeName;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -62,6 +63,7 @@ public final class DeclarationParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> token.type() == TokenType.IDENTIFIER,
+                ErrorCode.EXPECTED_IDENTIFIER,
                 "Expected an identifier after '" + declarator.value() + "'",
                 declarator.range());
     }
@@ -70,6 +72,7 @@ public final class DeclarationParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, ":"),
+                ErrorCode.EXPECTED_COLON,
                 "Expected ':' after the variable name",
                 name.range());
     }
@@ -78,6 +81,7 @@ public final class DeclarationParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> token.type() == TokenType.KEYWORD || token.type() == TokenType.IDENTIFIER,
+                ErrorCode.EXPECTED_TYPE,
                 "Expected a type annotation after ':'",
                 colon.range());
     }
@@ -99,6 +103,7 @@ public final class DeclarationParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, ";"),
+                ErrorCode.MISSING_SEMICOLON,
                 "Expected ';' at the end of the declaration",
                 parts.beforeSemicolon());
     }

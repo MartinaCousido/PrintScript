@@ -4,6 +4,7 @@ import org.printscript.ast.AssignmentStatement;
 import org.printscript.ast.Expression;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.Statement;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.token.Token;
@@ -47,6 +48,7 @@ public final class AssignmentParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isOperator(token, "="),
+                ErrorCode.EXPECTED_ASSIGNMENT,
                 "Expected '=' after the variable name",
                 name.range());
     }
@@ -55,6 +57,7 @@ public final class AssignmentParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, ";"),
+                ErrorCode.MISSING_SEMICOLON,
                 "Expected ';' at the end of the assignment",
                 expression.range());
     }

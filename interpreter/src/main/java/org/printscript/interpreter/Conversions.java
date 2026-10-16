@@ -1,5 +1,6 @@
 package org.printscript.interpreter;
 
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
@@ -27,7 +28,7 @@ final class Conversions {
         try {
             return new Success<>(Double.parseDouble(text));
         } catch (NumberFormatException e) {
-            return new Failure<>("'" + text + "' no es un number", range);
+            return new Failure<>(ErrorCode.NOT_A_NUMBER, "'" + text + "' no es un number", range);
         }
     }
 
@@ -36,6 +37,6 @@ final class Conversions {
         if ("true".equals(text) || "false".equals(text)) {
             return new Success<>(Boolean.parseBoolean(text));
         }
-        return new Failure<>("'" + text + "' no es un boolean", range);
+        return new Failure<>(ErrorCode.NOT_A_BOOLEAN, "'" + text + "' no es un boolean", range);
     }
 }

@@ -14,6 +14,7 @@ import org.printscript.ast.ScopedStatementVisitor;
 import org.printscript.ast.Statement;
 import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
@@ -47,7 +48,9 @@ public final class StatementChecker extends ScopedStatementVisitor {
         if (declaration.initializer().isEmpty()) {
             // una constante sin valor no se puede completar después: nace inservible
             return new Failure<>(
-                    "Una constante tiene que declararse con un valor", declaration.range());
+                    ErrorCode.CONST_WITHOUT_VALUE,
+                    "Una constante tiene que declararse con un valor",
+                    declaration.range());
         }
         return declare(
                 declaration.name().name(),
@@ -65,7 +68,10 @@ public final class StatementChecker extends ScopedStatementVisitor {
             boolean immutable) {
         Optional<Type> declared = Type.fromWrittenName(annotation.name(), supportedTypes);
         if (declared.isEmpty()) {
-            return new Failure<>("Tipo desconocido: " + annotation.name(), annotation.range());
+            return new Failure<>(
+                    ErrorCode.UNKNOWN_TYPE,
+                    "Tipo desconocido: " + annotation.name(),
+                    annotation.range());
         }
 
         // la tabla decide si ya estaba declarada, y solo mira el scope actual: el mismo
@@ -75,7 +81,10 @@ public final class StatementChecker extends ScopedStatementVisitor {
         if (updated.isEmpty()) {
             // el rango es el de la declaración entera, como venía reportándolo el
             // intérprete: lo que está de más es la sentencia, no el nombre
-            return new Failure<>("Variable ya declarada: " + name, statement);
+            return new Failure<>(
+                    ErrorCode.VARIABLE_ALREADY_DECLARED,
+                    "Variable ya declarada: " + name,
+                    statement);
         }
         // se declara aunque el inicializador esté mal, así un error no arrastra a las
         // sentencias que usan la variable después
@@ -94,10 +103,16 @@ public final class StatementChecker extends ScopedStatementVisitor {
         if (declared.isEmpty()) {
             // en una asignación la sentencia entera es la que no tiene sentido; cuando
             // el nombre aparece dentro de una expresión, el rango es el del uso
-            return new Failure<>("Variable no declarada: " + name, assignment.range());
+            return new Failure<>(
+                    ErrorCode.UNDECLARED_VARIABLE,
+                    "Variable no declarada: " + name,
+                    assignment.range());
         }
         if (declared.get().immutable()) {
-            return new Failure<>("No se puede reasignar la constante " + name, assignment.range());
+            return new Failure<>(
+                    ErrorCode.CONST_REASSIGNMENT,
+                    "No se puede reasignar la constante " + name,
+                    assignment.range());
         }
         return checkAssignable(assignment.expression(), declared.get().type());
     }
@@ -119,6 +134,7 @@ public final class StatementChecker extends ScopedStatementVisitor {
                         value -> {
                             if (!(value == Type.BOOLEAN)) {
                                 return new Failure<>(
+                                        ErrorCode.NON_BOOLEAN_CONDITION,
                                         "La condición de un if tiene que ser boolean",
                                         ifStatement.condition().range());
                             }
@@ -154,6 +170,7 @@ public final class StatementChecker extends ScopedStatementVisitor {
         }
         if (actual != declared) {
             return new Failure<>(
+                    ErrorCode.TYPE_MISMATCH,
                     "No se puede asignar "
                             + actual.writtenName()
                             + " a una variable "
@@ -173,6 +190,6 @@ public final class StatementChecker extends ScopedStatementVisitor {
 
     @Override
     protected Result<Void> notAStatement(Range range) {
-        return new Failure<>("No es una sentencia", range);
+        return new Failure<>(ErrorCode.UNSUPPORTED_NODE, "No es una sentencia", range);
     }
 }

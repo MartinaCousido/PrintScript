@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -202,8 +203,11 @@ class ParserTest {
                     }
 
                     @Override
-                    public String unterminatedMessage(List<Token> accumulated) {
-                        return "Expected an identifier before the end of the stream";
+                    public <T> Failure<T> unterminated(List<Token> accumulated, Range range) {
+                        return new Failure<>(
+                                ErrorCode.MISSING_SEMICOLON,
+                                "Expected an identifier before the end of the stream",
+                                range);
                     }
                 };
         Parser parser =
@@ -235,8 +239,11 @@ class ParserTest {
                     }
 
                     @Override
-                    public String unterminatedMessage(List<Token> accumulated) {
-                        return "Expected the moon before the end of the stream";
+                    public <T> Failure<T> unterminated(List<Token> accumulated, Range range) {
+                        return new Failure<>(
+                                ErrorCode.MISSING_SEMICOLON,
+                                "Expected the moon before the end of the stream",
+                                range);
                     }
                 };
         Parser parser =
@@ -248,6 +255,7 @@ class ParserTest {
 
         Failure<Statement> failure = assertInstanceOf(Failure.class, parser.next());
 
+        assertEquals(ErrorCode.MISSING_SEMICOLON, failure.code());
         assertEquals("Expected the moon before the end of the stream", failure.message());
         assertEquals(rangeAt(2), failure.range());
     }

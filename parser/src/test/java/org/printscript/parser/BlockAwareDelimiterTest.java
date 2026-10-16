@@ -9,6 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.printscript.common.ErrorCode;
+import org.printscript.common.Failure;
+import org.printscript.common.Position;
+import org.printscript.common.Range;
 import org.printscript.token.Token;
 
 class BlockAwareDelimiterTest {
@@ -108,13 +112,19 @@ class BlockAwareDelimiterTest {
     }
 
     @Test
-    void theMessageSaysWhatIsMissingDependingOnWhereItStopped() {
-        assertEquals(
-                "Expected '}' before the end of the stream",
-                delimiter.unterminatedMessage(Lexemes.tokensOf("if ( a ) { x = 1 ;")));
-        assertEquals(
-                "Expected ';' before the end of the stream",
-                delimiter.unterminatedMessage(Lexemes.tokensOf("let x : number = 1")));
+    void theErrorSaysWhatIsMissingDependingOnWhereItStopped() {
+        Range end = new Range(new Position(1, 1), new Position(1, 2));
+
+        Failure<Void> insideBlock =
+                delimiter.unterminated(Lexemes.tokensOf("if ( a ) { x = 1 ;"), end);
+        Failure<Void> outsideBlock =
+                delimiter.unterminated(Lexemes.tokensOf("let x : number = 1"), end);
+
+        assertEquals(ErrorCode.UNCLOSED_BLOCK, insideBlock.code());
+        assertEquals("Expected '}' before the end of the stream", insideBlock.message());
+        assertEquals(ErrorCode.MISSING_SEMICOLON, outsideBlock.code());
+        assertEquals("Expected ';' before the end of the stream", outsideBlock.message());
+        assertEquals(end, outsideBlock.range());
     }
 
     @Test
