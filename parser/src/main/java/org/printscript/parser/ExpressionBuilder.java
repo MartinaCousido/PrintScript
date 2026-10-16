@@ -22,6 +22,7 @@ import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 
 // arma las cuentas respetando que debe resolverse primero
+// arma todos los nodos de expresión: numberLiteral, stringLiteral, etc.
 public final class ExpressionBuilder {
 
     private final Map<String, ReadFactory> reads;

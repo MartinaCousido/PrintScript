@@ -61,6 +61,12 @@ misma entrada sin retenerla y debe terminar. El upstream declara 5 MB iniciales 
 máximos, pero con JDK 25 el collector entra en 7 MB. Fijar máximo e inicial en los 5 MB ya
 declarados por el TCK conserva el propósito: el collector agota memoria, el counter no.
 
+**En macOS con chip Apple, `testWithCollector` falla en local y no es un problema del
+proyecto.** Ese JVM tiene un piso de heap de 8 MB e ignora cualquier `-Xmx` menor —medido:
+`2m`, `4m`, `5m` y `7m` dan todos 8 MB—, así que el collector nunca se queda sin memoria y
+el caso queda en 58/59. Bajar más el valor no cambia nada. El resultado oficial es el del
+CI, que corre en Linux x86_64, donde la frontera sí se respeta.
+
 ## Automatización
 
 El CI ejecuta `build` y el TCK contra Maven Local en cada push y PR, sin publicar.

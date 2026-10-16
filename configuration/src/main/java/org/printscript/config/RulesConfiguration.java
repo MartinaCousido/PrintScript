@@ -3,6 +3,8 @@ package org.printscript.config;
 import java.util.Map;
 import java.util.Optional;
 
+// el resultado
+// guarda lo que decía cada archivo
 public final class RulesConfiguration {
 
     private final Map<String, Object> values;

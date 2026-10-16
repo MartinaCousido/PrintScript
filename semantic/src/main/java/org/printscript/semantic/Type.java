@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.Set;
 
 // el tipo semántico, con el que se razona sobre qué programas tienen sentido
+// lista de tipos que entiende semantic
 public enum Type {
     NUMBER("number"),
     STRING("string"),

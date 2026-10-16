@@ -47,7 +47,7 @@ final class ExecutionOutput {
                             return execute(sourceFile, printer, err, version, reader);
                         });
         if (result == ExitCode.SUCCESS) {
-            console.println("Salida guardada en " + outputFile);
+            err.println("Salida guardada en " + outputFile);
         }
         return result;
     }

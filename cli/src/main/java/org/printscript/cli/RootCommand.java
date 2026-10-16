@@ -6,12 +6,6 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ScopeType;
 
-/*
- * No se usa mixinStandardHelpOptions: registra -V/--version para imprimir la
- * versión del jar, que choca con el --version/-v de la consigna (la versión del
- * lenguaje PrintScript). Por eso -h/--help se declara a mano y --version queda
- * libre para su único significado en esta CLI.
- */
 @Command(
         name = "printscript",
         subcommands = {
