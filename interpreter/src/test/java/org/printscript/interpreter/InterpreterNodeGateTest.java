@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -122,5 +123,20 @@ class InterpreterNodeGateTest {
 
         assertInstanceOf(Success.class, result, String.valueOf(result));
         assertEquals(List.of("hola"), printer.lines);
+    }
+
+    @Test
+    void changingTheSourceSetCannotChangeTheLanguagePolicy() {
+        Set<Class<? extends Statement>> supported = new HashSet<>(Set.of(PrintlnStatement.class));
+        InMemoryPrinter printer = new InMemoryPrinter();
+        Statement statement = new PrintlnStatement(new StringLiteral("kept", ANY), ANY);
+        Interpreter interpreter =
+                new Interpreter(
+                        new ResultStream(List.of(new Success<>(statement))),
+                        new Executor(new Environment(), Ports.of(printer)),
+                        supported);
+        supported.clear();
+        assertInstanceOf(Success.class, interpreter.next());
+        assertEquals(List.of("kept"), printer.lines);
     }
 }

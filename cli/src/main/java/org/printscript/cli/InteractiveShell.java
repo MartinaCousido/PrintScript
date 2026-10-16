@@ -7,15 +7,11 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import org.printscript.runner.ValidationRunner;
 
@@ -26,13 +22,15 @@ import org.printscript.runner.ValidationRunner;
 // y stdin/stdout (docs/arquitectura.md, sección 5).
 final class InteractiveShell {
 
+    private static final int SOURCE_AND_CONFIG_PARTS = 2;
+
     private final BufferedReader input;
     private final PrintStream out;
     private final PrintStream err;
+    private final DirectoryNavigator navigator;
     // cada alias apunta al handler de su comando; evita un switch gigante y hace de
     // única fuente de verdad de qué comandos existen
     private final Map<String, Consumer<String>> commands = new HashMap<>();
-    private Path workingDir;
     private boolean running = true;
     // la versión de la sesión: la fijan con el comando 'version'
     private LanguageVersion version = LanguageVersion.V1_0;
@@ -41,15 +39,15 @@ final class InteractiveShell {
         this.input = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
         this.out = out;
         this.err = err;
-        this.workingDir = startDir.toAbsolutePath().normalize();
+        this.navigator = new DirectoryNavigator(startDir, out, err);
         registerCommands();
     }
 
     private void registerCommands() {
         register(argument -> printHelp(), "help", "?", "ayuda");
-        register(argument -> out.println(workingDir), "pwd");
-        register(this::listDirectory, "ls", "dir");
-        register(this::changeDirectory, "cd");
+        register(argument -> out.println(navigator.current()), "pwd");
+        register(argument -> navigator.list(ShellArguments.singlePath(argument)), "ls", "dir");
+        register(argument -> navigator.change(ShellArguments.singlePath(argument)), "cd");
         register(this::runExecution, "execution", "exec", "run");
         register(this::runSave, "save", "guardar");
         register(this::runValidation, "validation", "validate");
@@ -67,6 +65,15 @@ final class InteractiveShell {
 
     // devuelve el código de salida del proceso; 0 al terminar el REPL normalmente
     int run() {
+        try {
+            return runSession();
+        } catch (UncheckedIOException exception) {
+            err.println("No se pudo leer la entrada: " + exception.getMessage());
+            return ExitCode.USAGE_ERROR.code();
+        }
+    }
+
+    private int runSession() {
         printBanner();
         while (running) {
             out.print(prompt());
@@ -95,9 +102,17 @@ final class InteractiveShell {
     // separa el comando (primer token) del resto de la línea, que se toma tal cual
     // como argumento; así los paths con espacios funcionan sin comillas
     private void dispatch(String line) {
-        int space = line.indexOf(' ');
-        String command = (space < 0 ? line : line.substring(0, space)).toLowerCase(Locale.ROOT);
-        String argument = space < 0 ? "" : line.substring(space + 1).strip();
+        int separator = -1;
+        for (int index = 0; index < line.length(); index++) {
+            if (Character.isWhitespace(line.charAt(index))) {
+                separator = index;
+                break;
+            }
+        }
+        boolean hasArgument = separator >= 0;
+        String commandName = hasArgument ? line.substring(0, separator) : line;
+        String command = commandName.toLowerCase(Locale.ROOT);
+        String argument = hasArgument ? line.substring(separator + 1).strip() : "";
 
         Consumer<String> handler = commands.get(command);
         if (handler == null) {
@@ -107,7 +122,11 @@ final class InteractiveShell {
                             + "'. Escribí 'help' para ver los comandos disponibles.");
             return;
         }
-        handler.accept(argument);
+        try {
+            handler.accept(argument);
+        } catch (IllegalArgumentException exception) {
+            err.println(exception.getMessage());
+        }
     }
 
     // --- operaciones sobre archivos ---
@@ -119,8 +138,8 @@ final class InteractiveShell {
             out.println("Versión del lenguaje: " + version.label());
             return;
         }
-        LanguageVersion elegida = LanguageVersion.of(argument);
-        if (elegida == null) {
+        LanguageVersion selected = LanguageVersion.of(argument);
+        if (selected == null) {
             err.println(
                     "'"
                             + argument
@@ -129,7 +148,7 @@ final class InteractiveShell {
                             + ")");
             return;
         }
-        version = elegida;
+        version = selected;
         out.println("Versión del lenguaje: " + version.label());
     }
 
@@ -157,9 +176,11 @@ final class InteractiveShell {
         withSourceFile(
                 argument,
                 path ->
-                        SourceFileProcessor.process(
+                        SourceFileProcessor.processStreaming(
                                 path,
-                                lines -> new ValidationRunner().validate(lines, version.domain()),
+                                (lines, report) ->
+                                        new ValidationRunner()
+                                                .validate(lines, version.domain(), report),
                                 err));
     }
 
@@ -193,7 +214,7 @@ final class InteractiveShell {
             err.println("Falta el archivo. Uso: <operación> <archivo.ps>");
             return;
         }
-        action.run(resolve(argument));
+        action.run(navigator.resolve(ShellArguments.singlePath(argument)));
     }
 
     // <archivo> [config]: el segundo token opcional es el archivo de reglas
@@ -202,90 +223,32 @@ final class InteractiveShell {
             err.println("Falta el archivo. Uso: " + uso);
             return;
         }
-        String[] parts = argument.split("\\s+", 2);
-        Path source = resolve(parts[0]);
-        Path config = parts.length > 1 ? resolve(parts[1]) : null;
+        List<String> parts = ShellArguments.tokenize(argument);
+        if (parts.isEmpty()) {
+            err.println("Argumentos inválidos. Uso: " + uso);
+            return;
+        }
+        if (parts.size() > SOURCE_AND_CONFIG_PARTS) {
+            err.println(
+                    "Demasiados argumentos. Uso: "
+                            + uso
+                            + ". Usá comillas para las rutas con espacios.");
+            return;
+        }
+        Path source = navigator.resolve(parts.getFirst());
+        Path config = parts.size() > 1 ? navigator.resolve(parts.get(1)) : null;
         operation.run(source, config);
-    }
-
-    // --- navegación del filesystem ---
-
-    private void listDirectory(String argument) {
-        Path target = argument.isEmpty() ? workingDir : resolve(argument);
-        if (!Files.isDirectory(target)) {
-            err.println("No es un directorio: " + target);
-            return;
-        }
-        entries(target).ifPresent(this::printEntries);
-    }
-
-    // vacío cuando no se pudo leer el directorio: el error ya se reportó
-    private Optional<List<String>> entries(Path target) {
-        List<String> dirs = new ArrayList<>();
-        List<String> files = new ArrayList<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(target)) {
-            for (Path entry : stream) {
-                classify(entry, dirs, files);
-            }
-        } catch (IOException e) {
-            err.println("No se pudo listar '" + target + "': " + e.getMessage());
-            return Optional.empty();
-        }
-        return Optional.of(sorted(dirs, files));
-    }
-
-    private static void classify(Path entry, List<String> dirs, List<String> files) {
-        String name = entry.getFileName().toString();
-        if (Files.isDirectory(entry)) {
-            dirs.add(name + "/");
-        } else {
-            files.add(name);
-        }
-    }
-
-    // primero los directorios y después los archivos, cada grupo en orden alfabético
-    private static List<String> sorted(List<String> dirs, List<String> files) {
-        dirs.sort(String::compareToIgnoreCase);
-        files.sort(String::compareToIgnoreCase);
-        List<String> all = new ArrayList<>(dirs);
-        all.addAll(files);
-        return all;
-    }
-
-    private void printEntries(List<String> entries) {
-        if (entries.isEmpty()) {
-            out.println("(directorio vacío)");
-            return;
-        }
-        entries.forEach(out::println);
-    }
-
-    private void changeDirectory(String argument) {
-        if (argument.isEmpty()) {
-            err.println("Falta el directorio. Uso: cd <directorio>");
-            return;
-        }
-        Path target = resolve(argument);
-        if (!Files.isDirectory(target)) {
-            err.println("No es un directorio: " + target);
-            return;
-        }
-        workingDir = target;
-    }
-
-    private Path resolve(String argument) {
-        return workingDir.resolve(argument).normalize();
     }
 
     // --- presentación ---
 
     private String prompt() {
-        return "printscript:" + workingDir.getFileName() + "> ";
+        return "printscript:" + navigator.current().getFileName() + "> ";
     }
 
     private void printBanner() {
         out.println("PrintScript — interfaz interactiva. Escribí 'help' para ver los comandos.");
-        out.println("Directorio actual: " + workingDir);
+        out.println("Directorio actual: " + navigator.current());
     }
 
     private void printHelp() {
@@ -293,6 +256,8 @@ final class InteractiveShell {
         out.println();
         printFileCommands();
         printConfigNote();
+        out.println("    Rutas con espacios: format \"mi programa.ps\" \"mis reglas.json\"");
+        out.println();
         printNavigationCommands();
         printSessionCommands();
     }
@@ -303,16 +268,19 @@ final class InteractiveShell {
         helpLine(
                 "save <archivo>",
                 "Como run, y además guarda la salida en <fuente>.out.txt junto al .ps");
-        helpLine("validate <archivo>", "Valida la sintaxis sin ejecutar el programa");
+        helpLine(
+                "validate <archivo>", "Valida la sintaxis y la semántica sin ejecutar el programa");
         helpLine("format <archivo> [config]", "Formatea el archivo e imprime el resultado");
         helpLine("analyze <archivo> [config]", "Lintea el archivo y reporta las violaciones");
         out.println();
     }
 
     private void printConfigNote() {
+        out.println(
+                "    Usá comillas para rutas con espacios: format \"mi fuente.ps\" \"mis reglas.yaml\"");
         out.println("    [config] es un archivo de reglas .json/.yaml/.yml (opcional):");
-        out.println("      · format sin [config]  → reglas por defecto (sin espaciado extra)");
-        out.println("      · analyze sin [config] → ninguna regla activa (no reporta nada)");
+        out.println("      · format sin [config]  → no aplica reglas de formato; muestra un aviso");
+        out.println("      · analyze sin [config] → solo revisa sintaxis; muestra un aviso");
         out.println("      · alias: exec=execution, format=fmt=formatting, analyze=lint=analyzing");
         out.println();
     }
@@ -327,6 +295,7 @@ final class InteractiveShell {
 
     private void printSessionCommands() {
         out.println("  Sesión");
+        helpLine("version [1.0|1.1]", "Muestra o cambia la versión del lenguaje (inicial: 1.0)");
         helpLine("help|?", "Muestra esta ayuda");
         helpLine("exit|quit", "Sale de la interfaz (también con Ctrl-D)");
     }

@@ -13,6 +13,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 class SaveOutputEndToEndTest {
 
+    private static final String EXECUTION = "execution";
+
     @TempDir Path tempDir;
 
     private Path write(String name, String content) throws IOException {
@@ -27,10 +29,11 @@ class SaveOutputEndToEndTest {
         Path output = tempDir.resolve("salida.txt");
 
         CliTestSupport.Result result =
-                CliTestSupport.run("execution", source.toString(), "-o", output.toString());
+                CliTestSupport.run(EXECUTION, source.toString(), "-o", output.toString());
 
         assertEquals(0, result.exitCode());
-        assertTrue(result.stdout().contains("hola"), "muestra la salida por stdout");
+        assertEquals("hola\nchau\n", result.stdout());
+        assertTrue(result.stderr().contains("Salida guardada en"), result.stderr());
         assertTrue(Files.exists(output), "crea el archivo de salida");
         String saved = Files.readString(output, StandardCharsets.UTF_8);
         assertTrue(saved.contains("hola") && saved.contains("chau"), saved);
@@ -42,12 +45,37 @@ class SaveOutputEndToEndTest {
 
         CliTestSupport.Result result =
                 CliTestSupport.run(
-                        "execution",
+                        EXECUTION,
                         tempDir.resolve("no-existe.ps").toString(),
                         "-o",
                         output.toString());
 
         assertEquals(2, result.exitCode());
         assertFalse(Files.exists(output), "no deja un .txt vacío si el fuente no existe");
+    }
+
+    @Test
+    void outputCannotOverwriteTheSourceOrAnAliasOfIt() throws IOException {
+        String program = "println(\"keep me\");\n";
+        Path source = write("original.ps", program);
+        Path alias = tempDir.resolve("alias.ps");
+        Files.createSymbolicLink(alias, source);
+        for (Path output : new Path[] {source, alias}) {
+            CliTestSupport.Result result =
+                    CliTestSupport.run(EXECUTION, source.toString(), "-o", output.toString());
+            assertEquals(2, result.exitCode());
+            assertEquals(program, Files.readString(source));
+        }
+    }
+
+    @Test
+    void executionErrorsPreserveThePreviousOutput() throws IOException {
+        Path source = write("invalid.ps", "println(\"partial\");\nprintln(missing);\n");
+        Path output = write("previous.txt", "previous output");
+        CliTestSupport.Result result =
+                CliTestSupport.run(EXECUTION, source.toString(), "-o", output.toString());
+        assertEquals(1, result.exitCode());
+        assertEquals("previous output", Files.readString(output));
+        assertFalse(result.stdout().contains("Salida guardada"));
     }
 }

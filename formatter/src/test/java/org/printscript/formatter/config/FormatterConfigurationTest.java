@@ -103,4 +103,11 @@ class FormatterConfigurationTest {
                 IllegalArgumentException.class,
                 () -> from(Map.of(FormatterConfiguration.INDENT_INSIDE_IF_KEY, -2)));
     }
+
+    @Test
+    void wrongRuleTypesFailInsteadOfDisablingTheRule() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> from(Map.of(FormatterConfiguration.SPACING_AROUND_EQUALS_KEY, "true")));
+    }
 }

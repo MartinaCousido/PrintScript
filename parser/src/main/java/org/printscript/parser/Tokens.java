@@ -27,16 +27,17 @@ final class Tokens {
     }
 
     static Result<Token> expect(
-            TokenBuffer tokens, Predicate<Token> shape, String message, Range fallback) {
+            TokenBuffer tokens, Predicate<Token> matches, String message, Range fallback) {
         Optional<Token> next = tokens.lookahead(0);
         if (next.isEmpty()) {
             return new Failure<>(message, fallback);
         }
-        if (!shape.test(next.get())) {
-            return new Failure<>(message, next.get().range());
+        Token candidate = next.get();
+        if (!matches.test(candidate)) {
+            return new Failure<>(message, candidate.range());
         }
         tokens.commit(1);
-        return new Success<>(next.get());
+        return new Success<>(candidate);
     }
 
     static <T> Failure<T> forward(Failure<?> failure) {

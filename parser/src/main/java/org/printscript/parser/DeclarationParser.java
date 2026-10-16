@@ -33,7 +33,7 @@ public final class DeclarationParser implements StatementParser {
     }
 
     private boolean isDeclarator(Token token) {
-        return declarators.keySet().stream().anyMatch(keyword -> Tokens.isKeyword(token, keyword));
+        return token.type() == TokenType.KEYWORD && declarators.containsKey(token.value());
     }
 
     @Override

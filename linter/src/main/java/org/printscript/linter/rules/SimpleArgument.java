@@ -17,9 +17,13 @@ final class SimpleArgument {
     static boolean test(Expression expression) {
         return switch (expression) {
             // un literal booleano es un literal: println(true) es un argumento simple
-            case Identifier _, NumberLiteral _, StringLiteral _, BooleanLiteral _ -> true;
+            case Identifier _ -> true;
+            case NumberLiteral _ -> true;
+            case StringLiteral _ -> true;
+            case BooleanLiteral _ -> true;
             // una lectura externa es un llamado, no un identificador ni un literal
-            case ReadInput _, ReadEnv _ -> false;
+            case ReadInput _ -> false;
+            case ReadEnv _ -> false;
             case BinaryExpression _ -> false;
         };
     }

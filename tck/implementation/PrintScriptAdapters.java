@@ -1,6 +1,5 @@
 package implementation;
 
-import interpreter.ErrorHandler;
 import interpreter.InputProvider;
 import interpreter.PrintEmitter;
 
@@ -9,10 +8,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Optional;
 
-import org.printscript.common.Failure;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.common.Version;
@@ -28,7 +25,7 @@ final class PrintScriptAdapters {
     private PrintScriptAdapters() {}
 
     // el fuente llega como stream y se recorre de a una línea: el TCK corre los tests con
-    // 7 MB de heap, así que leer el archivo entero a memoria haría fallar el caso grande
+    // heap pequeño (5 MB con nuestra adaptación de Java 25); no se materializa el fuente
     static Iterator<String> lines(InputStream source) {
         return new BufferedReader(new InputStreamReader(source, StandardCharsets.UTF_8))
                 .lines()
@@ -42,10 +39,6 @@ final class PrintScriptAdapters {
             default ->
                     throw new IllegalArgumentException("Versión no soportada por la implementación: " + version);
         };
-    }
-
-    static void report(List<? extends Failure<?>> failures, ErrorHandler handler) {
-        failures.forEach(failure -> handler.reportError(describe(failure.message(), failure.range())));
     }
 
     static String describe(String message, Range range) {

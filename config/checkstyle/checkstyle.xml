@@ -47,9 +47,8 @@
     <property name="fileExtensions" value="java"/> <!-- solo se miran archivos java; los .kts, .yml, .md los formatea Spotless -->
 
     <!--
-      Estas dos las cubre el formateador, pero se quedan como red para los archivos
-      que todavía nadie tocó: el ratchet de Spotless solo formatea lo modificado,
-      mientras que Checkstyle mira siempre los 90 archivos. Cuestan una línea.
+      Estas dos también las cubre el formateador; quedan como comprobaciones básicas
+      cuando se ejecuta Checkstyle por separado.
     -->
     <module name="NewlineAtEndOfFile"/> <!-- todo archivo tiene que terminar con un salto de linea -->
     <module name="FileTabCharacter"> <!-- prohibido el carácter de tabulación -->

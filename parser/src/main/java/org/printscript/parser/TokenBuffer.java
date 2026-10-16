@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import org.printscript.token.Token;
 
@@ -15,7 +16,7 @@ public final class TokenBuffer {
     private final List<Token> retained;
 
     public TokenBuffer(Iterator<Token> source) {
-        this.source = source;
+        this.source = Objects.requireNonNull(source, "source");
         this.retained = new ArrayList<>();
     }
 

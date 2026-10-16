@@ -2,8 +2,6 @@ package org.printscript.formatter;
 
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
@@ -44,18 +42,32 @@ final class Gaps {
 
     // las reglas se consultan en orden y gana la primera que opine
     private Optional<String> forced(Token previous, Token current) {
-        return Stream.<Supplier<Optional<String>>>of(
-                        () -> afterPrintln(previous, current),
-                        () -> afterStatement(previous, current),
-                        () -> bracePlacement(current),
-                        () -> aroundEquals(previous, current),
-                        () -> beforeColon(current),
-                        () -> afterColon(previous),
-                        () -> aroundOperations(previous, current),
-                        () -> singleSpace(previous, current))
-                .map(Supplier::get)
-                .flatMap(Optional::stream)
-                .findFirst();
+        Optional<String> result = afterPrintln(previous, current);
+        if (result.isPresent()) {
+            return result;
+        }
+        result = afterStatement(previous, current);
+        if (result.isPresent()) {
+            return result;
+        }
+        result = bracePlacement(current);
+        if (result.isPresent()) {
+            return result;
+        }
+        result = aroundEquals(previous, current);
+        if (result.isPresent()) {
+            return result;
+        }
+        result = beforeColon(current);
+        if (result.isPresent()) {
+            return result;
+        }
+        result = afterColon(previous);
+        if (result.isPresent()) {
+            return result;
+        }
+        result = aroundOperations(previous, current);
+        return result.isPresent() ? result : singleSpace(previous, current);
     }
 
     private Optional<String> afterPrintln(Token previous, Token current) {
@@ -64,7 +76,7 @@ final class Gaps {
         }
         return configuration
                 .lineBreaksAfterPrintln()
-                .map(howMany -> lineBreaks(howMany + 1, current));
+                .map(howMany -> lineBreaks(Math.addExact(howMany, 1), current));
     }
 
     // solo si la sentencia siguiente arranca en la misma línea: si ya había un salto, la
@@ -139,7 +151,7 @@ final class Gaps {
         int level = isPunctuation(current, "}") ? depth - 1 : depth;
         return configuration
                 .indentInsideIf()
-                .map(size -> spaces(size * level))
+                .map(size -> spaces(Math.multiplyExact(size, Math.max(0, level))))
                 .orElseGet(() -> spaces(asItWas));
     }
 

@@ -1,17 +1,17 @@
 package org.printscript.semantic;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.printscript.ast.AssignmentStatement;
-import org.printscript.ast.Block;
 import org.printscript.ast.ConstDeclaration;
 import org.printscript.ast.Expression;
 import org.printscript.ast.IfStatement;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.ReadEnv;
 import org.printscript.ast.ReadInput;
+import org.printscript.ast.ScopedStatementVisitor;
 import org.printscript.ast.Statement;
-import org.printscript.ast.StatementOnlyVisitor;
 import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Failure;
@@ -22,7 +22,7 @@ import org.printscript.common.Success;
 // las reglas semánticas
 // el estado de error es por sentencia y no acumulado:
 // una sentencia inválida no condena a las que siguen
-public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
+public final class StatementChecker extends ScopedStatementVisitor {
 
     private final Set<Type> supportedTypes;
     private SymbolTable symbols;
@@ -102,72 +102,60 @@ public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
         return checkAssignable(assignment.expression(), declared.get().type());
     }
 
-    // un Block es exactamente un scope: se abre un frame al entrar y se cierra al
-    // salir, también cuando una sentencia de adentro falló. Es la misma regla para el
-    // then, para el else y para el bloque de un else if, porque los tres son Block.
     @Override
-    public Result<Void> visitBlock(Block block) {
+    protected void openScope() {
         symbols = symbols.openScope();
-        try {
-            for (Statement statement : block.statements()) {
-                Result<Void> checked = statement.accept(this);
-                if (checked instanceof Failure<Void>) {
-                    return checked;
-                }
-            }
-            return success();
-        } finally {
-            symbols = symbols.closeScope();
-        }
     }
 
     @Override
-    public Result<Void> visitIfStatement(IfStatement ifStatement) {
-        // la condición se evalúa en el scope de afuera, que es lo correcto y sale solo
-        Result<Type> condition = ExpressionTyper.typeOf(ifStatement.condition(), symbols);
-        if (condition instanceof Failure<Type> failure) {
-            return propagate(failure);
-        }
-        if (((Success<Type>) condition).value() != Type.BOOLEAN) {
-            return new Failure<>(
-                    "La condición de un if tiene que ser boolean", ifStatement.condition().range());
-        }
-        Result<Void> thenChecked = ifStatement.thenBlock().accept(this);
-        if (thenChecked instanceof Failure<Void>) {
-            return thenChecked;
-        }
-        return ifStatement
-                .elseBranch()
-                .map(branch -> branch.accept(this))
-                .orElseGet(StatementChecker::success);
+    protected void closeScope() {
+        symbols = symbols.closeScope();
+    }
+
+    @Override
+    protected Result<List<Statement>> branches(IfStatement ifStatement) {
+        return ExpressionTyper.typeOf(ifStatement.condition(), symbols)
+                .andThen(
+                        value -> {
+                            if (!(value == Type.BOOLEAN)) {
+                                return new Failure<>(
+                                        "La condición de un if tiene que ser boolean",
+                                        ifStatement.condition().range());
+                            }
+                            return new Success<>(
+                                    ifStatement
+                                            .elseBranch()
+                                            .map(
+                                                    branch ->
+                                                            List.<Statement>of(
+                                                                    ifStatement.thenBlock(),
+                                                                    branch))
+                                            .orElseGet(() -> List.of(ifStatement.thenBlock())));
+                        });
     }
 
     @Override
     public Result<Void> visitPrintlnStatement(PrintlnStatement println) {
         // println acepta cualquier tipo básico: solo hace falta que la expresión tipe
-        Result<Type> actual = ExpressionTyper.typeOf(println.expression(), symbols);
-        if (actual instanceof Failure<Type> failure) {
-            return propagate(failure);
-        }
-        return success();
+        return ExpressionTyper.typeOf(println.expression(), symbols).map(type -> null);
     }
 
     private Result<Void> checkAssignable(Expression expression, Type declared) {
-        Result<Type> actual = ExpressionTyper.typeOf(expression, symbols);
-        if (actual instanceof Failure<Type> failure) {
-            return propagate(failure);
-        }
-        Type type = ((Success<Type>) actual).value();
+        return ExpressionTyper.typeOf(expression, symbols)
+                .andThen(actual -> compareTypes(expression, declared, actual));
+    }
+
+    private static Result<Void> compareTypes(Expression expression, Type declared, Type actual) {
         // excepción acotada: lo que entra de afuera es texto, y el tipo declarado manda
         // la conversión. Vale solo cuando el inicializador es exactamente una lectura;
         // adentro de una expresión es un string común, o si no deja de ser checkeable.
         if (isExternalRead(expression)) {
             return success();
         }
-        if (type != declared) {
+        if (actual != declared) {
             return new Failure<>(
                     "No se puede asignar "
-                            + type.writtenName()
+                            + actual.writtenName()
                             + " a una variable "
                             + declared.writtenName(),
                     expression.range());
@@ -181,10 +169,6 @@ public final class StatementChecker extends StatementOnlyVisitor<Result<Void>> {
 
     private static Result<Void> success() {
         return new Success<>(null);
-    }
-
-    private static Result<Void> propagate(Failure<Type> failure) {
-        return new Failure<>(failure.message(), failure.range());
     }
 
     @Override

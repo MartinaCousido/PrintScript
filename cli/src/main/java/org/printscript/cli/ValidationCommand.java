@@ -1,7 +1,7 @@
 package org.printscript.cli;
 
 import java.util.Iterator;
-import java.util.List;
+import java.util.function.Consumer;
 import org.printscript.common.Failure;
 import org.printscript.common.Version;
 import org.printscript.runner.ValidationRunner;
@@ -14,7 +14,8 @@ import picocli.CommandLine.Command;
 final class ValidationCommand extends AbstractSourceFileCommand {
 
     @Override
-    protected List<Failure<?>> execute(Iterator<String> lines, Version version) {
-        return new ValidationRunner().validate(lines, version);
+    protected boolean execute(
+            Iterator<String> lines, Version version, Consumer<Failure<?>> report) {
+        return new ValidationRunner().validate(lines, version, report);
     }
 }

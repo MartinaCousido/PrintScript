@@ -1,10 +1,12 @@
 package org.printscript.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -48,6 +50,30 @@ class ConfigurationReaderTest {
     }
 
     @Test
+    void standardReaderSupportsBothBuiltInFormats() {
+        ConfigurationReader standard = ConfigurationReader.standard();
+
+        assertEquals(
+                Optional.of(CAMEL),
+                standard.read(streamOf("{\"" + FORMAT + "\": \"" + CAMEL + "\"}"), JSON)
+                        .getString(FORMAT));
+        assertEquals(
+                Optional.of(CAMEL),
+                standard.read(streamOf(FORMAT + ": " + CAMEL), YAML).getString(FORMAT));
+    }
+
+    @Test
+    void readerRequiresAtLeastOneMapper() {
+        assertThrows(IllegalArgumentException.class, () -> new ConfigurationReader(List.of()));
+    }
+
+    @Test
+    void readerRejectsMissingSourceOrFormat() {
+        assertThrows(NullPointerException.class, () -> reader.read(null, JSON));
+        assertThrows(NullPointerException.class, () -> reader.read(streamOf("{}"), null));
+    }
+
+    @Test
     void theShortYamlExtensionIsAlsoYaml() {
         RulesConfiguration configuration = reader.read(streamOf(OTRA + ": false\n"), "yml");
 
@@ -84,5 +110,40 @@ class ConfigurationReaderTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> reader.read(streamOf("{esto no es json"), JSON));
+    }
+
+    @Test
+    void nullDocumentsAndNullRuleValuesHaveConfigurationDiagnostics() {
+        for (String content : List.of("null", "{\"enabled\":null}")) {
+            IllegalArgumentException exception =
+                    assertThrows(
+                            IllegalArgumentException.class,
+                            () -> reader.read(streamOf(content), JSON));
+            assertTrue(exception.getMessage().contains("configuración"));
+        }
+    }
+
+    private static final class TrackedInput extends ByteArrayInputStream {
+        private boolean closed;
+
+        TrackedInput(String content) {
+            super(content.getBytes(StandardCharsets.UTF_8));
+        }
+
+        @Override
+        public void close() throws IOException {
+            closed = true;
+            super.close();
+        }
+    }
+
+    @Test
+    void bothMappersLeaveBorrowedStreamsOpen() throws IOException {
+        for (String format : List.of(JSON, YAML)) {
+            try (TrackedInput source = new TrackedInput("{}")) {
+                reader.read(source, format);
+                assertFalse(source.closed);
+            }
+        }
     }
 }

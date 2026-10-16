@@ -112,4 +112,27 @@ class ReadInputCollectorTest {
         assertEquals(0, found(declaration(new BooleanLiteral(true, R))));
         assertEquals(0, found(declaration(new Identifier("otra", R))));
     }
+
+    @Test
+    void descendsIntoThePromptOfAnotherReadInput() {
+        ReadInput inner = read();
+        ReadInput outer = new ReadInput(inner, R);
+        assertEquals(List.of(outer, inner), outer.accept(collector));
+    }
+
+    @Test
+    void deepPromptsAndBlocksAreCollectedWithoutJvmRecursion() {
+        final int depth = 10_000;
+        Expression prompt = new StringLiteral("prompt", R);
+        for (int index = 0; index < depth; index++) {
+            prompt = new ReadInput(prompt, R);
+        }
+        Statement statement = new PrintlnStatement(prompt, R);
+        for (int index = 0; index < depth; index++) {
+            statement = new Block(List.of(statement), R);
+        }
+        assertEquals(depth, found(statement));
+        assertEquals(1, statement.accept(new PrintlnCollector()).size());
+        assertEquals(0, statement.accept(new IdentifierCollector()).size());
+    }
 }

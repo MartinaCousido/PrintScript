@@ -16,22 +16,11 @@ dependencies {
     api(project(":formatter"))
 }
 
+// Ejemplo de desarrollo: se compila con los tests y no se publica en el jar.
 tasks.register<JavaExec>("playground") {
-    group = "application"
-    description = "Corre Playground.java para probar programas PrintScript a mano"
+    group = "development"
+    description = "Ejecuta el ejemplo de desarrollo, sin incluirlo en la librería publicada"
+    dependsOn(tasks.named("testClasses"))
     mainClass.set("org.printscript.runner.Playground")
-    classpath = sourceSets["main"].runtimeClasspath
-}
-
-tasks.named<Pmd>("pmdMain") {
-    exclude("**/Playground.java")
-}
-
-tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
-    classDirectories.setFrom(
-        classDirectories.files.map {
-            // también las clases anidadas del Playground, que no son parte del sistema
-            fileTree(it) { exclude("**/Playground.class", "**/Playground$*.class") }
-        },
-    )
+    classpath = sourceSets["test"].runtimeClasspath
 }

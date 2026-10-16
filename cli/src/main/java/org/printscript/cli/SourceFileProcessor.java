@@ -3,21 +3,21 @@ package org.printscript.cli;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
-import java.util.List;
+import java.util.function.Consumer;
 import org.printscript.common.Failure;
 
 // abre el archivo fuente, arma el iterator de líneas con progreso y delega en el
 // caller. Es el único camino por el que cli lee un .ps del filesystem.
 final class SourceFileProcessor {
 
-    // operación que produce fallas (execution/validation)
     @FunctionalInterface
-    interface Operation {
-        List<Failure<?>> execute(Iterator<String> lines);
+    interface StreamingOperation {
+        boolean execute(Iterator<String> lines, Consumer<Failure<?>> report);
     }
 
     // operación que produce su propio exit code (analyzing, que además reporta
@@ -29,13 +29,13 @@ final class SourceFileProcessor {
 
     private SourceFileProcessor() {}
 
-    static ExitCode process(Path sourceFile, Operation operation, PrintStream err) {
+    static ExitCode processStreaming(
+            Path sourceFile, StreamingOperation operation, PrintStream err) {
         return read(
                 sourceFile,
                 lines -> {
-                    List<Failure<?>> failures = operation.execute(lines);
-                    new FailureReporter(err).report(failures);
-                    return failures.isEmpty() ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
+                    boolean clean = operation.execute(lines, new FailureReporter(err)::report);
+                    return clean ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
                 },
                 err);
     }
@@ -54,8 +54,8 @@ final class SourceFileProcessor {
                         new ProgressReportingIterator(reader.lines().iterator(), totalBytes, err);
                 return consumer.consume(lines);
             }
-        } catch (IOException e) {
-            err.println("No se pudo leer '" + sourceFile + "': " + e.getMessage());
+        } catch (IOException | UncheckedIOException e) {
+            err.println("No se pudo procesar '" + sourceFile + "': " + e.getMessage());
             return ExitCode.USAGE_ERROR;
         }
     }

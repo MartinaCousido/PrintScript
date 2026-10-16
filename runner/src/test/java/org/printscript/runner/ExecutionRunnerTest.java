@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.printscript.common.Failure;
+import org.printscript.common.Version;
 import org.printscript.runtime.OutputPrinter;
 
 class ExecutionRunnerTest {
@@ -29,6 +30,22 @@ class ExecutionRunnerTest {
 
     private static List<Failure<?>> runProgram(InMemoryPrinter printer, String... lines) {
         return new ExecutionRunner().run(List.of(lines).iterator(), printer);
+    }
+
+    @Test
+    void explicitVersionUsesTheRequestedLanguageFeatures() {
+        InMemoryPrinter printer = new InMemoryPrinter();
+
+        List<Failure<?>> failures =
+                new ExecutionRunner()
+                        .run(
+                                List.of("const ready: boolean = true;", "println(ready);")
+                                        .iterator(),
+                                printer,
+                                Version.V11);
+
+        assertEquals(List.of(), failures);
+        assertEquals(List.of("true"), printer.lines);
     }
 
     @Test

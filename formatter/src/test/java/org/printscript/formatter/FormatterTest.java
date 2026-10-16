@@ -237,4 +237,39 @@ class FormatterTest {
 
         assertEquals(source, format(source, FormatterConfiguration.none()));
     }
+
+    @Test
+    void overflowingLineBreakCountIsReportedInsteadOfThrowing() {
+        Formatter formatter =
+                formatterOver(
+                        "println(1); println(2);",
+                        new Rules().printlnBreaks(Integer.MAX_VALUE).build());
+        boolean reported = false;
+        while (formatter.hasNext()) {
+            if (formatter.next() instanceof Failure<String> failure) {
+                reported = true;
+                assertTrue(failure.message().contains("espaciado"));
+            }
+        }
+        assertTrue(reported);
+    }
+
+    @Test
+    void overflowingIndentationIsReportedBeforeAllocatingSpaces() {
+        Formatter formatter =
+                new Formatter(
+                        LexerFactory.create(
+                                List.of("if(true){if(true){", "println(1);}}", "println(2);")
+                                        .iterator(),
+                                Version.V11),
+                        new Rules().indent(Integer.MAX_VALUE).build());
+        boolean reported = false;
+        while (formatter.hasNext()) {
+            if (formatter.next() instanceof Failure<String> failure) {
+                reported = true;
+                assertTrue(failure.message().contains("espaciado"));
+            }
+        }
+        assertTrue(reported);
+    }
 }

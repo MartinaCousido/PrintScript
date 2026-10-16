@@ -2,11 +2,14 @@ package org.printscript.runner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +50,60 @@ class FormattingEndToEndTest {
                 new FormattingRunner().format(List.of(lines).iterator(), configuration, output);
         assertEquals(List.of(), failures);
         return output.toString();
+    }
+
+    @Test
+    @SuppressWarnings("PMD.CloseResource") // The test writer owns no resource.
+    void writingFailureIsReportedToTheCaller() {
+        Writer failing =
+                new Writer() {
+                    @Override
+                    public void write(char[] buffer, int offset, int length) throws IOException {
+                        throw new IOException("disk full");
+                    }
+
+                    @Override
+                    public void flush() {}
+
+                    @Override
+                    public void close() {}
+                };
+
+        assertThrows(
+                UncheckedIOException.class,
+                () ->
+                        new FormattingRunner()
+                                .format(
+                                        List.of("println(1);").iterator(),
+                                        FormatterConfiguration.none(),
+                                        failing));
+    }
+
+    @Test
+    @SuppressWarnings("PMD.CloseResource") // The test writer owns no resource.
+    void flushingFailureIsReportedToTheCaller() {
+        Writer failing =
+                new Writer() {
+                    @Override
+                    public void write(char[] buffer, int offset, int length) {}
+
+                    @Override
+                    public void flush() throws IOException {
+                        throw new IOException("disk full");
+                    }
+
+                    @Override
+                    public void close() {}
+                };
+
+        assertThrows(
+                UncheckedIOException.class,
+                () ->
+                        new FormattingRunner()
+                                .format(
+                                        List.<String>of().iterator(),
+                                        FormatterConfiguration.none(),
+                                        failing));
     }
 
     private static List<String> execute(String... lines) {

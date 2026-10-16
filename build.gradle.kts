@@ -3,6 +3,13 @@ plugins {
     id("jacoco")
 }
 
+allprojects {
+    dependencyLocking {
+        lockAllConfigurations()
+        lockMode.set(LockMode.STRICT)
+    }
+}
+
 group = "org.printscript"
 version = providers.gradleProperty("printscriptVersion").getOrElse("0.1.0-SNAPSHOT")
 
@@ -12,6 +19,8 @@ jacoco {
 
 // el task hace un reporte de cobertura unificado de los 13 módulos
 tasks.register<JacocoReport>("jacocoRootReport") {
+    group = "verification"
+    description = "Genera el reporte de cobertura de todos los módulos"
     dependsOn(subprojects.map { it.tasks.named("test") })
     executionData(subprojects.map { it.fileTree(it.layout.buildDirectory).include("jacoco/test.exec") })
     sourceDirectories.from(subprojects.map { it.file("src/main/java") })
@@ -35,6 +44,8 @@ dependencies {
 }
 
 tasks.register<JavaExec>("cpdCheck") {
+    group = "verification"
+    description = "Detecta código Java duplicado entre módulos"
     val reporte = layout.buildDirectory.file("reports/cpd/cpd.txt")
     outputs.file(reporte)
     // Las fuentes entran como strings en args, así que Gradle no las ve como inputs.
@@ -60,6 +71,8 @@ tasks.named("check") {
 
 // le dice a git que busque los hooks en config/githooks en vez de en .git/hooks (que no se clona)
 tasks.register<Exec>("installGitHooks") {
+    group = "development"
+    description = "Instala el hook de pre-commit en este clon"
     commandLine("git", "config", "core.hooksPath", "config/githooks")
 }
 

@@ -11,8 +11,8 @@ Sin generar una distribución, usando el toolchain de Gradle (no hace falta tene
 instalado):
 
 ```bash
-# el working directory de la tarea run es cli/, por eso la ruta es relativa a ahí
-./gradlew :cli:run --args="execution src/test/resources/examples/valid-hello.ps"
+# las rutas parten de la raíz del repositorio, también al correr con Gradle
+./gradlew :cli:run --args="execution cli/src/test/resources/examples/valid-hello.ps"
 ```
 
 Generando una distribución instalable (requiere un `java` de PATH compatible con el
@@ -23,6 +23,10 @@ toolchain del proyecto, hoy Java 25; si tu `java` por defecto es más viejo, us�
 ./gradlew :cli:installDist
 cli/build/install/printscript/bin/printscript execution ruta/al/archivo.ps
 ```
+
+La tarea `:cli:run` usa la raíz del repositorio como directorio de trabajo. El
+binario instalado usa el directorio desde el que lo invocás. En ambos casos podés
+usar rutas absolutas; en la sesión interactiva `pwd` muestra la base de las rutas.
 
 ## Interfaz interactiva (REPL)
 
@@ -59,6 +63,7 @@ Comandos disponibles:
 | `pwd` | | Muestra el directorio actual |
 | `ls [directorio]` | `dir` | Lista el contenido (directorios primero, con `/`) |
 | `cd <directorio>` | | Cambia de directorio (acepta `..` y rutas absolutas) |
+| `version [1.0\|1.1]` | `v` | Muestra o cambia la versión del lenguaje de la sesión (inicial: `1.0`) |
 | `help` | `?` | Muestra la ayuda con todos los comandos |
 | `exit` | `quit` | Sale de la interfaz (también con Ctrl-D) |
 
@@ -66,6 +71,22 @@ Las rutas de archivo son relativas al directorio actual del REPL (el que muestra
 `pwd`), no al working directory del proceso. Cada operación usa exactamente el mismo
 camino de lectura, progreso y reporte de errores que su subcomando equivalente
 (`SourceFileProcessor`), así que el resultado es idéntico al de la forma no interactiva.
+
+Las rutas con espacios se agrupan con comillas simples o dobles:
+
+```text
+format "mi programa.ps" "mis reglas.json"
+analyze 'mi programa.ps' 'mis reglas.json'
+exec "mi programa.ps"
+cd "mis programas"
+version 1.1
+```
+
+`format` y `analyze` aceptan uno o dos argumentos; un argumento extra o comillas
+sin cerrar producen un mensaje de uso y la sesión sigue abierta. Los comandos que
+reciben una sola ruta también conservan la forma anterior sin comillas (`exec mi
+programa.ps`). Las comillas agrupan rutas; no hay expansión de variables ni escapes
+como en una shell del sistema.
 
 Bajo `./gradlew :cli:run` conviene pasar `--console=plain` para que Gradle no pise el
 prompt con su propia salida de progreso; el binario de `installDist` no lo necesita.
@@ -77,7 +98,7 @@ prompt con su propia salida de progreso; el binario de `installDist` no lo neces
 | `execution` | `exec` | Ejecuta el archivo: corre lexer → parser → intérprete e imprime la salida del programa por stdout |
 | `validation` | `validate` | Valida sintaxis y semántica sin ejecutar nada |
 | `formatting` | `format`, `fmt` | Formatea el archivo con el módulo `formatter`, aplicando las reglas del `--config`; escribe por stdout o, con `--output`, a un archivo |
-| `analyzing` | `analyze`, `lint` | Analiza estáticamente con el módulo `linter`, aplicando las reglas del `--config` (sin config, ninguna regla está prendida) |
+| `analyzing` | `analyze`, `lint` | Analiza estáticamente con el módulo `linter`, aplicando las reglas del `--config` (sin config, avisa que no hay reglas de lint activas) |
 
 Las cuatro operaciones tienen backend hoy. `validation` valida sintaxis **y semántica**:
 la cadena pasa por el módulo `semantic`, así que un `let x: number = "hola";` se reporta sin
@@ -89,14 +110,20 @@ ejecutar nada.
 `println` del programa a un archivo, además de mostrarla por stdout. El REPL deriva el
 nombre del archivo del fuente (`ejemplo.ps` → `ejemplo.out.txt`, en el mismo directorio);
 el subcomando toma la ruta explícita del `--output`. Solo se guarda lo que el programa
-imprime, nunca el progreso ni los errores. Si el fuente no existe, no se crea el `.txt`.
+imprime, nunca el progreso ni los errores. El mensaje de confirmación va por `stderr`,
+para mantener `stdout` limpio al redirigirlo. Si el fuente no existe, no se crea el `.txt`.
+
+En `execution` y `formatting`, `--output` debe señalar un archivo distinto del fuente.
+Si es el mismo, incluso a través de `..`, un enlace simbólico o un enlace duro, la CLI
+rechaza la operación con código `2` **antes de abrir o truncar la salida**. El fuente
+queda intacto. Un archivo de salida distinto que ya existe se reemplaza.
 
 ### `formatting`: reglas del formatter
 
 El formatter **reescribe el fuente**: ajusta el espacio que alguna regla activa nombra y
 deja el resto tal como estaba. Una clave ausente no cae en un valor por defecto, significa
-**no tocar ese espacio**. Por eso un archivo formateado sin `--config` sale idéntico al
-original. Por defecto el resultado va por stdout; `--output archivo` lo escribe a un
+**no tocar ese espacio**. Sin `--config` no se aplica ninguna regla de formato y la CLI muestra un aviso por
+`stderr`; también avisa si el archivo de configuración no activa ninguna regla. Por defecto el resultado va por stdout; `--output archivo` lo escribe a un
 archivo (nunca pisa el fuente). Reglas disponibles:
 
 | Clave | Qué controla | Valores |
@@ -137,14 +164,13 @@ $ echo $?
 Los paréntesis y el `*` quedan pegados porque ninguna regla activa habla de ellos:
 agregando `mandatory-space-surrounding-operations` saldría `(2 + 3) * 4`.
 
-```bash
-```
 
 ### `analyzing`: reglas del linter
 
 El linter aplica las reglas que declara el archivo `--config` (JSON o YAML). Una clave
-ausente deja su regla apagada; sin `--config`, no hay ninguna regla activa y el análisis
-no reporta nada. Reglas disponibles:
+ausente deja su regla apagada; sin `--config`, no hay ninguna regla activa: se siguen reportando los errores de sintaxis, pero no
+las violaciones de convenciones. La CLI muestra un aviso por `stderr` cuando no hay
+reglas activas, incluso si se pasó un config vacío o con todas las reglas apagadas. Reglas disponibles:
 
 | Clave | Qué exige | Valores |
 |---|---|---|
@@ -241,3 +267,34 @@ archivo — sin releer el archivo para calcularlo. La salida real del programa
 ejecutado va exclusivamente por `stdout`, así que redirigir la salida
 (`printscript execution archivo.ps > salida.txt`) captura solo lo que el programa
 imprime, nunca el progreso ni los mensajes de error.
+
+## Protección de archivos de salida
+
+`execution` y `formatting` rechazan una salida que sea el mismo archivo fuente,
+incluso por un alias o enlace. La salida se escribe en un temporal junto al destino;
+el destino se reemplaza solo si la operación y el cierre del writer terminan bien.
+Si hay errores del fuente o de E/S, se conserva el destino anterior y se elimina el
+temporal. La salida por consola durante ejecución sigue siendo inmediata y puede
+mostrar mensajes anteriores a un error.
+
+El reemplazo usa un movimiento atómico cuando el filesystem lo permite; en otros
+filesystems usa el movimiento estándar. Reemplaza la entrada del destino, por lo que
+un enlace de salida distinto del fuente se reemplaza por el archivo generado.
+
+## Rutas y diagnósticos del REPL
+
+Se aceptan comillas simples/dobles y escapes de comillas/backslashes:
+
+```text
+format "mi fuente.ps" "mis reglas.yaml"
+run 'mi fuente.ps'
+cd "directorio con espacios"
+```
+
+Los comandos de una sola ruta conservan rutas sin comillas con espacios. Para
+source/config se usan dos argumentos, entre comillas si contienen espacios.
+Comillas sin cerrar y argumentos sobrantes producen diagnóstico y permiten seguir
+la sesión. CLI y TCK entregan diagnósticos por sentencia, sin retener un reporte
+completo; en análisis se imprimen en orden de sentencias (errores y violaciones
+pueden intercalarse). Las reglas conocidas de tipo incorrecto se rechazan; el
+lookup genérico de RulesConfiguration sigue siendo permisivo para otros clientes.

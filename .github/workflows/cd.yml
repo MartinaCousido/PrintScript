@@ -29,11 +29,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # fetch-depth 0 por la misma razón que en el CI: el ratchet de Spotless compara
-      # contra origin/master y necesita la historia completa.
-      - uses: actions/checkout@v7
+      # Historia completa para trazar el commit y tags publicados.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
 
       - name: Registrar el commit publicado
@@ -41,13 +39,13 @@ jobs:
         run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Instalar el JDK del toolchain declarado
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: '25'
 
       - name: Preparar Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
       - name: Derivar la versión
         id: version
@@ -86,28 +84,36 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@v7
+      # Las herramientas pertenecen al workflow; los adapters pertenecen al artefacto.
+      # Un CI anterior puede terminar después de integrar una nueva versión del CD.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: workflow-tools
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.publicar.outputs.commit }}
-      - uses: actions/setup-java@v5
+          path: release-source
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: '25'
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
         with:
           cache-disabled: true
       - name: Validar la versión descargada del registro
         env:
           VERSION: ${{ needs.publicar.outputs.version }}
+          PRINTSCRIPT_TCK_IMPLEMENTATION_SOURCE: ${{ github.workspace }}/release-source/tck/implementation
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./tck/run-official-tck.sh "$VERSION" --published
+        run: ./workflow-tools/tck/run-official-tck.sh "$VERSION" --published
       - name: Guardar el resultado del TCK
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: tck-paquetes-publicados
-          path: build/official-tck/build/reports/tests/test
+          path: workflow-tools/build/official-tck/build/reports/tests/test
 
   release:
     name: Crear Release de la CLI validada
@@ -119,14 +125,14 @@ jobs:
     env:
       VERSION: ${{ needs.publicar.outputs.version }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.publicar.outputs.commit }}
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: '25'
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
       - name: Armar la distribución
         run: ./gradlew :cli:distZip :cli:distTar -PprintscriptVersion="$VERSION" --no-daemon
       - name: Publicar el Release con el ejecutable

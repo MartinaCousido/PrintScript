@@ -3,6 +3,8 @@ package org.printscript.interpreter;
 import java.math.BigDecimal;
 import org.printscript.ast.BinaryExpression;
 import org.printscript.ast.BooleanLiteral;
+import org.printscript.ast.Expression;
+import org.printscript.ast.ExpressionFold;
 import org.printscript.ast.ExpressionOnlyVisitor;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.NumberLiteral;
@@ -47,11 +49,11 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
     // que el usuario tipea
     @Override
     public Result<Object> visitReadInput(ReadInput readInput) {
-        Result<Object> prompt = readInput.prompt().accept(this);
-        if (prompt instanceof Failure<Object> failure) {
-            return failure;
-        }
-        ports.printer().print(asText(((Success<Object>) prompt).value()));
+        return evaluate(readInput);
+    }
+
+    private Result<Object> readInputAfterPrompt(ReadInput readInput, Object prompt) {
+        ports.printer().print(asText(prompt));
         return ports.input()
                 .readLine()
                 .<Result<Object>>map(Success::new)
@@ -64,11 +66,10 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
 
     @Override
     public Result<Object> visitReadEnv(ReadEnv readEnv) {
-        Result<Object> name = readEnv.name().accept(this);
-        if (name instanceof Failure<Object> failure) {
-            return failure;
-        }
-        String variable = asText(((Success<Object>) name).value());
+        return evaluate(readEnv);
+    }
+
+    private Result<Object> readEnvironmentVariable(ReadEnv readEnv, String variable) {
         return ports.env()
                 .read(variable)
                 .<Result<Object>>map(Success::new)
@@ -93,19 +94,20 @@ public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Obje
 
     @Override
     public Result<Object> visitBinaryExpression(BinaryExpression binaryExpression) {
-        Result<Object> left = binaryExpression.left().accept(this);
-        if (left instanceof Failure<Object> failure) {
-            return failure;
-        }
-        Result<Object> right = binaryExpression.right().accept(this);
-        if (right instanceof Failure<Object> failure) {
-            return failure;
-        }
-        return combine(
-                ((Success<Object>) left).value(),
-                binaryExpression.operator(),
-                ((Success<Object>) right).value(),
-                binaryExpression.range());
+        return evaluate(binaryExpression);
+    }
+
+    private Result<Object> evaluate(Expression expression) {
+        return ExpressionFold.evaluate(
+                expression,
+                leaf -> leaf.accept(this),
+                (binary, left, right) -> combine(left, binary.operator(), right, binary.range()),
+                (read, argument) ->
+                        switch (read) {
+                            case ReadInput input -> readInputAfterPrompt(input, argument);
+                            case ReadEnv env -> readEnvironmentVariable(env, asText(argument));
+                            default -> throw new IllegalStateException("Expected an external read");
+                        });
     }
 
     // pasa un número a texto

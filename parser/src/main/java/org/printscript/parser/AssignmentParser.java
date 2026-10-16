@@ -19,8 +19,16 @@ public final class AssignmentParser implements StatementParser {
 
     @Override
     public boolean matches(TokenBuffer tokens) {
-        return tokens.lookahead(0).filter(token -> token.type() == TokenType.IDENTIFIER).isPresent()
-                && tokens.lookahead(1).filter(token -> Tokens.isOperator(token, "=")).isPresent();
+        boolean startsWithIdentifier =
+                tokens.lookahead(0)
+                        .filter(token -> token.type() == TokenType.IDENTIFIER)
+                        .isPresent();
+        if (!startsWithIdentifier) {
+            return false;
+        }
+        boolean followedByAssignment =
+                tokens.lookahead(1).filter(token -> Tokens.isOperator(token, "=")).isPresent();
+        return followedByAssignment;
     }
 
     @Override

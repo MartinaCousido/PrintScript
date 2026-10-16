@@ -3,20 +3,16 @@ package org.printscript.cli;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
-import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
-import java.util.List;
-import org.printscript.common.Failure;
 import org.printscript.common.Version;
 import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.runner.FormattingRunner;
 
-// Orquesta la operación de formateo para cli: carga las reglas del --config (o usa las
-// de por defecto), corre el FormattingRunner y escribe el código formateado a un
+// Orquesta la operación de formateo para cli: carga las reglas del --config,
+// corre el FormattingRunner y escribe el código formateado a un
 // archivo (--output) o por consola.
 final class Formatting {
 
@@ -29,12 +25,19 @@ final class Formatting {
             PrintStream console,
             PrintStream err,
             Version version) {
+        if (!FileArguments.requireExistingRegularFile(sourceFile, err)
+                || !FileArguments.requireDistinctOutput(sourceFile, outputFile, err)) {
+            return ExitCode.USAGE_ERROR;
+        }
         FormatterConfiguration configuration;
         try {
             configuration = FormatterConfiguration.from(ConfigurationFiles.read(configFile));
         } catch (IOException | IllegalArgumentException e) {
             err.println("No se pudo leer la configuración: " + e.getMessage());
             return ExitCode.USAGE_ERROR;
+        }
+        if (configuration.equals(FormatterConfiguration.none())) {
+            err.println("Aviso: no hay reglas de formato activas. Usá --config para activarlas.");
         }
         return SourceFileProcessor.read(
                 sourceFile,
@@ -50,36 +53,56 @@ final class Formatting {
             PrintStream err,
             Version version) {
         if (outputFile == null) {
-            // no se cierra la consola (rompería el stdout del resto del proceso), solo
-            // se vuelca; el FormattingRunner además hace flush del Writer
-            Writer destination = new OutputStreamWriter(console, StandardCharsets.UTF_8);
-            List<Failure<?>> failures =
-                    new FormattingRunner().format(lines, configuration, destination, version);
-            flush(destination);
-            return finish(failures, err);
+            return formatToConsole(lines, configuration, console, err, version);
         }
-        try (Writer destination = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8)) {
-            List<Failure<?>> failures =
-                    new FormattingRunner().format(lines, configuration, destination, version);
-            ExitCode code = finish(failures, err);
-            console.println("Código formateado guardado en " + outputFile);
-            return code;
-        } catch (IOException e) {
-            err.println("No se pudo escribir '" + outputFile + "': " + e.getMessage());
-            return ExitCode.USAGE_ERROR;
-        }
+        return formatToFile(lines, configuration, outputFile, err, version);
     }
 
-    private static ExitCode finish(List<Failure<?>> failures, PrintStream err) {
-        new FailureReporter(err).report(failures);
-        return failures.isEmpty() ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
+    private static ExitCode formatToConsole(
+            Iterator<String> lines,
+            FormatterConfiguration configuration,
+            PrintStream console,
+            PrintStream err,
+            Version version) {
+        // No se cierra la consola: el resto del proceso sigue usándola.
+        Writer destination = new OutputStreamWriter(console, StandardCharsets.UTF_8);
+        boolean clean =
+                new FormattingRunner()
+                        .format(
+                                lines,
+                                configuration,
+                                destination,
+                                version,
+                                new FailureReporter(err)::report);
+        return finish(clean);
     }
 
-    private static void flush(Writer destination) {
-        try {
-            destination.flush();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+    private static ExitCode formatToFile(
+            Iterator<String> lines,
+            FormatterConfiguration configuration,
+            Path outputFile,
+            PrintStream err,
+            Version version) {
+        ExitCode result =
+                FileOutputs.write(
+                        outputFile,
+                        err,
+                        destination ->
+                                finish(
+                                        new FormattingRunner()
+                                                .format(
+                                                        lines,
+                                                        configuration,
+                                                        destination,
+                                                        version,
+                                                        new FailureReporter(err)::report)));
+        if (result == ExitCode.SUCCESS) {
+            err.println("Código formateado guardado en " + outputFile);
         }
+        return result;
+    }
+
+    private static ExitCode finish(boolean clean) {
+        return clean ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
     }
 }

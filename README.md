@@ -26,46 +26,73 @@ Está declarada como *toolchain* en el convention plugin, y Gradle la resuelve s
 primera vez gracias al `foojay-resolver` de `settings.gradle.kts`. Ese es justamente el
 punto: la toolchain se declara en el proyecto, no en la máquina de cada uno.
 
-### Si tenés un JDK viejo por defecto
+### Elegir el Java que usa Gradle
 
-Con SDKMAN, adoptando un JDK que ya tengas instalado (no descarga nada):
-
-```bash
-sdk install java 21-local $(/usr/libexec/java_home -v 21)
-sdk default java 21-local
-```
-
-O con SDKMAN descargándolo:
+En Linux o macOS, apuntá `JAVA_HOME` al directorio de un JDK 17 o superior instalado:
 
 ```bash
-sdk install java 21.0.7-tem
-sdk default java 21.0.7-tem
-```
-
-Sin SDKMAN, agregando esto al final de tu `~/.zshrc`:
-
-```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+export JAVA_HOME="/ruta/al/jdk"
 export PATH="$JAVA_HOME/bin:$PATH"
+./gradlew --version
 ```
 
-## Cómo se usa
+En macOS podés obtener esa ruta con `/usr/libexec/java_home -v 21`.
+Con SDKMAN en Linux o macOS, `sdk list java` muestra las versiones disponibles:
+instalá una de 17 o superior con `sdk install java <identificador>` y elegila con
+`sdk default java <identificador>`.
 
-```bash
-# compilar y testear todo
-./gradlew build
+En Windows (PowerShell), configurá el directorio de tu JDK y usá el wrapper de Windows:
 
-# solo los tests
-./gradlew test
-
-# un módulo suelto: compila y testea únicamente ese
-./gradlew :lexer:build
-
-# ver deprecaciones del build
-./gradlew clean build --warning-mode all
+```powershell
+$env:JAVA_HOME = 'C:\ruta\al\jdk'
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+.\gradlew.bat --version
 ```
+
+La primera compilación necesita acceso a Internet para resolver dependencias y, si no
+está instalado, el JDK 25 del toolchain. La distribución de la CLI también necesita
+Java 25 para ejecutarse: la descarga automática del toolchain es una función de Gradle,
+no del ejecutable instalado.
+
+## Comandos de desarrollo
+
+Desde la raíz del repositorio, estos son los comandos habituales:
+
+| Comando | Para qué sirve |
+|---|---|
+| `./gradlew assemble` | Compilar y generar los artefactos, sin tests ni chequeos de calidad |
+| `./gradlew test` | Correr los tests; también genera sus reportes de cobertura |
+| `./gradlew check` | Correr tests, formato, estilo, PMD, duplicación y mínimos de cobertura |
+| `./gradlew build` | Generar artefactos y ejecutar todos los chequeos de `check` |
+| `./gradlew spotlessApply` | Corregir el formato de nuestro Java y de los archivos de build/texto |
+| `./gradlew :cli:run --console=plain` | Abrir la interfaz interactiva de PrintScript |
+| `./gradlew :cli:installDist` | Generar el ejecutable local en `cli/build/install/printscript` |
+| `./gradlew jacocoRootReport` | Generar el reporte de cobertura conjunto |
+| `./gradlew installGitHooks` | Instalar el hook de pre-commit una vez por clon |
+
+En Windows, reemplazá `./gradlew` por `.\gradlew.bat`.
+Para trabajar en un módulo, usá su prefijo: `./gradlew :lexer:build` compila sus
+dependencias y verifica ese módulo, sin ejecutar todos los chequeos del repositorio.
+Para ver deprecaciones: `./gradlew build --warning-mode all`.
+
+### Por qué aparecen tantas tareas
+
+Gradle genera tareas para compilar, empaquetar, probar, publicar y revisar el código
+**de cada uno de los trece módulos**. Por eso `./gradlew tasks --all` muestra cientos
+de entradas: no son cientos de comandos que haya que aprender.
+
+`./gradlew tasks` muestra la ayuda organizada por categorías; `./gradlew help --task cpdCheck` explica una tarea concreta. Las tareas propias `cpdCheck` y
+`jacocoRootReport` están en `verification`; `installGitHooks` y `:runner:playground`
+están en `development`.
+
+`./gradlew :runner:playground` ejecuta un ejemplo fijo para desarrollar el runner.
+Vive entre los fuentes de test y no se incluye en las librerías publicadas. Para usar
+archivos `.ps`, el punto de entrada es la CLI.
 
 ## Herramientas de calidad
+
+El formato Java se verifica sobre todos los fuentes, sin depender de ramas remotas
+ni de la historia de Git.
 
 Seis herramientas corren dentro de `./gradlew check` (que `build` incluye) y rompen el
 build cuando encuentran algo. El reparto de responsabilidades: **el formateador decide
@@ -82,7 +109,7 @@ tests.** Antes de agregar una regla, esa división dice dónde va.
 | CPD | código duplicado | `src/main` de los trece módulos | tarea `cpdCheck` del `build.gradle.kts` raíz, umbral de 50 tokens | leer `build/reports/cpd/cpd.txt` y extraer lo repetido |
 | JaCoCo | cobertura de los tests, con piso | cada módulo por separado | convention plugin `printscript.quality` | escribir el test que falta |
 
-La cobertura es un **piso, nunca un objetivo**: mide qué líneas se ejecutaron, no si se
+La cobertura es un **piso, nunca un objetivo**: mide qué instrucciones de Java se ejecutaron, no si se
 verificó algo, así que sirve para avisar cuando baja y no como número a perseguir. El
 piso por defecto es `0.80` y sube en los módulos cuya cobertura real ya es alta; los
 valores están en `buildSrc/src/main/kotlin/printscript.quality.gradle.kts`. El reporte
@@ -95,22 +122,14 @@ la repetición es legibilidad, no deuda.
 
 ### Órdenes útiles
 
-```bash
-# toda la cadena: formato, estilo, PMD, CPD, tests y cobertura
-./gradlew check
+`check`, `spotlessApply` y `jacocoRootReport` están en [Comandos de desarrollo](#comandos-de-desarrollo). Para correr una sola herramienta:
 
-# una sola herramienta
+```bash
 ./gradlew spotlessCheck
 ./gradlew checkstyleMain
 ./gradlew pmdMain
 ./gradlew cpdCheck
 ./gradlew jacocoTestCoverageVerification
-
-# formatear sin buildear
-./gradlew spotlessApply
-
-# cobertura agregada del proyecto entero
-./gradlew jacocoRootReport
 ```
 
 ### El hook de pre-commit
@@ -138,7 +157,7 @@ propia) existe `git commit --no-verify`; la red que no se puede saltear es el CI
   `linter` de PrintScript que pide la consigna: esos operan sobre los programas `.ps`
   del usuario y se configuran con un JSON o un YAML. El linter de PrintScript ya
   existe y está documentado más abajo, en [su propia sección](#el-linter-de-printscript).
-- No usamos ktlint ni Detekt sobre el código del proyecto porque son herramientas de
+- No usamos ktlint ni Detekt sobre el código Java del proyecto porque son herramientas de
   Kotlin y nuestro código es Java; sus equivalentes acá son google-java-format,
   Checkstyle y PMD. ktlint aparece únicamente para formatear los `.gradle.kts` del
   build, que sí son Kotlin.
@@ -175,8 +194,8 @@ El módulo `cli` expone las cuatro operaciones de la consigna (`execution`,
 interfaz interactiva (REPL) cuando se lo corre sin argumentos:
 
 ```bash
-# el working directory de la tarea run es cli/, por eso la ruta es relativa a ahí
-./gradlew :cli:run --args="execution src/test/resources/examples/valid-hello.ps"
+# las rutas parten de la raíz del repositorio, también al correr con Gradle
+./gradlew :cli:run --args="execution cli/src/test/resources/examples/valid-hello.ps"
 
 # sin argumentos: interfaz interactiva para navegar y correr operaciones
 ./gradlew :cli:run --console=plain
@@ -190,7 +209,9 @@ ejemplos de salida (éxito y error con fila/columna) en [`docs/cli.md`](docs/cli
 
 ## Qué reconoce hoy
 
-PrintScript 1.0 completo:
+La CLI admite PrintScript **1.0 y 1.1**, con `1.0` como versión inicial. Para usar
+`const`, `boolean`, `if`, `readInput` o `readEnv`, pasá `--version 1.1` o escribí
+`version 1.1` en la interfaz interactiva. Construcciones de PrintScript 1.0:
 
 | Construcción | Ejemplo | Estado |
 |---|---|---|
@@ -249,7 +270,7 @@ declaración.
 
 ## Integración continua
 
-Cada push a `master` y cada pull request dispara el workflow de
+Cada push y cada pull request dispara el workflow de
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml), que corre `./gradlew build`
 con toda la cadena de calidad y publica como artifacts los reportes de test,
 Checkstyle, PMD, CPD y cobertura (por módulo y agregada), también cuando el build
@@ -309,12 +330,9 @@ secciones anteriores no se repiten acá.
 
 | Comando | Qué hace |
 |---|---|
-| `./gradlew tasks` | Lista las tareas disponibles, agrupadas por categoría |
-| `./gradlew tasks --all` | Lo mismo, incluyendo las tareas de cada módulo y las que no tienen grupo |
 | `./gradlew projects` | Muestra los 13 módulos que declara `settings.gradle.kts` |
 | `./gradlew --version` | Muestra la versión de Gradle (la que fija el wrapper), la de Kotlin y la del JVM con el que corre Gradle |
 | `./gradlew clean` | Borra las carpetas `build/` de todos los módulos: la próxima compilación arranca de cero |
-| `./gradlew assemble` | Compila y arma los jars, sin correr tests ni chequeos de calidad |
 | `./gradlew build --stacktrace` | Repite el build mostrando el detalle técnico del error cuando algo falla |
 | `./gradlew :cli:dependencies --configuration runtimeClasspath` | Muestra el árbol de dependencias con el que corre la CLI, incluidas las transitivas. Cambiando `:cli` por otro módulo se ve el suyo |
 | `./gradlew --stop` | Detiene los procesos de Gradle (daemons) que quedaron corriendo en segundo plano |
