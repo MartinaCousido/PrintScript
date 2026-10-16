@@ -3,10 +3,8 @@ package org.printscript.cli;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
-import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
@@ -29,6 +27,10 @@ final class Formatting {
             PrintStream console,
             PrintStream err,
             Version version) {
+        if (!FileArguments.requireExistingRegularFile(sourceFile, err)
+                || !FileArguments.requireDistinctOutput(sourceFile, outputFile, err)) {
+            return ExitCode.USAGE_ERROR;
+        }
         FormatterConfiguration configuration;
         try {
             configuration = FormatterConfiguration.from(ConfigurationFiles.read(configFile));
@@ -65,7 +67,6 @@ final class Formatting {
         Writer destination = new OutputStreamWriter(console, StandardCharsets.UTF_8);
         List<Failure<?>> failures =
                 new FormattingRunner().format(lines, configuration, destination, version);
-        flush(destination);
         return finish(failures, err);
     }
 
@@ -76,28 +77,23 @@ final class Formatting {
             PrintStream console,
             PrintStream err,
             Version version) {
-        try (Writer destination = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8)) {
-            List<Failure<?>> failures =
-                    new FormattingRunner().format(lines, configuration, destination, version);
-            ExitCode code = finish(failures, err);
+        ExitCode result =
+                FileOutputs.write(
+                        outputFile,
+                        err,
+                        destination ->
+                                finish(
+                                        new FormattingRunner()
+                                                .format(lines, configuration, destination, version),
+                                        err));
+        if (result == ExitCode.SUCCESS) {
             console.println("Código formateado guardado en " + outputFile);
-            return code;
-        } catch (IOException e) {
-            err.println("No se pudo escribir '" + outputFile + "': " + e.getMessage());
-            return ExitCode.USAGE_ERROR;
         }
+        return result;
     }
 
     private static ExitCode finish(List<Failure<?>> failures, PrintStream err) {
         new FailureReporter(err).report(failures);
         return failures.isEmpty() ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
-    }
-
-    private static void flush(Writer destination) {
-        try {
-            destination.flush();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 }

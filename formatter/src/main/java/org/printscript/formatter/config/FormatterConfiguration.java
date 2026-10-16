@@ -1,5 +1,6 @@
 package org.printscript.formatter.config;
 
+import java.util.Map;
 import java.util.Optional;
 import org.printscript.config.RulesConfiguration;
 
@@ -52,6 +53,19 @@ public record FormatterConfiguration(
     }
 
     public static FormatterConfiguration from(RulesConfiguration rules) {
+        rules.validateTypes(
+                Map.ofEntries(
+                        Map.entry(SPACING_AROUND_EQUALS_KEY, Boolean.class),
+                        Map.entry(NO_SPACING_AROUND_EQUALS_KEY, Boolean.class),
+                        Map.entry(SPACING_BEFORE_COLON_KEY, Boolean.class),
+                        Map.entry(SPACING_AFTER_COLON_KEY, Boolean.class),
+                        Map.entry(SPACE_SURROUNDING_OPERATIONS_KEY, Boolean.class),
+                        Map.entry(SINGLE_SPACE_SEPARATION_KEY, Boolean.class),
+                        Map.entry(LINE_BREAK_AFTER_STATEMENT_KEY, Boolean.class),
+                        Map.entry(LINE_BREAKS_AFTER_PRINTLN_KEY, Integer.class),
+                        Map.entry(IF_BRACE_SAME_LINE_KEY, Boolean.class),
+                        Map.entry(IF_BRACE_BELOW_LINE_KEY, Boolean.class),
+                        Map.entry(INDENT_INSIDE_IF_KEY, Integer.class)));
         return new FormatterConfiguration(
                 equalsSpacingOf(rules),
                 rules.getBoolean(SPACING_BEFORE_COLON_KEY).orElse(false),

@@ -1,12 +1,9 @@
 package org.printscript.cli;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import org.printscript.common.Version;
 import org.printscript.runner.ExecutionRunner;
@@ -34,20 +31,25 @@ final class ExecutionOutput {
         }
         // se valida el fuente antes de crear el archivo de salida para no dejar un .txt
         // vacío cuando el .ps no existe
-        if (!FileArguments.requireExistingRegularFile(sourceFile, err)) {
+        if (!FileArguments.requireExistingRegularFile(sourceFile, err)
+                || !FileArguments.requireDistinctOutput(sourceFile, outputFile, err)) {
             return ExitCode.USAGE_ERROR;
         }
-        try (Writer writer = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8)) {
-            OutputPrinter printer =
-                    new TeeOutputPrinter(
-                            new ConsoleOutputPrinter(console), new WriterOutputPrinter(writer));
-            ExitCode code = execute(sourceFile, printer, err, version, reader);
+        ExitCode result =
+                FileOutputs.write(
+                        outputFile,
+                        err,
+                        writer -> {
+                            OutputPrinter printer =
+                                    new TeeOutputPrinter(
+                                            new ConsoleOutputPrinter(console),
+                                            new WriterOutputPrinter(writer));
+                            return execute(sourceFile, printer, err, version, reader);
+                        });
+        if (result == ExitCode.SUCCESS) {
             console.println("Salida guardada en " + outputFile);
-            return code;
-        } catch (IOException e) {
-            err.println("No se pudo escribir la salida en '" + outputFile + "': " + e.getMessage());
-            return ExitCode.USAGE_ERROR;
         }
+        return result;
     }
 
     private static ExitCode execute(

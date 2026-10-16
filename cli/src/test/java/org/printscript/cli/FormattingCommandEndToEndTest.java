@@ -14,6 +14,7 @@ class FormattingCommandEndToEndTest {
 
     @TempDir Path tempDir;
 
+    private static final String SOURCE = "let a:number=12;\n";
     private static final String COMANDO = "formatting";
     private static final String CONFIG_ESPACIADO =
             "{ \"enforce-spacing-after-colon-in-declaration\": true,"
@@ -27,7 +28,7 @@ class FormattingCommandEndToEndTest {
 
     @Test
     void formatsToStdoutApplyingConfigRules() throws IOException {
-        Path source = write("feo.ps", "let a:number=12;\n");
+        Path source = write("feo.ps", SOURCE);
         Path config = write("reglas.json", CONFIG_ESPACIADO);
 
         CliTestSupport.Result result =
@@ -39,7 +40,7 @@ class FormattingCommandEndToEndTest {
 
     @Test
     void writesFormattedCodeToOutputFileWhenRequested() throws IOException {
-        Path source = write("feo.ps", "let a:number=12;\n");
+        Path source = write("feo.ps", SOURCE);
         Path config = write("reglas.json", CONFIG_ESPACIADO);
         Path output = tempDir.resolve("lindo.ps");
 
@@ -78,12 +79,32 @@ class FormattingCommandEndToEndTest {
 
     @Test
     void badConfigExtensionIsUsageError() throws IOException {
-        Path source = write("feo.ps", "let a:number=12;\n");
+        Path source = write("feo.ps", SOURCE);
         Path config = write("reglas", CONFIG_ESPACIADO);
 
         CliTestSupport.Result result =
                 CliTestSupport.run(COMANDO, source.toString(), "-c", config.toString());
 
         assertEquals(2, result.exitCode());
+    }
+
+    @Test
+    void formattingCannotOverwriteTheSource() throws IOException {
+        String program = SOURCE;
+        Path source = write("source.ps", program);
+        CliTestSupport.Result result =
+                CliTestSupport.run(COMANDO, source.toString(), "-o", source.toString());
+        assertEquals(2, result.exitCode());
+        assertEquals(program, Files.readString(source));
+    }
+
+    @Test
+    void lexicalErrorsPreserveThePreviousFormattedFile() throws IOException {
+        Path source = write("invalid.ps", "let a: number = #;\n");
+        Path output = write("previous.ps", "previous content");
+        CliTestSupport.Result result =
+                CliTestSupport.run(COMANDO, source.toString(), "-o", output.toString());
+        assertEquals(1, result.exitCode());
+        assertEquals("previous content", Files.readString(output));
     }
 }

@@ -7,10 +7,10 @@ import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 
 // reconoce números, enteros y con coma decimal
-public final class NumberTokenConstructor implements TokenConstructor {
+public final class NumberTokenConstructor extends TextTokenConstructor {
 
     @Override
-    public Optional<Token> tryBuild(String rest, Position start) {
+    public Optional<Token> tryBuild(CharSequence rest, Position start) {
         int length = digitsFrom(rest, 0);
         if (length == 0) {
             return Optional.empty();
@@ -18,12 +18,12 @@ public final class NumberTokenConstructor implements TokenConstructor {
         if (hasDecimalPartAt(rest, length)) {
             length = digitsFrom(rest, length + 1);
         }
-        String lexeme = rest.substring(0, length);
+        String lexeme = rest.subSequence(0, length).toString();
         Position end = new Position(start.line(), start.column() + length - 1);
         return Optional.of(new Token(TokenType.NUMBER, lexeme, new Range(start, end)));
     }
 
-    private static int digitsFrom(String rest, int index) {
+    private static int digitsFrom(CharSequence rest, int index) {
         int current = index;
         while (current < rest.length() && Character.isDigit(rest.charAt(current))) {
             current = current + 1;
@@ -31,7 +31,7 @@ public final class NumberTokenConstructor implements TokenConstructor {
         return current;
     }
 
-    private static boolean hasDecimalPartAt(String rest, int index) {
+    private static boolean hasDecimalPartAt(CharSequence rest, int index) {
         boolean decimalPoint = index < rest.length() && rest.charAt(index) == '.';
         boolean followedByDigit =
                 index + 1 < rest.length() && Character.isDigit(rest.charAt(index + 1));

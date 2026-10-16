@@ -37,7 +37,12 @@ public final class ConfigurationReader {
                                         new IllegalArgumentException(
                                                 "Formato de configuración no soportado: "
                                                         + format));
-        return new RulesConfiguration(readWith(mapper, source, format));
+        Map<String, Object> values = readWith(mapper, source, format);
+        if (values == null || values.values().stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException(
+                    "La configuración debe ser un objeto con valores no nulos");
+        }
+        return new RulesConfiguration(values);
     }
 
     private static Map<String, Object> readWith(

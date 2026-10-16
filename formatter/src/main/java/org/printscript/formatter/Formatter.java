@@ -38,10 +38,19 @@ public final class Formatter implements Iterator<Result<String>> {
             previous = token;
             return new Failure<>("Símbolo no reconocido: '" + token.value() + "'", token.range());
         }
-        String piece = space(token) + lexemeOf(token);
+        Result<String> result = formatToken(token);
         gaps.advancePast(previous, token);
         previous = token;
-        return new Success<>(piece);
+        return result;
+    }
+
+    private Result<String> formatToken(Token token) {
+        try {
+            return new Success<>(space(token) + lexemeOf(token));
+        } catch (ArithmeticException exception) {
+            return new Failure<>(
+                    "El espaciado configurado excede el tamaño admitido", token.range());
+        }
     }
 
     // el lexer guarda el contenido del string sin las comillas, porque es lo que el

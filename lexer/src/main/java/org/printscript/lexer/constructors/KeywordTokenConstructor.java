@@ -8,7 +8,7 @@ import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 
 // reconoce palabras y decide su categoría según la tabla que le pasan
-public final class KeywordTokenConstructor implements TokenConstructor {
+public final class KeywordTokenConstructor extends TextTokenConstructor {
 
     private final Map<String, TokenType> keywords;
 
@@ -17,7 +17,7 @@ public final class KeywordTokenConstructor implements TokenConstructor {
     }
 
     @Override
-    public Optional<Token> tryBuild(String rest, Position start) {
+    public Optional<Token> tryBuild(CharSequence rest, Position start) {
         if (rest.isEmpty() || !startsWord(rest.charAt(0))) {
             return Optional.empty();
         }
@@ -25,7 +25,7 @@ public final class KeywordTokenConstructor implements TokenConstructor {
         while (length < rest.length() && continuesWord(rest.charAt(length))) {
             length = length + 1;
         }
-        String word = rest.substring(0, length);
+        String word = rest.subSequence(0, length).toString();
         TokenType type = keywords.getOrDefault(word, TokenType.IDENTIFIER);
         Position end = new Position(start.line(), start.column() + length - 1);
         return Optional.of(new Token(type, word, new Range(start, end)));

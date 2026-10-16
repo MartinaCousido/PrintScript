@@ -95,3 +95,12 @@ export GITHUB_TOKEN=token_con_write_packages
 
 El script no publica si falla `build`, cobertura o el TCK. La versión debe ser nueva: GitHub
 Packages no es Maven Local y la operación sí escribe en un servicio remoto.
+
+El job de validación usa las herramientas del SHA del workflow y los adapters del SHA
+publicado en checkouts separados. Esto permite verificar un CI anterior que termine
+después de actualizar CD. `PRINTSCRIPT_TCK_IMPLEMENTATION_SOURCE` selecciona el directorio
+de adapters; en ejecución local el default sigue siendo `tck/implementation`.
+
+El adapter conserva una reserva de 4 KiB para poder reportar el OOM esperado del colector.
+La libera antes de llamar al handler y usa `Reference.reachabilityFence` para conservarla
+durante ejecución. Las pruebas y el heap de 5 MB no se modifican por esta reserva.
