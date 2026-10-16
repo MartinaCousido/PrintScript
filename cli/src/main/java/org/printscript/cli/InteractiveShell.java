@@ -224,8 +224,15 @@ final class InteractiveShell {
             return;
         }
         List<String> parts = ShellArguments.tokenize(argument);
-        if (parts.isEmpty() || parts.size() > SOURCE_AND_CONFIG_PARTS) {
+        if (parts.isEmpty()) {
             err.println("Argumentos inválidos. Uso: " + uso);
+            return;
+        }
+        if (parts.size() > SOURCE_AND_CONFIG_PARTS) {
+            err.println(
+                    "Demasiados argumentos. Uso: "
+                            + uso
+                            + ". Usá comillas para las rutas con espacios.");
             return;
         }
         Path source = navigator.resolve(parts.getFirst());
@@ -249,6 +256,8 @@ final class InteractiveShell {
         out.println();
         printFileCommands();
         printConfigNote();
+        out.println("    Rutas con espacios: format \"mi programa.ps\" \"mis reglas.json\"");
+        out.println();
         printNavigationCommands();
         printSessionCommands();
     }
@@ -259,7 +268,8 @@ final class InteractiveShell {
         helpLine(
                 "save <archivo>",
                 "Como run, y además guarda la salida en <fuente>.out.txt junto al .ps");
-        helpLine("validate <archivo>", "Valida la sintaxis sin ejecutar el programa");
+        helpLine(
+                "validate <archivo>", "Valida la sintaxis y la semántica sin ejecutar el programa");
         helpLine("format <archivo> [config]", "Formatea el archivo e imprime el resultado");
         helpLine("analyze <archivo> [config]", "Lintea el archivo y reporta las violaciones");
         out.println();
@@ -269,8 +279,8 @@ final class InteractiveShell {
         out.println(
                 "    Usá comillas para rutas con espacios: format \"mi fuente.ps\" \"mis reglas.yaml\"");
         out.println("    [config] es un archivo de reglas .json/.yaml/.yml (opcional):");
-        out.println("      · format sin [config]  → reglas por defecto (sin espaciado extra)");
-        out.println("      · analyze sin [config] → ninguna regla activa (no reporta nada)");
+        out.println("      · format sin [config]  → no aplica reglas de formato; muestra un aviso");
+        out.println("      · analyze sin [config] → solo revisa sintaxis; muestra un aviso");
         out.println("      · alias: exec=execution, format=fmt=formatting, analyze=lint=analyzing");
         out.println();
     }
@@ -285,6 +295,7 @@ final class InteractiveShell {
 
     private void printSessionCommands() {
         out.println("  Sesión");
+        helpLine("version [1.0|1.1]", "Muestra o cambia la versión del lenguaje (inicial: 1.0)");
         helpLine("help|?", "Muestra esta ayuda");
         helpLine("exit|quit", "Sale de la interfaz (también con Ctrl-D)");
     }

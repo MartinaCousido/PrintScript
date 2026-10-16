@@ -11,8 +11,8 @@ import org.printscript.common.Version;
 import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.runner.FormattingRunner;
 
-// Orquesta la operación de formateo para cli: carga las reglas del --config (o usa las
-// de por defecto), corre el FormattingRunner y escribe el código formateado a un
+// Orquesta la operación de formateo para cli: carga las reglas del --config,
+// corre el FormattingRunner y escribe el código formateado a un
 // archivo (--output) o por consola.
 final class Formatting {
 
@@ -36,6 +36,9 @@ final class Formatting {
             err.println("No se pudo leer la configuración: " + e.getMessage());
             return ExitCode.USAGE_ERROR;
         }
+        if (configuration.equals(FormatterConfiguration.none())) {
+            err.println("Aviso: no hay reglas de formato activas. Usá --config para activarlas.");
+        }
         return SourceFileProcessor.read(
                 sourceFile,
                 lines -> format(lines, configuration, outputFile, console, err, version),
@@ -52,7 +55,7 @@ final class Formatting {
         if (outputFile == null) {
             return formatToConsole(lines, configuration, console, err, version);
         }
-        return formatToFile(lines, configuration, outputFile, console, err, version);
+        return formatToFile(lines, configuration, outputFile, err, version);
     }
 
     private static ExitCode formatToConsole(
@@ -78,7 +81,6 @@ final class Formatting {
             Iterator<String> lines,
             FormatterConfiguration configuration,
             Path outputFile,
-            PrintStream console,
             PrintStream err,
             Version version) {
         ExitCode result =
@@ -95,7 +97,7 @@ final class Formatting {
                                                         version,
                                                         new FailureReporter(err)::report)));
         if (result == ExitCode.SUCCESS) {
-            console.println("Código formateado guardado en " + outputFile);
+            err.println("Código formateado guardado en " + outputFile);
         }
         return result;
     }

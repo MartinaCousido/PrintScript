@@ -56,7 +56,7 @@ tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
     violationRules {
         rule {
             // El piso está por debajo de la cobertura real para que avise cuando
-            // baja, no para que moleste. Coverage mide qué líneas se ejecutaron,
+            // baja, no para que moleste. Coverage mide qué instrucciones se ejecutaron,
             // no si se verificó algo: es un piso, nunca un objetivo.
             limit {
                 counter = "INSTRUCTION"

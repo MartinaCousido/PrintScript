@@ -97,7 +97,7 @@ class InteractiveShellTest {
         Path saved = dir.resolve("hola.out.txt");
         assertTrue(Files.exists(saved), "crea hola.out.txt junto al fuente");
         assertTrue(Files.readString(saved, StandardCharsets.UTF_8).contains("hola"));
-        assertTrue(result.out().contains("Salida guardada en"), "avisa dónde guardó");
+        assertTrue(result.err().contains("Salida guardada en"), "avisa dónde guardó");
     }
 
     @Test
@@ -165,19 +165,55 @@ class InteractiveShellTest {
     }
 
     @Test
-    void quotedPathsAndTabSeparatedCommandsWorkInTheRepl(@TempDir Path dir) throws IOException {
-        writeFile(dir.resolve("mi fuente.ps"), "let a:number=12;");
-        writeFile(dir.resolve("mis reglas.json"), "{\"enforce-spacing-around-equals\":true}");
-        Output result = run(dir, "format\t\"mi fuente.ps\" \"mis reglas.json\"\nexit\n");
-        assertTrue(result.out().contains("a:number = 12"), result.out());
-        assertFalse(result.err().contains("No se pudo"), result.err());
+    void acceptsQuotedSourceAndConfigPathsWithSpaces(@TempDir Path dir) throws IOException {
+        writeFile(dir.resolve("mi programa.ps"), "let last_name:number=12;\n");
+        writeFile(
+                dir.resolve("mis reglas.json"),
+                "{ \"enforce-spacing-after-colon-in-declaration\": true,"
+                        + " \"identifier_format\": \"camel case\" }");
+
+        Output result =
+                run(
+                        dir,
+                        "format \"mi programa.ps\" \"mis reglas.json\"\n"
+                                + "analyze 'mi programa.ps' 'mis reglas.json'\nexit\n");
+
+        assertTrue(result.out().contains("let last_name: number=12;"), result.out());
+        assertTrue(result.err().contains("lint:"), result.err());
+        assertFalse(result.err().contains("no existe"), result.err());
     }
 
     @Test
-    void malformedQuotesAreReportedAndTheSessionContinues(@TempDir Path dir) {
-        Output result = run(dir, "run \"sin cerrar\npwd\nexit\n");
-        assertTrue(result.err().contains("Comillas sin cerrar"));
-        assertTrue(result.out().contains(dir.toString()));
-        assertEquals(0, result.exitCode());
+    void handlesQuotedNavigationAndExecutionAndTabSeparators(@TempDir Path dir) throws IOException {
+        Path folder = Files.createDirectory(dir.resolve("mis programas"));
+        writeFile(folder.resolve("mi programa.ps"), "println(\"hola\");\n");
+
+        Output result = run(dir, "cd \"mis programas\"\nexec\t\"mi programa.ps\"\nls '.'\nexit\n");
+
+        assertTrue(result.out().contains("hola"), result.out());
+        assertTrue(result.out().contains("mi programa.ps"), result.out());
+    }
+
+    @Test
+    void rejectsMalformedQuotesAndExtraArgumentsWithoutEndingSession(@TempDir Path dir) {
+        Output result =
+                run(
+                        dir,
+                        "format \"sin cerrar\nformat a.ps b.json extra\n"
+                                + "exec \"a.ps\" \"b.ps\"\npwd\nexit\n");
+
+        assertTrue(result.err().contains("Comillas sin cerrar"), result.err());
+        assertTrue(result.err().contains("Demasiados argumentos"), result.err());
+        assertTrue(result.err().contains("una sola ruta"), result.err());
+        assertTrue(result.out().contains(dir.toString()), result.out());
+    }
+
+    @Test
+    void helpExplainsLanguageVersionAndInactiveRules(@TempDir Path dir) {
+        Output result = run(dir, "help\nexit\n");
+
+        assertTrue(result.out().contains("version [1.0|1.1]"), result.out());
+        assertTrue(result.out().contains("sintaxis y la semántica"), result.out());
+        assertTrue(result.out().contains("solo revisa sintaxis"), result.out());
     }
 }

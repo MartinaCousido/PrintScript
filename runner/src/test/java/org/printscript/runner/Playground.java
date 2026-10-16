@@ -5,6 +5,7 @@ import org.printscript.common.Failure;
 import org.printscript.runtime.OutputPrinter;
 
 // es un main con un programa hardcodeado para probar a mano
+@SuppressWarnings("PMD.SystemPrintln")
 public final class Playground {
 
     private Playground() {}
