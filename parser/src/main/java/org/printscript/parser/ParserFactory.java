@@ -10,7 +10,7 @@ import org.printscript.ast.ReadInput;
 import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Version;
 
-// acá vive todo lo que el parser sabe de cada versión del lenguaje: qué sentencias
+// acá vive lo que el parser sabe de cada versión del lenguaje: qué sentencias
 // existen y dónde termina una sentencia. El motor recibe las dos cosas como datos.
 public final class ParserFactory {
 
@@ -30,11 +30,6 @@ public final class ParserFactory {
                         new PrintlnParser(expressionBuilder));
         return switch (version) {
             case V10 -> common;
-            // el if se pasa la lista como Supplier porque se contiene a sí mismo: es uno
-            // de los parsers que puede aparecer adentro de su propio cuerpo. La lista se
-            // arma una sola vez y el Supplier devuelve siempre esa misma instancia; si en
-            // cambio recomputara statementParsers(V11), cada sentencia de cada bloque
-            // reconstruiría todo el grafo de parsers.
             case V11 -> {
                 AtomicReference<List<StatementParser>> self = new AtomicReference<>();
                 List<StatementParser> all =

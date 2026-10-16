@@ -5,10 +5,6 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import org.printscript.token.Token;
 
-// el criterio de PrintScript 1.1, que agrega bloques entre llaves
-// la sentencia termina cuando aparece un ';' en profundidad 0, o cuando una '}' devuelve
-// la profundidad de 1 a 0. Un programa sin llaves nunca sale de profundidad 0, así que
-// para 1.0 se comporta igual que SemicolonDelimiter.
 public final class BlockAwareDelimiter implements StatementDelimiter {
 
     @Override
@@ -25,8 +21,6 @@ public final class BlockAwareDelimiter implements StatementDelimiter {
             return false;
         }
         if (depth == 0) {
-            // una llave suelta: se corta acá para que el parser la reporte como
-            // sentencia irreconocible en vez de tragarse el resto del archivo
             return true;
         }
         // solo acá se consulta el token siguiente, que cuesta una línea más de fuente:

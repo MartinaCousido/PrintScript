@@ -9,7 +9,7 @@ import org.printscript.common.Success;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
 
-// Consultas sobre la categoría y el texto de un token.
+// preguntas cortas que se repiten mucho, "este token es la palabra let?" "es un ;?"
 final class Tokens {
 
     private Tokens() {}

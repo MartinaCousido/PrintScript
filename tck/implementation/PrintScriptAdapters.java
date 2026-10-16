@@ -14,7 +14,7 @@ import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.common.Version;
 import org.printscript.runtime.OutputPrinter;
-
+// traduce el vocabulario que habla el tck y el vocabulario de printscript
 // Las piezas que comparten los tres adaptadores.
 //
 // Cada uno traduce entre dos vocabularios: el del TCK (InputStream, String de version,

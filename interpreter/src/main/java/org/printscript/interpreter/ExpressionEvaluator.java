@@ -19,6 +19,7 @@ import org.printscript.common.Success;
 import org.printscript.runtime.RuntimePorts;
 
 // calcula cuánto vale una expresión, recorriendo su árbol
+// calcula valores
 public final class ExpressionEvaluator extends ExpressionOnlyVisitor<Result<Object>> {
 
     private final Environment environment;
