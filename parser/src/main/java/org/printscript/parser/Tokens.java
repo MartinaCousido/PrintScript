@@ -8,11 +8,11 @@ import org.printscript.common.Result;
 import org.printscript.common.Success;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
-//preguntas cortas que se repiten mucho, "este token es la palabra let?" "es un ;?
+
+// preguntas cortas que se repiten mucho, "este token es la palabra let?" "es un ;?"
 final class Tokens {
 
-    private Tokens() {
-    }
+    private Tokens() {}
 
     static boolean isKeyword(Token token, String text) {
         return token.type() == TokenType.KEYWORD && text.equals(token.value());
@@ -26,7 +26,8 @@ final class Tokens {
         return token.type() == TokenType.OPERATOR && text.equals(token.value());
     }
 
-    static Result<Token> expect(TokenBuffer tokens, Predicate<Token> shape, String message, Range fallback) {
+    static Result<Token> expect(
+            TokenBuffer tokens, Predicate<Token> shape, String message, Range fallback) {
         Optional<Token> next = tokens.lookahead(0);
         if (next.isEmpty()) {
             return new Failure<>(message, fallback);

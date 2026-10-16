@@ -258,19 +258,29 @@ descargarlo en cada corrida.
 
 ## Entrega continua
 
-El CI verifica; el CD entrega, y entregar es una decisión explícita. El workflow de
-[`.github/workflows/cd.yml`](.github/workflows/cd.yml) corre **solo cuando se tagea una
-versión**:
+El [CD](.github/workflows/cd.yml) publica después de cada CI exitoso de un push a
+`master` o `main`, incluidos los merges de PR. Usa el SHA exacto validado y una versión
+`0.2.0-main.<run-id>.<attempt>` que permite reintentos sin sobrescribir paquetes.
+Los PR ejecutan CI y TCK local, pero no publican.
+
+Después de publicar, otro job en un runner nuevo descarga esa versión de GitHub Packages
+y ejecuta los 59 tests del TCK. No usa Maven Local ni el cache Gradle de publicación.
+Los tests se conservan; la configuración de Java 25 y heap se explica en [tck/README.md](tck/README.md).
+
+No requiere un fork personal ni secrets manuales: cada job usa el `GITHUB_TOKEN`
+automático con sus permisos de lectura o publicación. Los paquetes deben estar asociados
+a este repositorio y permitir el acceso de sus workflows; un error de permisos falla el CD.
+
+Los tags `v*` también verifican y publican una versión estable. El Release de la CLI se
+crea únicamente después de que pase la validación de los paquetes publicados:
 
 ```sh
 git tag v0.2.0
 git push origin v0.2.0
 ```
 
-El tag es la única fuente del número de versión: se le saca la `v` y se pasa como
-`-PprintscriptVersion`, así el jar publicado, el zip de la CLI y el tag dicen siempre lo
-mismo. Antes de publicar corre `./gradlew build` completo: un tag sobre un commit roto
-falla ahí y no queda publicado a medias.
+Un tag identifica una versión inmutable: si una publicación estable queda incompleta,
+se debe resolver esa publicación antes de reintentar el mismo tag.
 
 Publica dos cosas:
 
@@ -280,7 +290,7 @@ Publica dos cosas:
 
   ```kotlin
   repositories {
-      maven("https://maven.pkg.github.com/ingsis-ua/ingsis-interpreter")
+      maven("https://maven.pkg.github.com/MartinaCousido/PrintScript")
   }
   dependencies {
       implementation("org.printscript:runner:0.2.0")
@@ -380,7 +390,52 @@ Dentro del REPL, las rutas son relativas al directorio que muestra `pwd`.
 |---|---|
 | `./tck/run-official-tck.sh 0.2.0-SNAPSHOT` | Publica los módulos en Maven Local, clona el TCK de la cátedra en un commit fijo y corre sus 59 casos. En macOS con chip Apple da 58/59 (ver [`tck/README.md`](tck/README.md)) |
 | `./gradlew publish -PprintscriptVersion=<versión>` | Publica los 13 módulos en GitHub Packages. Necesita credenciales (`GITHUB_ACTOR` y `GITHUB_TOKEN`, o `gpr.user` y `gpr.key` en `~/.gradle/gradle.properties`) y una versión que no exista |
-| `GITHUB_ACTOR=<usuario> GITHUB_TOKEN=<token> ./scripts/publish-working-tree.sh <versión>` | Corre el build, la cobertura y el TCK, y solo si pasan publica el working tree, incluidos los cambios sin commitear |
+| `GITHUB_ACTOR=<usuario> GITHUB_TOKEN=<token> ./scripts/publish-working-tree.sh <versión>` | Corre el build, la cobertura y el TCK, y solo si pasan publica el working tree, incluidos los cambios sin commitear. En macOS con chip Apple se corta en el TCK y no publica: ahí conviene el paso a paso de abajo |
+
+### Publicar desde local en GitHub Packages, paso a paso
+
+Sube los 13 módulos desde la máquina propia, sin pasar por el CI. Usa la
+[GitHub CLI](https://cli.github.com) para obtener el token.
+
+**Una sola vez**, darle a la sesión de `gh` el permiso para publicar paquetes. Abre el
+navegador y pide pegar un código de un solo uso que aparece en la terminal:
+
+```bash
+gh auth refresh -s write:packages,read:packages
+gh auth status    # en "Token scopes" tienen que figurar write:packages y read:packages
+```
+
+**Cada vez que se publica**, en la misma terminal:
+
+```bash
+# 1. Cargar las credenciales que lee el build (solo valen en esta terminal)
+unset GITHUB_TOKEN    # gh auth token devuelve esta variable si ya existe, aunque esté mal
+export GITHUB_ACTOR=MartinaCousido
+export GITHUB_TOKEN=$(gh auth token)
+
+# 2. Verificar que quedaron bien cargadas
+echo $GITHUB_ACTOR            # tiene que mostrar el usuario
+echo ${GITHUB_TOKEN:0:4}      # tiene que mostrar gho_
+echo ${#GITHUB_TOKEN}         # alrededor de 40 caracteres
+
+# 3. Verificar que el código está sano: se publica lo que hay en la carpeta
+./gradlew build
+
+# 4. Publicar con una versión nueva
+./gradlew publish -PprintscriptVersion=0.2.0-local.martina.2
+
+# 5. Si quedó algún módulo sin publicar, publicarlo solo con la misma versión
+./gradlew :cli:publish -PprintscriptVersion=0.2.0-local.martina.2
+```
+
+Para comprobarlo, en GitHub: repositorio → **Packages** → cada `org.printscript.*` tiene
+que listar la versión publicada.
+
+| Si aparece… | Qué significa | Qué hacer |
+|---|---|---|
+| `401 Unauthorized` | Gradle no recibió un token válido | Repetir el paso 1 en la terminal donde se publica, y verificar con el paso 2 |
+| `409 Conflict` | Esa versión ya existe en algún módulo; GitHub no deja reemplazarla | Usar otra versión: `.3`, `.4`… |
+| Algunos módulos con la versión y otros no | El `publish` se interrumpió antes de terminar | No cortarlo hasta `BUILD SUCCESSFUL`, y publicar los que falten con el paso 5 |
 
 ### CI y mantenimiento
 

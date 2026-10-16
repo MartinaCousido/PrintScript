@@ -1,24 +1,31 @@
 name: CD
 
-# El CI verifica cada push y cada PR; el CD entrega, y entregar es una decisión
-# explícita: corre solo cuando alguien tagea una versión.
-#
-#   git tag v0.2.0 && git push origin v0.2.0
-#
-# El tag es la única fuente del número de versión: se le saca la "v" y se pasa como
-# -PprintscriptVersion, que es lo que leen el convention plugin y el build raíz. Así
-# el .jar publicado, el zip de la CLI y el tag dicen siempre lo mismo.
+# Publica el commit exacto que pasó CI después de cada push o merge a main/master.
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main, master]
   push:
     tags: ['v*']
 
 permissions:
-  contents: write # crear el GitHub Release
-  packages: write # publicar en GitHub Packages
+  contents: read
 
 jobs:
   publicar:
-    name: Publicar la versión del tag
+    name: Publicar los paquetes
+    permissions:
+      contents: read
+      packages: write
+    if: >-
+      ${{ github.event_name == 'push' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.event == 'push' &&
+           github.event.workflow_run.head_repository.full_name == github.repository) }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      commit: ${{ steps.commit.outputs.commit }}
     runs-on: ubuntu-latest
 
     steps:
@@ -27,6 +34,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
+
+      - name: Registrar el commit publicado
+        id: commit
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Instalar el JDK del toolchain declarado
         uses: actions/setup-java@v5
@@ -37,8 +49,18 @@ jobs:
       - name: Preparar Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Derivar la versión del tag
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - name: Derivar la versión
+        id: version
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == workflow_run ]]; then
+            version="0.2.0-main.${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[[:alnum:].]+)?$ ]]
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       # No se publica nada que no pase los mismos chequeos que el CI. Un tag sobre un
       # commit roto tiene que fallar acá y no quedar publicado a medias.
@@ -48,9 +70,6 @@ jobs:
       - name: Ejecutar el TCK oficial antes de publicar
         run: ./tck/run-official-tck.sh "$VERSION"
 
-      - name: Armar la distribución de la CLI
-        run: ./gradlew :cli:distZip :cli:distTar -PprintscriptVersion=$VERSION --no-daemon
-
       # Los trece módulos, cada uno con su jar, su jar de fuentes y su POM con las
       # dependencias entre módulos ya resueltas.
       - name: Publicar los módulos en GitHub Packages
@@ -59,6 +78,57 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  validar-publicacion:
+    name: TCK contra GitHub Packages en un runner nuevo
+    needs: publicar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.publicar.outputs.commit }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-disabled: true
+      - name: Validar la versión descargada del registro
+        env:
+          VERSION: ${{ needs.publicar.outputs.version }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./tck/run-official-tck.sh "$VERSION" --published
+      - name: Guardar el resultado del TCK
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: tck-paquetes-publicados
+          path: build/official-tck/build/reports/tests/test
+
+  release:
+    name: Crear Release de la CLI validada
+    if: github.event_name == 'push'
+    needs: [publicar, validar-publicacion]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.publicar.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.publicar.outputs.commit }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Armar la distribución
+        run: ./gradlew :cli:distZip :cli:distTar -PprintscriptVersion="$VERSION" --no-daemon
       - name: Publicar el Release con el ejecutable
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -84,7 +154,7 @@ jobs:
 
           ```kotlin
           repositories {
-              maven("https://maven.pkg.github.com/ingsis-ua/ingsis-interpreter")
+              maven("https://maven.pkg.github.com/MartinaCousido/PrintScript")
           }
           dependencies {
               implementation("org.printscript:runner:__VERSION__")

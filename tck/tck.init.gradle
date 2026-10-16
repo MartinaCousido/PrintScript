@@ -1,5 +1,6 @@
 // Adaptación reproducible del TCK oficial a los artefactos de este repository.
 // Se aplica con Gradle 9.5 desde tck/run-official-tck.sh; no modifica el clon del TCK.
+def published = System.getenv('PRINTSCRIPT_TCK_SOURCE_MODE') == '--published'
 def implementationVersion = System.getenv('PRINTSCRIPT_TCK_VERSION')
 if (!implementationVersion) {
     throw new GradleException('PRINTSCRIPT_TCK_VERSION no está definido')
@@ -8,7 +9,22 @@ if (!implementationVersion) {
 allprojects {
     plugins.withId('java') {
         repositories {
-            mavenLocal()
+            if (published) {
+                exclusiveContent {
+                    forRepository {
+                        maven {
+                            url = uri('https://maven.pkg.github.com/MartinaCousido/PrintScript')
+                            credentials {
+                                username = System.getenv('GITHUB_ACTOR')
+                                password = System.getenv('GITHUB_TOKEN')
+                            }
+                        }
+                    }
+                    filter { includeGroup('org.printscript') }
+                }
+            } else {
+                mavenLocal()
+            }
             mavenCentral()
         }
 
@@ -24,10 +40,19 @@ allprojects {
     }
 
     afterEvaluate {
+        if (published) {
+            repositories.removeAll { it.name == 'MavenLocal' }
+        }
         java.toolchain.languageVersion = JavaLanguageVersion.of(25)
         tasks.withType(Test).configureEach {
             // El TCK prueba streaming: el collector debe agotar memoria, pero el counter no.
             // Con JDK 25, 5 MB conserva exactamente esa frontera; con 7 MB el collector entra.
+            //
+            // Vale para el CI, que corre en Linux x86_64. En macOS/aarch64 el JVM tiene un
+            // piso de 8 MB e ignora cualquier -Xmx menor (medido: 2m, 4m, 5m y 7m dan todos
+            // 8 MB), así que ahí el collector nunca se queda sin memoria y testWithCollector
+            // falla en local aunque el resultado oficial sea 59/59. No es un problema de la
+            // implementación: bajarle más el heap no cambia nada.
             minHeapSize = '5m'
             maxHeapSize = '5m'
         }

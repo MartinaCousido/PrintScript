@@ -6,6 +6,7 @@ import org.printscript.common.Result;
 import org.printscript.common.Success;
 
 // lleva un valor al tipo con el que se declaró la variable
+// convierte cualquier string al tipo con el que se declaró la variable
 final class Conversions {
 
     private Conversions() {}

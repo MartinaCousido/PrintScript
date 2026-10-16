@@ -6,6 +6,7 @@ import java.util.NoSuchElementException;
 import org.printscript.token.Token;
 
 // convierte una lista de tokens común en el mismo Iterator
+// que es lo que necesita el TokenBuffer para funcionar
 final class ListTokenIterator implements Iterator<Token> {
 
     private final List<Token> tokens;
