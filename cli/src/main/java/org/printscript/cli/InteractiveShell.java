@@ -176,9 +176,11 @@ final class InteractiveShell {
         withSourceFile(
                 argument,
                 path ->
-                        SourceFileProcessor.process(
+                        SourceFileProcessor.processStreaming(
                                 path,
-                                lines -> new ValidationRunner().validate(lines, version.domain()),
+                                (lines, report) ->
+                                        new ValidationRunner()
+                                                .validate(lines, version.domain(), report),
                                 err));
     }
 

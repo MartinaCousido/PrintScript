@@ -241,3 +241,34 @@ archivo — sin releer el archivo para calcularlo. La salida real del programa
 ejecutado va exclusivamente por `stdout`, así que redirigir la salida
 (`printscript execution archivo.ps > salida.txt`) captura solo lo que el programa
 imprime, nunca el progreso ni los mensajes de error.
+
+## Protección de archivos de salida
+
+`execution` y `formatting` rechazan una salida que sea el mismo archivo fuente,
+incluso por un alias o enlace. La salida se escribe en un temporal junto al destino;
+el destino se reemplaza solo si la operación y el cierre del writer terminan bien.
+Si hay errores del fuente o de E/S, se conserva el destino anterior y se elimina el
+temporal. La salida por consola durante ejecución sigue siendo inmediata y puede
+mostrar mensajes anteriores a un error.
+
+El reemplazo usa un movimiento atómico cuando el filesystem lo permite; en otros
+filesystems usa el movimiento estándar. Reemplaza la entrada del destino, por lo que
+un enlace de salida distinto del fuente se reemplaza por el archivo generado.
+
+## Rutas y diagnósticos del REPL
+
+Se aceptan comillas simples/dobles y escapes de comillas/backslashes:
+
+```text
+format "mi fuente.ps" "mis reglas.yaml"
+run 'mi fuente.ps'
+cd "directorio con espacios"
+```
+
+Los comandos de una sola ruta conservan rutas sin comillas con espacios. Para
+source/config se usan dos argumentos, entre comillas si contienen espacios.
+Comillas sin cerrar y argumentos sobrantes producen diagnóstico y permiten seguir
+la sesión. CLI y TCK entregan diagnósticos por sentencia, sin retener un reporte
+completo; en análisis se imprimen en orden de sentencias (errores y violaciones
+pueden intercalarse). Las reglas conocidas de tipo incorrecto se rechazan; el
+lookup genérico de RulesConfiguration sigue siendo permisivo para otros clientes.

@@ -58,18 +58,16 @@ flowchart TD
 
     token --> common
     ast --> common
-    config --> common
-    runtimeapi --> common
 ```
 
-> Las aristas hacia `common` desde los seis motores, `runner` y `cli` se omiten por legibilidad: **todos dependen de `common`**.
+> Las aristas hacia `common` desde los seis motores, `runner` y `cli` se omiten por legibilidad: **todos ellos dependen de `common`**; `runtime-api` y `configuration` no dependen de otros módulos del proyecto.
 
 Cinco cosas para leer en ese grafo:
 
 - **Los seis motores no se conocen entre sí.** No hay ninguna flecha horizontal. Consumen vocabulario, nunca el módulo de al lado. El `linter` no conoce al `parser`: recibe el flujo de sentencias ya armado. El `formatter` va un paso más atrás y consume tokens, no el árbol.
 - **`semantic` está entre el parser y el interpreter**, y es lo que hace que el modo Validation de la consigna valide de verdad la semántica y no solo la sintaxis. Depende de `ast` y no de `parser`: consume el vocabulario, no la gramática.
 - **`runtime-api` es un módulo de puertos**: `OutputPrinter`, `InputProvider` y `EnvProvider`, más el `RuntimePorts` que los junta. No depende de nada: es el único módulo sin una sola dependencia, y eso es lo que permite que `cli` e `interpreter` lo implementen y lo consuman sin conocerse.
-- **Nadie depende de `interpreter`, `linter` ni `formatter`.** Son hojas: lo que más cambia está arriba de todo, donde romperlo no rompe a nadie.
+- **`runner` depende de `interpreter`, `linter` y `formatter`.** Los motores no se conocen entre sí; las fachadas de `runner` coordinan sus resultados.
 - **`cli` es el único que toca filesystem, `System.out`/`System.err`, `System.getenv` y códigos de salida**, y el único punto de entrada ejecutable (`org.printscript.cli.Cli.main`). No depende de `lexer`, `parser`, `interpreter`, `ast` ni `token`: solo de `runner`, `runtime-api` y `common`.
 
 ---
@@ -85,7 +83,7 @@ Cinco cosas para leer en ese grafo:
 | `lexer` | Cómo se reconoce un token dentro del texto | Cambian las reglas léxicas | `common`, `token` | ✅ |
 | `parser` | La gramática y cómo se construye el árbol | Cambian las reglas sintácticas | `common`, `token`, `ast` | ✅ |
 | `interpreter` | Qué efecto produce cada nodo al ejecutarse | Cambia la semántica de ejecución | `common`, `ast`, `runtime-api` | ✅ |
-| `configuration` | En qué formato vive la configuración (JSON, YAML, mañana TOML) | Aparecen formatos nuevos | `common` | ✅ |
+| `configuration` | En qué formato vive la configuración (JSON, YAML, mañana TOML) | Aparecen formatos nuevos | — | ✅ |
 | `semantic` | Qué programas bien formados tienen sentido | Cambian las reglas de tipos y scope | `common`, `ast` | ✅ |
 | `formatter` | Cómo se ve el código | Cambian las reglas de estilo | `common`, `token`, `configuration` | ✅ |
 | `linter` | Qué convenciones se exigen | Cambian las convenciones | `common`, `ast`, `configuration` | ✅ |
@@ -96,7 +94,7 @@ Cinco cosas para leer en ese grafo:
 
 ## 3. Cómo interactúan: el pipeline en streaming
 
-La consigna exige que un fuente que no entra en memoria se pueda procesar igual, y que no se haga todo el análisis léxico antes de pasar a la etapa siguiente. De ahí sale el mecanismo central: **ninguna etapa produce una colección, todas producen un flujo**.
+La consigna exige que un fuente que no entra en memoria se pueda procesar igual, y que no se haga todo el análisis léxico antes de pasar a la etapa siguiente. De ahí sale el mecanismo central: **las etapas se encadenan por iteradores**. Las fachadas de `runner` ofrecen overloads con consumidores de diagnósticos para procesarlos inmediatamente. Las firmas que devuelven listas se conservan como APIs de conveniencia. CLI y TCK usan los consumidores.
 
 El contrato compartido es el `Iterator<T>` estándar de Java, con `hasNext()` y `next()`. Lo implementan las cinco etapas; lo único que cambia entre ellas es la `T`. No hay una interfaz propia: el contrato de iteración es el de la plataforma. `semantic` no transforma el dato: recibe `Result<Statement>` y devuelve `Result<Statement>`, así que se encadena sin que el parser ni el intérprete sepan que existe.
 
@@ -140,7 +138,7 @@ En cualquier instante de la ejecución:
 - el árbol de esa sentencia,
 - el `Environment` acumulado.
 
-Nunca el programa entero. El único acumulador es el `TokenBuffer`, y su cota es la sentencia más larga.
+El pipeline no retiene el programa entero. El buffer y el árbol retienen la sentencia actual, incluido el bloque completo cuando es un `if`. El estado de variables crece con los símbolos vivos. Los scopes son frames enlazados persistentes; abrir/cerrar cuesta O(1) y escribir en un frame copia un camino AVL O(log n). Las APIs de conveniencia de `runner` retienen listas de diagnósticos; las APIs incrementales usadas por CLI/TCK no las acumulan. Una sentencia o línea arbitrariamente grande sigue requiriendo memoria proporcional a su tamaño.
 
 ### Los errores viajan como dato
 
@@ -168,7 +166,7 @@ Tan importante como las dependencias que existen son las que se evitaron deliber
 
 **`cli` no depende de `interpreter`.** Los puertos que el `cli` implementa viven en `runtime-api`, no dentro del intérprete. Si vivieran ahí, el `cli` tendría que depender del intérprete entero para escribir dos clases de tres líneas, y cualquier cambio interno del `Executor` lo recompilaría.
 
-**Nadie depende de `interpreter`, `formatter` ni `linter`.** Son hojas del grafo, y son justamente los módulos que más cambian.
+**Los motores no dependen entre sí.** `runner` sí depende de ellos para construir el pipeline de cada operación.
 
 ---
 
@@ -241,9 +239,9 @@ El invariante del módulo: **compone, no decide**. No tiene ni una regla del len
 
 **La política con los errores es acumular, no cortar.** Las etapas deliberadamente no la toman, así que la decisión vive acá: la fachada junta los `Failure` que salen del bucle — con su mensaje y su `Range` — y los devuelve como lista al terminar. Un error no detiene la ejecución del resto del programa.
 
-**Trade-off asumido.** Como la ejecución es en una sola pasada, cuando aparece un error las sentencias válidas anteriores ya se ejecutaron y su salida ya salió. Quien necesite atomicidad corre primero la validación.
+**Trade-off asumido.** Como la ejecución es en una sola pasada, cuando aparece un error las sentencias válidas anteriores ya se ejecutaron y su salida ya salió. Validar primero evita efectos por errores estáticos, pero no revierte efectos ni garantiza atomicidad ante errores de ejecución. Los destinos de archivo de CLI solo se reemplazan después de éxito y cierre del writer.
 
-**Comportamiento anotado: imprimir una variable declarada sin valor.** Hoy el valor guardado para una declaración sin inicializador es `null`, y `asText` lo convierte con `String.valueOf`, así que `println` imprime `null`. No es lo que debería pasar en un lenguaje con chequeo de tipos, y `semantic` tampoco lo detecta: hoy acepta una declaración sin inicializador y no marca el uso posterior de esa variable. Queda anotado como pendiente de una regla de "usada antes de asignarse".
+**Comportamiento anotado: imprimir una variable declarada sin valor.** Hoy el valor guardado para una declaración sin inicializador es `null`, y `asText` lo convierte con `String.valueOf`, así que `println` imprime `null`. Es un comportamiento existente fijado por tests: no se redefine el lenguaje durante esta revisión. Introducir análisis de asignación definitiva requeriría cambiar explícitamente ese contrato y los casos de compatibilidad.
 
 ---
 
@@ -251,7 +249,7 @@ El invariante del módulo: **compone, no decide**. No tiene ni una regla del len
 
 Es el único punto de entrada ejecutable del sistema (`org.printscript.cli.Cli.main`) y el único módulo autorizado a tocar filesystem, `System.out`/`System.err` y códigos de salida — el resto son librerías puras. Traduce argumentos con **picocli** a un `RootCommand` con cuatro subcomandos, uno por operación de la consigna: `execution`, `validation`, `formatting` y `analyzing` (con sus alias). A partir de ahí nada depende de picocli salvo las clases de comando mismas.
 
-`ExecutionCommand` y `ValidationCommand` comparten `AbstractSourceFileCommand`, y `AnalyzingCommand` sigue el mismo patrón: todos abren el archivo fuente vía `SourceFileProcessor`, que arma un `Iterator<String>` de líneas con progreso y delega en la operación concreta (`ExecutionRunner`/`ValidationRunner`/`AnalyzingRunner`). Cero lógica de lenguaje en `cli`: solo abre archivos, arma el iterador y reporta lo que el `runner` devuelve.
+`ValidationCommand` usa `AbstractSourceFileCommand`; `ExecutionCommand` delega en `ExecutionOutput` para coordinar consola y guardado opcional. `AnalyzingCommand` sigue el mismo camino de lectura: todos abren el archivo fuente vía `SourceFileProcessor`, que arma un `Iterator<String>` de líneas con progreso y delega en la operación concreta (`ExecutionRunner`/`ValidationRunner`/`AnalyzingRunner`). Cero lógica de lenguaje en `cli`: abre archivos, arma el iterador y reporta diagnósticos incrementales.
 
 **Interfaz interactiva.** Correr `cli` sin argumentos abre `InteractiveShell`, un REPL que mantiene su propio directorio de trabajo para navegar el filesystem (`pwd`/`ls`/`cd`) y correr las operaciones sobre archivos relativos a él. No duplica nada: usa el mismo `SourceFileProcessor` y los mismos runners que los subcomandos, así que el resultado es idéntico al de la forma no interactiva.
 
@@ -281,7 +279,7 @@ Es una etapa más del pipeline: implementa `Iterator<Result<List<Violation>>>` y
 
 ### El recorrido se escribe una sola vez
 
-`IdentifierCollector` es un `ASTVisitor<List<Identifier>>` y es el único lugar donde se baja por el árbol. Las reglas lo usan; no recorren. Cuando el AST gane un nodo, el visitor deja de compilar y avisa dónde hay que decidir.
+`NodeCollector` implementa un recorrido preorder iterativo compartido por `IdentifierCollector`, `PrintlnCollector` y `ReadInputCollector`. Cada collector selecciona su tipo, incluye nodos anidados y acumula sin copiar listas por nivel. Las reglas usan esos collectors. Cuando el AST gane un nodo, el visitor deja de compilar y avisa dónde hay que decidir.
 
 `PrintlnArgumentRule` no recorre nada: mira el hijo inmediato del `println` con un switch exhaustivo sobre `Expression`. La regla está escrita en positivo — solo un identificador o un literal — así que un tipo de expresión nuevo también rompe la compilación en vez de colarse.
 
@@ -294,10 +292,21 @@ Es una etapa más del pipeline: implementa `Iterator<Result<List<Violation>>>` y
 | `identifier_format` | El formato exigido a los identificadores | `camel case` (también `camelCase` y `camel_case`) |
 | `mandatory-variable-or-literal-in-println` | Que `println` reciba solo un identificador o un literal | `true` / `false` |
 
-Una clave ausente deja la regla apagada. Un valor **desconocido** en `identifier_format` rompe con un mensaje que nombra el valor recibido y los soportados, en vez de apagar la regla en silencio.
+Una clave ausente deja la regla apagada. Una clave conocida con tipo incorrecto se rechaza con un diagnóstico; claves de otras operaciones se permiten para compartir configuración. Un valor **desconocido** en `identifier_format` rompe con un mensaje que nombra el valor recibido y los soportados, en vez de apagar la regla en silencio.
 
 **Las dos convenciones de identificador están soportadas.** `camel case` y `snake case`, cada una con su `IdentifierFormatChecker` y su valor en el enum `IdentifierFormat`. La segunda entró para cumplir el TCK, que trae casos de las dos, y no cambió nada de lo que ya estaba escrito: es exactamente la extensión que el diseño preveía.
 
 ### El linter no sabe qué es JSON
 
 Recibe una `LinterConfiguration` tipada. Leer el archivo es trabajo de `configuration`, y traducir esa configuración genérica a la del linter es trabajo de `LinterConfiguration.from`. Así el módulo no arrastra Jackson y sus tests no necesitan un archivo.
+
+## 10. Profundidad y contratos de recorrido
+
+`ExpressionBuilder` usa frames explícitos para grupos, reads y precedencia. `IfParser`
+usa continuaciones explícitas para bloques y else-if. `ExpressionFold` comparte la
+reducción de expresiones entre tipado/evaluación, preservando izquierda-derecha y
+cortocircuito ante Failure. `ScopedStatementVisitor`/`StatementTraversal` comparten
+el recorrido de statements: semantic selecciona ambas ramas; execution selecciona
+solo la tomada. Todos los scopes abiertos se cierran en finally, incluso en errores.
+No hay un límite artificial de anidamiento. Cuatro regresiones activas prueban
+10.000 niveles/operadores; la memoria disponible sigue siendo un límite físico.

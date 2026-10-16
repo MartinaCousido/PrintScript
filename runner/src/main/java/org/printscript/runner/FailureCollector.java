@@ -1,8 +1,7 @@
 package org.printscript.runner;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
+import java.util.function.Consumer;
 import org.printscript.common.Failure;
 import org.printscript.common.Result;
 
@@ -10,13 +9,14 @@ final class FailureCollector {
 
     private FailureCollector() {}
 
-    static List<Failure<?>> collect(Iterator<? extends Result<?>> results) {
-        List<Failure<?>> failures = new ArrayList<>();
+    static boolean consume(Iterator<? extends Result<?>> results, Consumer<Failure<?>> report) {
+        boolean clean = true;
         while (results.hasNext()) {
             if (results.next() instanceof Failure<?> failure) {
-                failures.add(failure);
+                report.accept(failure);
+                clean = false;
             }
         }
-        return failures;
+        return clean;
     }
 }

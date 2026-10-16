@@ -7,8 +7,6 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Iterator;
-import java.util.List;
-import org.printscript.common.Failure;
 import org.printscript.common.Version;
 import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.runner.FormattingRunner;
@@ -65,9 +63,15 @@ final class Formatting {
             Version version) {
         // No se cierra la consola: el resto del proceso sigue usándola.
         Writer destination = new OutputStreamWriter(console, StandardCharsets.UTF_8);
-        List<Failure<?>> failures =
-                new FormattingRunner().format(lines, configuration, destination, version);
-        return finish(failures, err);
+        boolean clean =
+                new FormattingRunner()
+                        .format(
+                                lines,
+                                configuration,
+                                destination,
+                                version,
+                                new FailureReporter(err)::report);
+        return finish(clean);
     }
 
     private static ExitCode formatToFile(
@@ -84,16 +88,19 @@ final class Formatting {
                         destination ->
                                 finish(
                                         new FormattingRunner()
-                                                .format(lines, configuration, destination, version),
-                                        err));
+                                                .format(
+                                                        lines,
+                                                        configuration,
+                                                        destination,
+                                                        version,
+                                                        new FailureReporter(err)::report)));
         if (result == ExitCode.SUCCESS) {
             console.println("Código formateado guardado en " + outputFile);
         }
         return result;
     }
 
-    private static ExitCode finish(List<Failure<?>> failures, PrintStream err) {
-        new FailureReporter(err).report(failures);
-        return failures.isEmpty() ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
+    private static ExitCode finish(boolean clean) {
+        return clean ? ExitCode.SUCCESS : ExitCode.SOURCE_ERRORS;
     }
 }

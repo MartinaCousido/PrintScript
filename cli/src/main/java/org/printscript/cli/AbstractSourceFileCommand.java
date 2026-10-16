@@ -2,8 +2,8 @@ package org.printscript.cli;
 
 import java.nio.file.Path;
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 import org.printscript.common.Failure;
 import org.printscript.common.Version;
 import picocli.CommandLine.Parameters;
@@ -19,12 +19,15 @@ abstract class AbstractSourceFileCommand implements Callable<Integer> {
 
     @ParentCommand private RootCommand root;
 
-    protected abstract List<Failure<?>> execute(Iterator<String> lines, Version version);
+    protected abstract boolean execute(
+            Iterator<String> lines, Version version, Consumer<Failure<?>> report);
 
     @Override
     public final Integer call() {
-        return SourceFileProcessor.process(
-                        sourceFile, lines -> execute(lines, root.language()), System.err)
+        return SourceFileProcessor.processStreaming(
+                        sourceFile,
+                        (lines, report) -> execute(lines, root.language(), report),
+                        System.err)
                 .code();
     }
 }

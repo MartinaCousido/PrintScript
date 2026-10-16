@@ -14,19 +14,17 @@ final class SimpleArgument {
 
     private SimpleArgument() {}
 
-    // Java 21 requires names for type patterns, even when only the type matters.
-    @SuppressWarnings("PMD.UnusedLocalVariable")
     static boolean test(Expression expression) {
         return switch (expression) {
             // un literal booleano es un literal: println(true) es un argumento simple
-            case Identifier identifier -> true;
-            case NumberLiteral number -> true;
-            case StringLiteral string -> true;
-            case BooleanLiteral bool -> true;
+            case Identifier _ -> true;
+            case NumberLiteral _ -> true;
+            case StringLiteral _ -> true;
+            case BooleanLiteral _ -> true;
             // una lectura externa es un llamado, no un identificador ni un literal
-            case ReadInput input -> false;
-            case ReadEnv env -> false;
-            case BinaryExpression binary -> false;
+            case ReadInput _ -> false;
+            case ReadEnv _ -> false;
+            case BinaryExpression _ -> false;
         };
     }
 }
