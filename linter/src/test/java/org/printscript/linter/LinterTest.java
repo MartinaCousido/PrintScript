@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.printscript.ast.Identifier;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -59,7 +60,7 @@ class LinterTest {
 
         @Override
         public List<Violation> check(Statement statement) {
-            return List.of(new Violation(message, statement.range()));
+            return List.of(new Violation("siempre", message, statement.range()));
         }
     }
 
@@ -129,7 +130,10 @@ class LinterTest {
         Range range = new Range(new Position(2, 1), new Position(2, 9));
         Linter linter =
                 new Linter(
-                        new ListStatements(List.of(new Failure<>("falta ';'", range))),
+                        new ListStatements(
+                                List.of(
+                                        new Failure<>(
+                                                ErrorCode.MISSING_SEMICOLON, "falta ';'", range))),
                         List.of(new AlwaysComplains("algo")));
 
         Failure<List<Violation>> failure = failureOf(linter.next());
@@ -143,7 +147,10 @@ class LinterTest {
         Linter linter =
                 new Linter(
                         new ListStatements(
-                                List.of(new Failure<>("roto", ANY), new Success<>(println("x")))),
+                                List.of(
+                                        new Failure<>(
+                                                ErrorCode.UNRECOGNIZED_STATEMENT, "roto", ANY),
+                                        new Success<>(println("x")))),
                         List.of(new AlwaysComplains("algo")));
 
         List<Result<List<Violation>>> results = new ArrayList<>();

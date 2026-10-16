@@ -2,4 +2,5 @@ package org.printscript.linter;
 
 import org.printscript.common.Range;
 
-public record Violation(String message, Range range) {}
+// rule es la clave con la que se configura la regla incumplida
+public record Violation(String rule, String message, Range range) {}

@@ -5,6 +5,7 @@ import org.printscript.ast.Expression;
 import org.printscript.ast.ReadInput;
 import org.printscript.ast.Statement;
 import org.printscript.linter.Violation;
+import org.printscript.linter.config.LinterConfiguration;
 import org.printscript.linter.visitors.ReadInputCollector;
 
 // un identificador o un literal, nunca una expresión armada
@@ -23,6 +24,7 @@ public final class ReadInputArgumentRule implements LintRule {
 
     private static Violation violationFor(Expression argument) {
         return new Violation(
+                LinterConfiguration.READ_INPUT_ARGUMENT_KEY,
                 "readInput solo puede llamarse con un identificador o un literal",
                 argument.range());
     }

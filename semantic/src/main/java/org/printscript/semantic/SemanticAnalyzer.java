@@ -31,7 +31,7 @@ public final class SemanticAnalyzer implements Iterator<Result<Statement>> {
         }
         Result<Void> checked = success.value().accept(checker);
         if (checked instanceof Failure<Void> failure) {
-            return new Failure<>(failure.message(), failure.range());
+            return new Failure<>(failure.code(), failure.message(), failure.range());
         }
         return result;
     }

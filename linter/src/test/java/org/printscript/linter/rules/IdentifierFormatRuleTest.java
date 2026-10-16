@@ -18,6 +18,7 @@ import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.linter.Violation;
+import org.printscript.linter.config.LinterConfiguration;
 import org.printscript.linter.rules.format.CamelCaseChecker;
 
 class IdentifierFormatRuleTest {
@@ -64,7 +65,10 @@ class IdentifierFormatRuleTest {
     void theMessageNamesTheIdentifierAndTheExpectedFormat() {
         Statement declaration = declarationOf(new Identifier(MAL, ANY));
 
-        String message = rule.check(declaration).get(0).message();
+        Violation violation = rule.check(declaration).get(0);
+        String message = violation.message();
+
+        assertEquals(LinterConfiguration.IDENTIFIER_FORMAT_KEY, violation.rule());
 
         assertTrue(message.contains(MAL), message);
         assertTrue(message.contains("camel"), message);

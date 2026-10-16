@@ -11,6 +11,7 @@ import org.printscript.ast.Operator;
 import org.printscript.ast.ReadEnv;
 import org.printscript.ast.ReadInput;
 import org.printscript.ast.StringLiteral;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
@@ -55,7 +56,9 @@ final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
     private static Result<Type> requireString(Type actual, Expression argument, String function) {
         if (actual != Type.STRING) {
             return new Failure<>(
-                    "El argumento de " + function + " tiene que ser string", argument.range());
+                    ErrorCode.INVALID_ARGUMENT_TYPE,
+                    "El argumento de " + function + " tiene que ser string",
+                    argument.range());
         }
         return new Success<>(Type.STRING);
     }
@@ -68,6 +71,7 @@ final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
                 .orElseGet(
                         () ->
                                 new Failure<>(
+                                        ErrorCode.UNDECLARED_VARIABLE,
                                         "Variable no declarada: " + identifier.name(),
                                         identifier.range()));
     }
@@ -113,6 +117,7 @@ final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
     private static Result<Type> arithmeticFailure(
             Operator operator, Type left, Type right, Range range) {
         return new Failure<>(
+                ErrorCode.INVALID_OPERATION,
                 "No se puede aplicar "
                         + operator
                         + " entre "
@@ -124,7 +129,7 @@ final class ExpressionTyper extends ExpressionOnlyVisitor<Result<Type>> {
 
     @Override
     protected Result<Type> notAnExpression(Range range) {
-        return new Failure<>("No es una expresión evaluable", range);
+        return new Failure<>(ErrorCode.UNSUPPORTED_NODE, "No es una expresión evaluable", range);
     }
 
     static Result<Type> typeOf(Expression expression, SymbolTable symbols) {

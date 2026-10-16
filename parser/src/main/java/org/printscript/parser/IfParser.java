@@ -10,6 +10,7 @@ import org.printscript.ast.Block;
 import org.printscript.ast.Expression;
 import org.printscript.ast.IfStatement;
 import org.printscript.ast.Statement;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
@@ -59,7 +60,7 @@ public final class IfParser implements StatementParser {
         }
 
         private void fail(Failure<?> error) {
-            failure = new Failure<>(error.message(), error.range());
+            failure = new Failure<>(error.code(), error.message(), error.range());
         }
 
         private void parseConditional() {
@@ -125,7 +126,11 @@ public final class IfParser implements StatementParser {
             }
             Optional<Token> next = tokens.lookahead(0);
             if (next.isEmpty()) {
-                failure = new Failure<>("Expected '}' to close the block", open.range());
+                failure =
+                        new Failure<>(
+                                ErrorCode.UNCLOSED_BLOCK,
+                                "Expected '}' to close the block",
+                                open.range());
                 return;
             }
             Optional<StatementParser> matching =
@@ -136,7 +141,11 @@ public final class IfParser implements StatementParser {
                 parseInBlock(matching.get(), open, statements);
                 return;
             }
-            failure = new Failure<>("Unrecognized statement", next.get().range());
+            failure =
+                    new Failure<>(
+                            ErrorCode.UNRECOGNIZED_STATEMENT,
+                            "Unrecognized statement",
+                            next.get().range());
         }
 
         private void parseInBlock(StatementParser parser, Token open, List<Statement> statements) {
@@ -169,6 +178,7 @@ public final class IfParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, "("),
+                ErrorCode.EXPECTED_OPENING_PARENTHESIS,
                 "Expected '(' after 'if'",
                 keyword.range());
     }
@@ -177,6 +187,7 @@ public final class IfParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, ")"),
+                ErrorCode.EXPECTED_CLOSING_PARENTHESIS,
                 "Expected ')' after the if condition",
                 condition.range());
     }
@@ -185,6 +196,7 @@ public final class IfParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, "{"),
+                ErrorCode.EXPECTED_OPENING_BRACE,
                 "Expected '{' to open the block",
                 previous);
     }

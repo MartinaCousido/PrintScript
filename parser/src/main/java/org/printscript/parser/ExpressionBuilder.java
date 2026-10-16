@@ -13,6 +13,7 @@ import org.printscript.ast.Operator;
 import org.printscript.ast.ReadEnv;
 import org.printscript.ast.ReadInput;
 import org.printscript.ast.StringLiteral;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
@@ -71,7 +72,8 @@ public final class ExpressionBuilder {
 
         private void operand(ExpressionFrame frame, Optional<Token> next) {
             if (next.isEmpty()) {
-                completed = new Failure<>("Missing operand", frame.anchor);
+                completed =
+                        new Failure<>(ErrorCode.MISSING_OPERAND, "Missing operand", frame.anchor);
                 return;
             }
             Token token = next.get();
@@ -96,7 +98,7 @@ public final class ExpressionBuilder {
             if (read) {
                 Result<Token> opening = openParenthesis(tokens, token);
                 if (opening instanceof Failure<Token> failure) {
-                    completed = new Failure<>(failure.message(), failure.range());
+                    completed = new Failure<>(failure.code(), failure.message(), failure.range());
                     return;
                 }
                 open = ((Success<Token>) opening).value();
@@ -126,11 +128,13 @@ public final class ExpressionBuilder {
                         .map(closing -> read(frame.keyword, expression, closing));
             }
             if (next.isEmpty()) {
-                return new Failure<>("Unclosed parenthesis", frame.open.range());
+                return new Failure<>(
+                        ErrorCode.UNCLOSED_PARENTHESIS, "Unclosed parenthesis", frame.open.range());
             }
             Token closing = next.get();
             if (!Tokens.isPunctuation(closing, ")")) {
-                return new Failure<>("Expected ')'", closing.range());
+                return new Failure<>(
+                        ErrorCode.EXPECTED_CLOSING_PARENTHESIS, "Expected ')'", closing.range());
             }
             tokens.commit(1);
             return new Success<>(
@@ -215,6 +219,7 @@ public final class ExpressionBuilder {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, "("),
+                ErrorCode.EXPECTED_OPENING_PARENTHESIS,
                 "Expected '(' after '" + keyword.value() + "'",
                 keyword.range());
     }
@@ -224,6 +229,7 @@ public final class ExpressionBuilder {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, ")"),
+                ErrorCode.EXPECTED_CLOSING_PARENTHESIS,
                 "Expected ')' after the argument of '" + keyword.value() + "'",
                 argument.range());
     }
@@ -251,12 +257,17 @@ public final class ExpressionBuilder {
             return new Success<>(
                     new NumberLiteral(Double.parseDouble(token.value()), token.range()));
         } catch (NumberFormatException e) {
-            return new Failure<>("Invalid number literal '" + token.value() + "'", token.range());
+            return new Failure<>(
+                    ErrorCode.INVALID_NUMBER_LITERAL,
+                    "Invalid number literal '" + token.value() + "'",
+                    token.range());
         }
     }
 
     private static Result<Expression> unexpectedToken(Token token) {
         return new Failure<>(
-                "Unexpected token '" + token.value() + "' in operand position", token.range());
+                ErrorCode.UNEXPECTED_TOKEN,
+                "Unexpected token '" + token.value() + "' in operand position",
+                token.range());
     }
 }

@@ -3,6 +3,7 @@ package org.printscript.parser;
 import org.printscript.ast.Expression;
 import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
 import org.printscript.token.Token;
@@ -38,6 +39,7 @@ public final class PrintlnParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, "("),
+                ErrorCode.EXPECTED_OPENING_PARENTHESIS,
                 "Expected '(' after 'println'",
                 println.range());
     }
@@ -46,6 +48,7 @@ public final class PrintlnParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, ")"),
+                ErrorCode.EXPECTED_CLOSING_PARENTHESIS,
                 "Expected ')' after the println argument",
                 argument.range());
     }
@@ -54,6 +57,7 @@ public final class PrintlnParser implements StatementParser {
         return Tokens.expect(
                 tokens,
                 token -> Tokens.isPunctuation(token, ";"),
+                ErrorCode.MISSING_SEMICOLON,
                 "Expected ';' at the end of the println statement",
                 close.range());
     }

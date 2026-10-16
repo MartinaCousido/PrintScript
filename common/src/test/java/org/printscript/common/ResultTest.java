@@ -23,7 +23,7 @@ class ResultTest {
     @Test
     void failureCarriesMessageAndRangeAndIsConsumedByPatternMatching() {
         Range range = new Range(new Position(2, 3), new Position(2, 5));
-        Result<Integer> result = new Failure<>("boom", range);
+        Result<Integer> result = new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, "boom", range);
 
         assertEquals("error:boom", describe(result));
     }
@@ -31,7 +31,7 @@ class ResultTest {
     @Test
     void failureExposesMessageAndRangeAsData() {
         Range range = new Range(new Position(2, 3), new Position(2, 5));
-        Failure<Integer> failure = new Failure<>("boom", range);
+        Failure<Integer> failure = new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, "boom", range);
 
         assertEquals("boom", failure.message());
         assertEquals(range, failure.range());
@@ -47,12 +47,24 @@ class ResultTest {
     @Test
     void mapLeavesAFailureUntouchedAndDoesNotRunTheMapping() {
         Range range = new Range(new Position(1, 1), new Position(1, 3));
-        Result<Integer> original = new Failure<>("roto", range);
+        Result<Integer> original = new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, "roto", range);
 
         Result<Integer> result = original.map(value -> value * 2);
 
         assertEquals("error:roto", describe(result));
         assertEquals(range, ((Failure<Integer>) result).range());
+    }
+
+    @Test
+    void chainingAFailureKeepsItsCode() {
+        Range range = new Range(new Position(1, 1), new Position(1, 3));
+        Result<Integer> original = new Failure<>(ErrorCode.MISSING_SEMICOLON, "falta ';'", range);
+
+        Failure<?> mapped = (Failure<?>) original.map(value -> value * 2);
+        Failure<?> chained = (Failure<?>) original.andThen(value -> new Success<>(value + 1));
+
+        assertEquals(ErrorCode.MISSING_SEMICOLON, mapped.code());
+        assertEquals(ErrorCode.MISSING_SEMICOLON, chained.code());
     }
 
     @Test
@@ -68,7 +80,13 @@ class ResultTest {
         Range range = new Range(new Position(4, 2), new Position(4, 6));
 
         Result<Integer> result =
-                new Success<Integer>(20).andThen(value -> new Failure<>("segundo", range));
+                new Success<Integer>(20)
+                        .andThen(
+                                value ->
+                                        new Failure<>(
+                                                ErrorCode.UNRECOGNIZED_STATEMENT,
+                                                "segundo",
+                                                range));
 
         assertEquals("error:segundo", describe(result));
         assertEquals(range, ((Failure<Integer>) result).range());
@@ -77,7 +95,8 @@ class ResultTest {
     @Test
     void andThenShortCircuitsOnFailureWithoutRunningTheNextStep() {
         Range range = new Range(new Position(7, 1), new Position(7, 4));
-        Result<Integer> original = new Failure<>("primero", range);
+        Result<Integer> original =
+                new Failure<>(ErrorCode.UNRECOGNIZED_STATEMENT, "primero", range);
 
         Result<Integer> result =
                 original.andThen(
@@ -97,7 +116,10 @@ class ResultTest {
                 new Success<Integer>(2)
                         .map(value -> value * 10)
                         .andThen(value -> new Success<>(value + 1))
-                        .andThen(value -> new Failure<Integer>("cortado", range))
+                        .andThen(
+                                value ->
+                                        new Failure<Integer>(
+                                                ErrorCode.UNRECOGNIZED_STATEMENT, "cortado", range))
                         .map(value -> value * 100);
 
         assertEquals("error:cortado", describe(result));

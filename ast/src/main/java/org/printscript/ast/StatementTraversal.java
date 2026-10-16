@@ -35,7 +35,7 @@ public final class StatementTraversal {
                 } else if (statement instanceof IfStatement conditional) {
                     Result<List<Statement>> selected = branches.apply(conditional);
                     if (selected instanceof Failure<List<Statement>> failure) {
-                        return new Failure<>(failure.message(), failure.range());
+                        return new Failure<>(failure.code(), failure.message(), failure.range());
                     }
                     enqueue(pending, ((Success<List<Statement>>) selected).value());
                 } else {

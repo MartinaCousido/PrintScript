@@ -17,6 +17,7 @@ import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.Statement;
 import org.printscript.ast.TypeName;
 import org.printscript.ast.VariableDeclaration;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
@@ -116,7 +117,13 @@ class InterpreterTest {
         Range range = rangeAt(7, 3, 7, 9);
         InMemoryPrinter printer = new InMemoryPrinter();
         Interpreter interpreter =
-                interpreterOf(printer, List.of(new Failure<>("falta un punto y coma", range)));
+                interpreterOf(
+                        printer,
+                        List.of(
+                                new Failure<>(
+                                        ErrorCode.MISSING_SEMICOLON,
+                                        "falta un punto y coma",
+                                        range)));
 
         Result<?> result = interpreter.next();
 

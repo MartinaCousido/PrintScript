@@ -18,6 +18,7 @@ import org.printscript.ast.VariableDeclaration;
 import org.printscript.common.Position;
 import org.printscript.common.Range;
 import org.printscript.linter.Violation;
+import org.printscript.linter.config.LinterConfiguration;
 
 class ReadInputArgumentRuleTest {
 
@@ -63,6 +64,7 @@ class ReadInputArgumentRuleTest {
 
         assertEquals(1, violations.size());
         assertTrue(violations.getFirst().message().contains("readInput"));
+        assertEquals(LinterConfiguration.READ_INPUT_ARGUMENT_KEY, violations.getFirst().rule());
     }
 
     @Test

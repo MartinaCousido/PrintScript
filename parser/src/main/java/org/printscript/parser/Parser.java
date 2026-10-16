@@ -7,6 +7,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import org.printscript.ast.Statement;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -70,7 +71,7 @@ public final class Parser implements Iterator<Result<Statement>> {
     private Result<List<Token>> unterminated(List<Token> statement, StatementDelimiter scanner) {
         Token last = statement.getLast();
         buffer.commit(statement.size());
-        return new Failure<>(scanner.unterminatedMessage(statement), last.range());
+        return scanner.unterminated(statement, last.range());
     }
 
     // la sentencia ya está acotada: la arma el primer parser que la reconozca
@@ -81,6 +82,9 @@ public final class Parser implements Iterator<Result<Statement>> {
                 return parser.parse(statementTokens);
             }
         }
-        return new Failure<>("Unrecognized statement", statement.getFirst().range());
+        return new Failure<>(
+                ErrorCode.UNRECOGNIZED_STATEMENT,
+                "Unrecognized statement",
+                statement.getFirst().range());
     }
 }

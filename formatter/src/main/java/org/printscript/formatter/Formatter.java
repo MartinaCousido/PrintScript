@@ -1,6 +1,7 @@
 package org.printscript.formatter;
 
 import java.util.Iterator;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Result;
 import org.printscript.common.Success;
@@ -36,7 +37,10 @@ public final class Formatter implements Iterator<Result<String>> {
             // del token siguiente se mide contra él y no contra el token anterior
             gaps.advancePast(previous, token);
             previous = token;
-            return new Failure<>("Símbolo no reconocido: '" + token.value() + "'", token.range());
+            return new Failure<>(
+                    ErrorCode.UNKNOWN_SYMBOL,
+                    "Símbolo no reconocido: '" + token.value() + "'",
+                    token.range());
         }
         Result<String> result = formatToken(token);
         gaps.advancePast(previous, token);
@@ -49,7 +53,9 @@ public final class Formatter implements Iterator<Result<String>> {
             return new Success<>(space(token) + lexemeOf(token));
         } catch (ArithmeticException exception) {
             return new Failure<>(
-                    "El espaciado configurado excede el tamaño admitido", token.range());
+                    ErrorCode.SPACING_TOO_LARGE,
+                    "El espaciado configurado excede el tamaño admitido",
+                    token.range());
         }
     }
 

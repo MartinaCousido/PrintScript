@@ -3,6 +3,8 @@ package org.printscript.parser;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+import org.printscript.common.Failure;
+import org.printscript.common.Range;
 import org.printscript.token.Token;
 
 // dice dónde termina una sentencia
@@ -16,5 +18,6 @@ public interface StatementDelimiter {
 
     boolean endsStatement(List<Token> accumulated, Token current, Supplier<Optional<Token>> next);
 
-    String unterminatedMessage(List<Token> accumulated);
+    // el error de una sentencia que se cortó antes de su terminador, con su código de regla
+    <T> Failure<T> unterminated(List<Token> accumulated, Range range);
 }

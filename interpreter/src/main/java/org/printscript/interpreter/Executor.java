@@ -10,6 +10,7 @@ import org.printscript.ast.PrintlnStatement;
 import org.printscript.ast.ScopedStatementVisitor;
 import org.printscript.ast.Statement;
 import org.printscript.ast.VariableDeclaration;
+import org.printscript.common.ErrorCode;
 import org.printscript.common.Failure;
 import org.printscript.common.Range;
 import org.printscript.common.Result;
@@ -57,7 +58,10 @@ public final class Executor extends ScopedStatementVisitor {
         String name = assignmentStatement.name().name();
         Optional<Variable> existing = environment.read(name);
         if (existing.isEmpty()) {
-            return new Failure<>("Variable no declarada: " + name, assignmentStatement.range());
+            return new Failure<>(
+                    ErrorCode.UNDECLARED_VARIABLE,
+                    "Variable no declarada: " + name,
+                    assignmentStatement.range());
         }
         // la conversión se aplica siempre; para cualquier inicializador que no sea una
         // lectura externa es un no-op, porque semantic ya garantizó que el tipo coincide
@@ -90,6 +94,7 @@ public final class Executor extends ScopedStatementVisitor {
                         value -> {
                             if (!(value instanceof Boolean)) {
                                 return new Failure<>(
+                                        ErrorCode.NON_BOOLEAN_CONDITION,
                                         "La condición de un if tiene que ser boolean",
                                         ifStatement.condition().range());
                             }
@@ -137,16 +142,27 @@ public final class Executor extends ScopedStatementVisitor {
         return environment
                 .declare(name, declaredType, value, immutable)
                 .<Result<Void>>map(this::commit)
-                .orElseGet(() -> new Failure<>("Variable ya declarada: " + name, range));
+                .orElseGet(
+                        () ->
+                                new Failure<>(
+                                        ErrorCode.VARIABLE_ALREADY_DECLARED,
+                                        "Variable ya declarada: " + name,
+                                        range));
     }
 
     // assign devuelve vacío por dos motivos distintos y el mensaje tiene que decir cuál
     private Result<Void> rejectedAssignment(AssignmentStatement assignment) {
         String name = assignment.name().name();
         if (environment.read(name).isPresent()) {
-            return new Failure<>("No se puede reasignar la constante " + name, assignment.range());
+            return new Failure<>(
+                    ErrorCode.CONST_REASSIGNMENT,
+                    "No se puede reasignar la constante " + name,
+                    assignment.range());
         }
-        return new Failure<>("Variable no declarada: " + name, assignment.range());
+        return new Failure<>(
+                ErrorCode.UNDECLARED_VARIABLE,
+                "Variable no declarada: " + name,
+                assignment.range());
     }
 
     private Result<Void> commit(Environment updated) {
@@ -156,6 +172,6 @@ public final class Executor extends ScopedStatementVisitor {
 
     @Override
     protected Result<Void> notAStatement(Range range) {
-        return new Failure<>("No es una sentencia ejecutable", range);
+        return new Failure<>(ErrorCode.UNSUPPORTED_NODE, "No es una sentencia ejecutable", range);
     }
 }
