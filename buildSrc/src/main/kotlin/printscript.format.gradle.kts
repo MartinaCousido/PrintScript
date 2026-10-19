@@ -9,7 +9,7 @@ plugins {
 spotless {
     java {
         target("src/**/*.java")
-        googleJavaFormat("1.27.0").aosp()
+        googleJavaFormat("1.30.0").aosp()
         removeUnusedImports()
     }
 
