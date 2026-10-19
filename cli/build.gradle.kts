@@ -21,5 +21,5 @@ dependencies {
     implementation(project(":runner"))
     implementation(project(":runtime-api"))
     implementation(project(":common"))
-    implementation("info.picocli:picocli:4.7.6")
+    implementation("info.picocli:picocli:4.7.7")
 }

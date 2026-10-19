@@ -23,7 +23,7 @@ jobs:
       # descargarlo en cada corrida. Quien desarrolla no necesita tenerlo: el
       # foojay-resolver de settings.gradle.kts lo resuelve solo.
       - name: Instalar el JDK del toolchain declarado
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '25'
@@ -42,7 +42,7 @@ jobs:
 
       - name: Publicar los reportes de test
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: reportes-de-test
           path: |
@@ -52,7 +52,7 @@ jobs:
 
       - name: Publicar los reportes de Checkstyle
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: reportes-de-checkstyle
           path: '*/build/reports/checkstyle'
@@ -60,7 +60,7 @@ jobs:
 
       - name: Publicar los reportes de PMD
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: reportes-de-pmd
           path: '*/build/reports/pmd'
@@ -68,7 +68,7 @@ jobs:
 
       - name: Publicar el reporte de CPD
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: reporte-de-cpd
           path: 'build/reports/cpd'
@@ -76,7 +76,7 @@ jobs:
 
       - name: Publicar la cobertura por módulo
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: cobertura-por-modulo
           path: '*/build/reports/jacoco'
@@ -84,7 +84,7 @@ jobs:
 
       - name: Publicar la cobertura agregada
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: cobertura-agregada
           path: 'build/reports/jacoco/jacocoRootReport'

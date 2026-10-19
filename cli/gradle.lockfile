@@ -1,11 +1,11 @@
 # This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
-com.fasterxml.jackson.core:jackson-annotations:2.18.2=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-core:2.18.2=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-databind:2.18.2=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
-com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.18.2=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
-com.fasterxml.jackson:jackson-bom:2.18.2=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-annotations:2.22=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-core:2.22.3=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-databind:2.22.3=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
+com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.22.3=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
+com.fasterxml.jackson:jackson-bom:2.22.3=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 com.github.oowekyala.ooxml:nice-xml-messages:3.1=pmd
 com.google.code.findbugs:jsr305:3.0.2=checkstyle,spotless865484172,spotless865487055
 com.google.code.gson:gson:2.14.0=pmd
@@ -24,7 +24,8 @@ com.puppycrawl.tools:checkstyle:10.21.0=checkstyle
 commons-beanutils:commons-beanutils:1.9.4=checkstyle
 commons-codec:commons-codec:1.15=checkstyle
 commons-collections:commons-collections:3.2.2=checkstyle
-info.picocli:picocli:4.7.6=checkstyle,compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
+info.picocli:picocli:4.7.6=checkstyle
+info.picocli:picocli:4.7.7=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
 net.sf.saxon:Saxon-HE:12.5=checkstyle
 net.sf.saxon:Saxon-HE:12.9=pmd
 net.sourceforge.pmd:pmd-ant:7.26.0=pmd
@@ -75,5 +76,5 @@ org.reflections:reflections:0.10.2=checkstyle
 org.slf4j:jul-to-slf4j:1.7.36=pmd
 org.xmlresolver:xmlresolver:5.2.2=checkstyle
 org.xmlresolver:xmlresolver:5.3.3=pmd
-org.yaml:snakeyaml:2.3=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
+org.yaml:snakeyaml:2.5=mainPmdAuxClasspath,runtimeClasspath,testPmdAuxClasspath,testRuntimeClasspath
 empty=annotationProcessor,testAnnotationProcessor
