@@ -2,10 +2,14 @@
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
 com.fasterxml.jackson.core:jackson-annotations:2.22=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-core:2.22.3=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
-com.fasterxml.jackson.core:jackson-databind:2.22.3=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
-com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.22.3=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
-com.fasterxml.jackson:jackson-bom:2.22.3=compileClasspath,mainPmdAuxClasspath,runtimeClasspath,testCompileClasspath,testPmdAuxClasspath,testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-core:2.22.3=mainPmdAuxClasspath,testPmdAuxClasspath
+com.fasterxml.jackson.core:jackson-core:2.22.4=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+com.fasterxml.jackson.core:jackson-databind:2.22.3=mainPmdAuxClasspath,testPmdAuxClasspath
+com.fasterxml.jackson.core:jackson-databind:2.22.4=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.22.3=mainPmdAuxClasspath,testPmdAuxClasspath
+com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.22.4=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+com.fasterxml.jackson:jackson-bom:2.22.3=mainPmdAuxClasspath,testPmdAuxClasspath
+com.fasterxml.jackson:jackson-bom:2.22.4=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
 com.github.oowekyala.ooxml:nice-xml-messages:3.1=pmd
 com.google.code.findbugs:jsr305:3.0.2=checkstyle,spotless865484172,spotless865487055
 com.google.code.gson:gson:2.14.0=pmd
