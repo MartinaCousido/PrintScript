@@ -40,7 +40,7 @@ repositories {
 val cpd: Configuration by configurations.creating
 dependencies {
     cpd("net.sourceforge.pmd:pmd-cli:7.28.0")
-    cpd("net.sourceforge.pmd:pmd-java:7.28.0")
+    cpd("net.sourceforge.pmd:pmd-java:7.29.0")
 }
 
 tasks.register<JavaExec>("cpdCheck") {
