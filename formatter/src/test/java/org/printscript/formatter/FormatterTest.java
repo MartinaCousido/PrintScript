@@ -216,6 +216,34 @@ class FormatterTest {
     }
 
     @Test
+    void withALineBreakAfterEachStatementTheBodyOfAnIfGoesOnItsOwnLinesAndIsIndented() {
+        String source = "if (a) {println(1);} else {println(2);}println(3);";
+
+        assertEquals(
+                "if (a) {\n    println(1);\n} else {\n    println(2);\n}\nprintln(3);",
+                format(source, new Rules().breakAfterStatement().braceSameLine(true).indent(4)));
+    }
+
+    @Test
+    void theElseGoesWhereTheBraceGoes() {
+        String source = "if (a) {\n  println(1);\n}else {\n  println(2);\n}";
+
+        assertEquals(
+                "if (a) {\n  println(1);\n} else {\n  println(2);\n}",
+                format(source, new Rules().braceSameLine(true)));
+        assertEquals(
+                "if (a)\n{\n  println(1);\n}\nelse\n{\n  println(2);\n}",
+                format(source, new Rules().braceSameLine(false)));
+    }
+
+    @Test
+    void withoutALineBreakAfterEachStatementTheBlockStaysOnItsLine() {
+        String source = "if (a) {println(1);}";
+
+        assertEquals(source, format(source, new Rules().indent(4)));
+    }
+
+    @Test
     void unknownSymbolsAreReportedAsFailuresInsteadOfBeingWritten() {
         Formatter formatter = formatterOver("let a: number = #;", FormatterConfiguration.none());
 

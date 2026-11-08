@@ -2,6 +2,8 @@ package org.printscript.formatter;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.printscript.formatter.config.FormatterConfiguration;
 import org.printscript.token.Token;
 import org.printscript.token.TokenType;
@@ -42,32 +44,20 @@ final class Gaps {
 
     // las reglas se consultan en orden y gana la primera que opine
     private Optional<String> forced(Token previous, Token current) {
-        Optional<String> result = afterPrintln(previous, current);
-        if (result.isPresent()) {
-            return result;
-        }
-        result = afterStatement(previous, current);
-        if (result.isPresent()) {
-            return result;
-        }
-        result = bracePlacement(current);
-        if (result.isPresent()) {
-            return result;
-        }
-        result = aroundEquals(previous, current);
-        if (result.isPresent()) {
-            return result;
-        }
-        result = beforeColon(current);
-        if (result.isPresent()) {
-            return result;
-        }
-        result = afterColon(previous);
-        if (result.isPresent()) {
-            return result;
-        }
-        result = aroundOperations(previous, current);
-        return result.isPresent() ? result : singleSpace(previous, current);
+        return Stream.<Supplier<Optional<String>>>of(
+                        () -> afterPrintln(previous, current),
+                        () -> afterStatement(previous, current),
+                        () -> elsePlacement(previous, current),
+                        () -> insideBlock(previous, current),
+                        () -> bracePlacement(current),
+                        () -> aroundEquals(previous, current),
+                        () -> beforeColon(current),
+                        () -> afterColon(previous),
+                        () -> aroundOperations(previous, current),
+                        () -> singleSpace(previous, current))
+                .map(Supplier::get)
+                .flatMap(Optional::stream)
+                .findFirst();
     }
 
     private Optional<String> afterPrintln(Token previous, Token current) {
@@ -87,6 +77,28 @@ final class Gaps {
                         && isPunctuation(previous, ";")
                         && sameLine(previous, current);
         return applies ? Optional.of(lineBreaks(1, current)) : Optional.empty();
+    }
+
+    // cada sentencia en su línea también vale para las del bloque: la primera arranca en
+    // una línea nueva después del '{', y lo que sigue al '}' (que no sea el else) también
+    private Optional<String> insideBlock(Token previous, Token current) {
+        boolean opensBlock = isPunctuation(previous, "{");
+        boolean closesBlock = isPunctuation(previous, "}") && !isKeyword(current, "else");
+        boolean applies =
+                configuration.lineBreakAfterStatement()
+                        && (opensBlock || closesBlock)
+                        && sameLine(previous, current);
+        return applies ? Optional.of(lineBreaks(1, current)) : Optional.empty();
+    }
+
+    // el else va donde va el '{': pegado al '}' con un espacio, o en la línea siguiente
+    private Optional<String> elsePlacement(Token previous, Token current) {
+        if (!isPunctuation(previous, "}") || !isKeyword(current, "else")) {
+            return Optional.empty();
+        }
+        return configuration
+                .ifBraceOnSameLine()
+                .map(onSameLine -> onSameLine ? " " : lineBreaks(1, current));
     }
 
     private Optional<String> bracePlacement(Token current) {
