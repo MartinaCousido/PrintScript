@@ -31,3 +31,16 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
+
+// La versión queda escrita en el manifest de cada jar (Implementation-Version).
+// Así quien usa la librería puede saber cuál tiene: el servicio de PrintScript
+// la responde en GET /version, y Snippet Service vuelve a validar los snippets
+// cuando cambia (ver "Re-validar con cada versión del parser" en SnippetSearcher).
+tasks.named<Jar>("jar") {
+    manifest {
+        attributes(
+            "Implementation-Title" to project.name,
+            "Implementation-Version" to project.version.toString(),
+        )
+    }
+}
